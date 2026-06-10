@@ -1,0 +1,92 @@
+/* 画面サイズ */
+.device-info-content {
+  font-size: unset;
+  width: 100%;
+  height: 100%;
+
+  max-width: none !important;
+  max-height: none !important;
+  overflow: visible;
+
+  margin: auto;
+  white-space: initial;
+  background-color: var(--ntss-base-background-color);
+  color: var(--ntss-base-color);
+}
+
+/* サイズ外枠 */
+.device-info-content-area {
+  padding: 5px;
+}
+
+/* 自動スクロール */
+.device-info-main-content {
+  max-height: none !important;
+}
+
+/* カスタム系スタイル指定 */
+.device-input-number >>> .custom-input-number,
+.device-input-time >>> .custom-input-time {
+  /* mod 装置設定外結障害No8対応 趙 start */
+  /*mod #6461-文字サイズ：特大のときに一部設定値が見切れる 徐博 start*/
+  /* width: 70px; */
+  width: 6em;
+  /*width: 76px;*/
+  /*mod #6461-文字サイズ：特大のときに一部設定値が見切れる 徐博 end*/
+  /* mod 装置設定外結障害No8対応 趙 end */
+}
+
+/* 各表示項目・内容 */
+.device-info-main-title,
+.device-info-cell-title,
+.device-info-cell-name,
+.device-info-cell-value {
+  padding: 3px 5px;
+}
+
+/* ボタン系 */
+.button-area {
+  padding: 10px;
+}
+
+.button-cancel {
+  text-align: left;
+}
+
+.button-ok {
+  text-align: right;
+}
+
+/* 境界線 ※テーマで色切り替え */
+.device-info-main-title {
+  border-bottom: solid 1px var(--ntss-border-color);
+}
+
+.device-info-cell {
+  border: solid 1px var(--ntss-border-color);
+  border-top: none;
+}
+
+/* 中央線 ※テーマで色切り替え */
+.device-info-cell-name {
+  border-right: solid 1px var(--ntss-border-color);
+}
+
+/* 蛇腹で色付け */
+#device-info-list tr:nth-child(2n){
+  background-color: var(--ntss-list-content-2nd-background-color) !important;
+  color: var(--ntss-list-body-color) !important;
+}
+
+@media print {
+  .device-info-content-area {
+    min-width: none !important;
+  }
+  ::v-deep .highcharts-container {
+    width: 100% !important;
+    height: auto !important;
+  }
+  ::v-deep .highcharts-root{
+    width: 100% !important;
+  }
+}

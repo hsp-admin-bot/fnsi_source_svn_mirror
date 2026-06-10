@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FNSiCSIService WiX v4 インストーラー
+  製品名   : FNSiCSIService
+  バージョン: 2.0.1
+  メーカー : Nikkiso
+  インストール先: C:\FNWSiTools\FNSiCSIService
+
+  画面フロー:
+    ようこそ → インストール先選択 → 確認 → 進捗 → [設定ダイアログ(CA)] → 完了
+
+  機能:
+    - 日本語 UI
+    - サイレントインストール(/quiet): 設定ダイアログをスキップ
+    - バージョンダウングレード検知・ブロック
+    - Windows サービス登録/解除（InstallUtil 経由）
+    - COM DLL 登録/解除（regsvr32 経由）
+    - レジストリへのインストールパス書き込み
+-->
+<?include GeneratedProductCode.wxi?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package
+    Name="FNSiCSIService"
+    Manufacturer="Nikkiso"
+    Version="$(var.ProductVersion)"
+    ProductCode="$(var.ProductCode)"
+    UpgradeCode="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2A1D9}"
+    Language="1041"
+    Codepage="932"
+    InstallerVersion="500"
+    Compressed="yes"
+    Scope="perMachine">
+
+    <SummaryInformation Description="FNSiCSIService インストーラー" Keywords="インストーラー" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- ============================== アイコン ============================== -->
+    <Icon Id="FNSiCSIServiceIcon" SourceFile="$(var.SrcSetup)nkk.ico" />
+
+    <Property Id="ARPPRODUCTICON" Value="FNSiCSIServiceIcon" />
+    <Property Id="ARPCONTACT"     Value="Nikkiso" />
+    <Property Id="ARPCOMMENTS"    Value="FNSiCSIService" />
+    <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
+
+    <Property Id="REBOOT" Value="ReallySuppress" />
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <!-- InstallValidate のファイル使用中チェックをスキップ（38秒待機を回避）
+         ファイルロック解除は DEFERRED CA StopServiceUninstall (SYSTEM権限) が担当する -->
+    <Property Id="MSIFASTINSTALL" Value="2" />
+    <Property Id="RUNNING_PROCESSES" Secure="yes" />
+    <Property Id="ROOTDRIVE" Value="C:\" />
+
+    <!-- ============================== .NET Framework 3.5 チェック ============================== -->
+    <Property Id="NETFRAMEWORK35" Secure="yes">
+      <RegistrySearch Id="NetFx35Search"
+                      Root="HKLM"
+                      Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v3.5"
+                      Name="Install"
+                      Type="raw" />
+    </Property>
+    <Launch Condition="NETFRAMEWORK35"
+            Message=".NET Framework 3.5 SP1 が必要です。インストールしてから再度実行してください。" />
+
+    <!-- ============================== バージョン管理 ============================== -->
+    <Upgrade Id="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2A1D9}">
+      <UpgradeVersion
+        Minimum="0.0.0"
+        Maximum="$(var.ProductVersion)"
+        IncludeMinimum="yes"
+        IncludeMaximum="no"
+        Property="OLDERVERSIONBEINGUPGRADED"
+        MigrateFeatures="yes" />
+      <UpgradeVersion
+        Minimum="$(var.ProductVersion)"
+        IncludeMinimum="no"
+        Property="NEWERVERSIONALREADYINSTALLED" />
+    </Upgrade>
+
+    <Launch Condition="NOT NEWERVERSIONALREADYINSTALLED"
+            Message="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
+
+    <!-- ============================== ディレクトリ構成 ============================== -->
+    <!--
+      デフォルト: C:\FNWSiTools\FNSiCSIService
+      TARGETDIR(C:\) > FNWSITOOLS(FNWSiTools) > INSTALLFOLDER(FNSiCSIService)
+    -->
+    <StandardDirectory Id="TARGETDIR">
+      <Directory Id="FNWSITOOLS" Name="FNWSiTools">
+        <Directory Id="INSTALLFOLDER" Name="FNSiCSIService" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="WindowsFolder" />
+
+    <!-- ============================== コンポーネント ============================== -->
+
+    <!-- (1) メインアプリケーション -->
+    <Component Id="C_MainExe"
+               Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B001}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_MainExe"
+            Source="$(var.SrcBin)FNWSiCoopCSI.exe"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (2) FNWSiCoopCSI.exe.config -->
+    <Component Id="C_ExeConfig"
+               Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B002}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_ExeConfig"
+            Source="$(var.SrcBin)FNWSiCoopCSI.exe.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (3) FNSiCSI.config（サービス接続設定・ユーザー設定を保持） -->
+    <Component Id="C_FNSiConfig"
+               Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B003}"
+               Directory="INSTALLFOLDER"
+               Permanent="yes"
+               NeverOverwrite="yes">
+      <File Id="F_FNSiConfig"
+            Source="$(var.SrcBin)FNSiCSI.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (4) SYS_COOP_INI_DATA.xml（システム設定データ） -->
+    <Component Id="C_SysCoopIni"
+               Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B004}"
+               Directory="INSTALLFOLDER"
+               Permanent="yes"
+               NeverOverwrite="yes">
+      <File Id="F_SysCoopIni"
+            Source="$(var.SrcBin)SYS_COOP_INI_DATA.xml"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (5) プロジェクト参照 DLL 群 -->
+    <ComponentGroup Id="CG_ProjectDlls" Directory="INSTALLFOLDER">
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B011}"><File Source="$(var.SrcBin)FNSiCSILogic.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B012}"><File Source="$(var.SrcBin)CoopComPlugIn.dll" /></Component>
+    </ComponentGroup>
+
+    <!-- (6) NuGet DLL 群 -->
+    <ComponentGroup Id="CG_NuGetDlls" Directory="INSTALLFOLDER">
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B021}"><File Source="$(var.SrcBin)Ionic.Zip.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B022}"><File Source="$(var.SrcLogicBin)Newtonsoft.Json.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B023}"><File Source="$(var.SrcPackages)\SuperSocket.ClientEngine.Core.0.10.0\lib\net45\SuperSocket.ClientEngine.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B024}"><File Source="$(var.SrcBin)System.Threading.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B025}"><File Source="$(var.SrcPackages)\WebSocket4Net.0.15.2\lib\net45\WebSocket4Net.dll" /></Component>
+    </ComponentGroup>
+
+    <!-- (7) ビルド出力の参照 DLL 群（HintPath 経由でコピーされる） -->
+    <ComponentGroup Id="CG_RefDlls" Directory="INSTALLFOLDER">
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B031}"><File Source="$(var.SrcBin)CoopCommonDefine.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B032}"><File Source="$(var.SrcBin)CoopCommonIF.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B033}"><File Source="$(var.SrcBin)CoopLog.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B034}"><File Source="$(var.SrcBin)CoopReturnCode.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B035}"><File Source="$(var.SrcBin)CoopComSocket.dll" /></Component>
+    </ComponentGroup>
+
+    <!-- (8) Reference フォルダ由来の DLL 群（手動コピー分） -->
+    <ComponentGroup Id="CG_CsiDlls" Directory="INSTALLFOLDER">
+      <!-- COM DLL（regsvr32 で登録） -->
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B041}"><File Source="$(var.SrcRef)CollectionFactory.dll" /></Component>
+      <!-- COM 相互運用アセンブリ -->
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B042}"><File Source="$(var.SrcRef)Interop.CollectionFactory.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B043}"><File Source="$(var.SrcRef)Interop.VBA.dll" /></Component>
+      <!-- CSI 連携 DLL 群 -->
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B044}"><File Source="$(var.SrcRef)CSICoopDialysisReportSendStd.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B045}"><File Source="$(var.SrcRef)CSICoopDialysisScheSendStd.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B046}"><File Source="$(var.SrcRef)CSICoopDialysisSendStd.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B047}"><File Source="$(var.SrcRef)CSICoopExaminRcvStd.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B048}"><File Source="$(var.SrcRef)CSICoopExaminScheSendStd.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B049}"><File Source="$(var.SrcRef)CSICoopPatientRcvSchedulerStd.dll" /></Component>
+      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B04A}"><File Source="$(var.SrcRef)CSICoopPatientRcvStd.dll" /></Component>
+    </ComponentGroup>
+
+    <!-- ============================== フィーチャー ============================== -->
+    <Feature Id="ProductFeature"
+             Title="FNSiCSIService"
+             Level="1"
+             ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentRef Id="C_MainExe" />
+      <ComponentRef Id="C_ExeConfig" />
+      <ComponentRef Id="C_FNSiConfig" />
+      <ComponentRef Id="C_SysCoopIni" />
+      <ComponentGroupRef Id="CG_ProjectDlls" />
+      <ComponentGroupRef Id="CG_NuGetDlls" />
+      <ComponentGroupRef Id="CG_RefDlls" />
+      <ComponentGroupRef Id="CG_CsiDlls" />
+    </Feature>
+
+    <!-- ============================== カスタムアクション ============================== -->
+
+
+    <!-- 修復時（deferred）: InstallFiles 直前にサービスを停止してファイルロックを解除 -->
+    <CustomAction Id="StopServiceBeforeFiles"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c sc stop FNSiCSIService &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- アップグレード時：旧バージョンのサービスを停止・削除 -->
+    <CustomAction Id="StopDeleteServiceUpgrade"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c sc stop FNSiCSIService &gt; nul 2&gt;&amp;1 &amp; timeout /t 5 /nobreak &gt; nul &amp; sc delete FNSiCSIService &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- アンインストール時：サービスを停止（sc delete は InstallUtil /u が行う） -->
+    <CustomAction Id="StopServiceUninstall"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c sc stop FNSiCSIService &gt; nul 2&gt;&amp;1 &amp; timeout /t 5 /nobreak &gt; nul"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- アンインストール用プロパティ設定 -->
+    <CustomAction Id="SetUninstallProperty"
+                  Property="RunUninstallUtil"
+                  Value="&quot;[INSTALLFOLDER]FNWSiCoopCSI.exe&quot;" />
+
+    <!-- InstallUtil /u でサービス解除・COM DLL 解除・レジストリ削除 -->
+    <CustomAction Id="RunUninstallUtil"
+                  Directory="WindowsFolder"
+                  ExeCommand="Microsoft.NET\Framework\v2.0.50727\InstallUtil.exe /u /LogToConsole=false /LogFile= [RunUninstallUtil]"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- インストール用プロパティ設定 -->
+    <CustomAction Id="SetInstallProperty"
+                  Property="RunInstallUtil"
+                  Value="&quot;[INSTALLFOLDER]FNWSiCoopCSI.exe&quot;" />
+
+    <!-- サイレントインストール時: /silent=1 をアセンブリパスの前に配置 -->
+    <CustomAction Id="SetInstallPropertySilent"
+                  Property="RunInstallUtil"
+                  Value="/silent=1 &quot;[INSTALLFOLDER]FNWSiCoopCSI.exe&quot;" />
+
+    <!-- InstallUtil でサービス登録・設定ダイアログ・COM DLL 登録・レジストリ書き込み -->
+    <CustomAction Id="RunInstallUtil"
+                  Directory="WindowsFolder"
+                  ExeCommand="Microsoft.NET\Framework\v2.0.50727\InstallUtil.exe /LogToConsole=false /LogFile= [RunInstallUtil]"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check" />
+    <CustomAction Id="StartServiceAfterInstallSilent"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c sc start FNSiCSIService &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+    <CustomAction Id="CA_DetectRunningProcesses"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_DetectRunningProcesses.vbs" />
+    <CustomAction Id="CA_KillGUIApps"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_KillGUIApps.vbs" />
+
+    <!-- ============================== シーケンス ============================== -->
+    <InstallExecuteSequence>
+      <!-- InstallValidate のファイル使用中チェックをスキップ（38秒待機を回避）
+           ファイルロック解除は DEFERRED StopServiceUninstall (SYSTEM権限) が担当する -->
+      <InstallValidate Condition="0" />
+      <RemoveExistingProducts After="InstallInitialize" />
+      <!-- アップグレード時：旧サービスを停止・削除 -->
+      <Custom Action="StopDeleteServiceUpgrade" Before="RemoveFiles" Condition="UPGRADINGPRODUCTCODE" />
+      <!-- アンインストール時 + 修復時：サービス停止(SYSTEM権限) → InstallUtil /u でサービス登録解除
+           修復時も同じ流れで一度解除し、InstallFiles 後に再登録することでクリーンな状態を保つ -->
+      <Custom Action="StopServiceUninstall" Before="SetUninstallProperty" Condition="NOT UPGRADINGPRODUCTCODE AND (REMOVE OR Installed)" />
+      <Custom Action="SetUninstallProperty" Before="RunUninstallUtil"     Condition="NOT UPGRADINGPRODUCTCODE AND (REMOVE OR Installed)" />
+      <Custom Action="RunUninstallUtil"     Before="RemoveFiles"          Condition="NOT UPGRADINGPRODUCTCODE AND (REMOVE OR Installed)" />
+      <!-- インストール時 + 修復時：ファイルコピー後に InstallUtil でサービス再登録・設定ダイアログ表示 -->
+      <Custom Action="SetInstallProperty"        Before="RunInstallUtil"    Condition="NOT REMOVE AND UILevel &gt;= 5" />
+      <Custom Action="SetInstallPropertySilent"  Before="RunInstallUtil"    Condition="NOT REMOVE AND UILevel &lt; 5" />
+      <Custom Action="RunInstallUtil"            After="InstallFiles"       Condition="NOT REMOVE" />
+      <Custom Action="StartServiceAfterInstallSilent" After="RunInstallUtil" Condition="NOT REMOVE AND UILevel &lt; 5" />
+    </InstallExecuteSequence>
+
+    <!-- ============================== UI ============================== -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <UI>
+      <Dialog Id="RunningProcessesDlg" Width="370" Height="270" Title="FNSiCSIService インストーラー">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}実行中アプリケーションの検出" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="15" Text="インストール前にアプリケーションを終了してください。" />
+        <Control Id="RunningAppsLabel" Type="Text" X="20" Y="58" Width="330" Height="30" Text="以下のアプリケーション/サービスが実行中のため、インストールを継続できません。" />
+        <Control Id="RunningAppsList" Type="Text" X="30" Y="92" Width="310" Height="90" Text="[RUNNING_PROCESSES]" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton" X="155" Y="243" Width="56" Height="17" Text="&lt; 戻る">
+          <Publish Event="NewDialog" Value="WelcomeDlg" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="MaintenanceTypeDlg" Condition="Installed" />
+        </Control>
+        <Control Id="CloseAndContinue" Type="PushButton" X="215" Y="243" Width="84" Height="17" Default="yes" Text="終了して続行">
+          <Publish Event="DoAction" Value="CA_KillGUIApps" Order="1" Condition="1" />
+          <Publish Event="NewDialog" Value="InstallDirDlg" Order="2" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="2" Condition="Installed" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="307" Y="243" Width="56" Height="17" Cancel="yes" Text="キャンセル">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="DoAction" Value="CA_DetectRunningProcesses" Order="1" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="RunningProcessesDlg" Order="2" Condition="NOT Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="WelcomeDlg"    Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="3" Condition="NOT Installed AND NOT RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="DoAction" Value="CA_DetectRunningProcesses" Order="1" Condition="Installed" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="RunningProcessesDlg" Order="2" Condition="Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" Order="3" Condition="Installed AND NOT RUNNING_PROCESSES" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"    Order="2" Condition="1" />
+    </UI>
+
+  </Package>
+
+</Wix>

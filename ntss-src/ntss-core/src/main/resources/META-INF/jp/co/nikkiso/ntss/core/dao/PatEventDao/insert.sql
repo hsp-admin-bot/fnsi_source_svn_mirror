@@ -1,0 +1,71 @@
+insert into pat_event (
+	pat_event_cd,
+	pat_id,
+	facility_cd,
+	fn_ctl_no,
+	event_status,
+	template_cd,
+	template_name,
+	category_cd,
+	category_name,
+	use_type,
+	ord_no,
+	input_params,
+	event_start_date,
+	event_end_date,
+	event_start_time,
+	event_end_time,
+	sub_category_cd,
+	sub_category_name,
+	result_params,
+	score_total,
+	reg_staff_info,
+	up_staff_info,
+	bbs_ctl_no,
+	letter_info,
+	is_newest,
+	is_del,
+	reg_date,
+-- add FNSI-改修内容転入時の紹介状取込ができない 任 start
+	report_url,
+-- add FNSI-改修内容転入転出の患者情報連動 任 start
+	report_date,
+-- add FNSI-改修内容転入転出の患者情報連動 任 end
+-- add FNSI-改修内容転入時の紹介状取込ができない 任 end
+	up_date
+) values (
+	/*patEvent.patEventCd*/null,
+	/*patEvent.patId*/null,
+	/*patEvent.facilityCd*/null,
+	/*patEvent.fnCtlNo*/null,
+	/*patEvent.eventStatus*/null,
+	/*patEvent.templateCd*/null,
+	/*patEvent.templateName*/null,
+	/*patEvent.categoryCd*/null,
+	/*patEvent.categoryName*/null,
+	/*patEvent.useType*/null,
+	/*patEvent.ordNo*/null,
+	/*patEvent.inputParams*/null,
+	/*patEvent.eventStartDate*/null,
+	/*patEvent.eventEndDate*/null,
+	/*patEvent.eventStartTime*/null,
+	/*patEvent.eventEndTime*/null,
+	/*patEvent.subCategoryCd*/null,
+	/*patEvent.subCategoryName*/null,
+	/*patEvent.resultParams*/null,
+	/*patEvent.scoreTotal*/null,
+	/*patEvent.regStaffInfo*/null,
+	/*patEvent.upStaffInfo*/null,
+	/*patEvent.bbsCtlNo*/null,
+	/*patEvent.letterInfo*/null,
+	/*patEvent.isNewest*/null,
+	/*patEvent.isDel*/null,
+    to_timestamp(/* patEvent.regDate */null, 'YYYY-MM-DD HH24:MI:SS'),
+-- add FNSI-改修内容転入時の紹介状取込ができない 任 start
+    /*patEvent.reportUrl*/null,
+-- add FNSI-改修内容転入転出の患者情報連動 任 start
+    /*patEvent.reportDate*/null,
+-- add FNSI-改修内容転入転出の患者情報連動 任 end
+-- add FNSI-改修内容転入時の紹介状取込ができない 任 end
+    to_timestamp(/* patEvent.upDate */null, 'YYYY-MM-DD HH24:MI:SS')
+);

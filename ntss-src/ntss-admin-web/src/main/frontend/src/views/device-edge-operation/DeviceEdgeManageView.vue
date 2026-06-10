@@ -1,0 +1,33 @@
+/**
+ * デバイスエッジ稼働監視
+ */
+<template>
+  <ntss-layout-split>
+    <header-component slot="header-content" />
+    <bread-crumbs-component slot="bread-crumbs-content" :history-key="historyKey" />
+    <main-component slot="main-content" ref="mainComponent" :history-key="historyKey" />
+  </ntss-layout-split>
+</template>
+
+<script>
+import HeaderComponent from "@/components/device-edge-operation/manage/DeviceEdgeManageHeaderComponent";
+import MainComponent from "@/components/device-edge-operation/manage/DeviceEdgeManageMainComponent";
+import BreadCrumbsComponent from "@/components/BreadCrumbsComponent";
+import ViewHelper from "@/views/ViewHelperMixin";
+import { HISTORY_KEY_DEVICE_EDGE_MANAGE } from "@/router/device-edge-operation/HistoryKeyConstants";
+
+export default {
+  name: "DeviceEdgeOperationView",
+  components: {
+    "header-component": HeaderComponent,
+    "main-component": MainComponent,
+    "bread-crumbs-component": BreadCrumbsComponent
+  },
+  mixins: [ViewHelper],
+  data() {
+    return {
+      historyKey: HISTORY_KEY_DEVICE_EDGE_MANAGE
+    };
+  }
+};
+</script>

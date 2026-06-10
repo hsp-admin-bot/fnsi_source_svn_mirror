@@ -1,0 +1,303 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="Current">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{5CEA00A8-3C51-4BE2-AC59-1B04C838BD7E}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>NKK.BloodPurify</RootNamespace>
+    <AssemblyName>FNWSiBloodPurify</AssemblyName>
+    <ApplicationIcon>Resources\BloodPurify.ico</ApplicationIcon>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <StartupObject>NKK.BloodPurify.Program</StartupObject>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkProfile />
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRules>-Microsoft.Globalization#CA1301;-Microsoft.Globalization#CA1302;-Microsoft.Globalization#CA1303;-Microsoft.Globalization#CA1306;-Microsoft.Globalization#CA1304;-Microsoft.Globalization#CA1305;-Microsoft.Globalization#CA1300;-Microsoft.Design#CA1012;-Microsoft.Design#CA2210;-Microsoft.Design#CA1040;-Microsoft.Design#CA1005;-Microsoft.Design#CA1020;-Microsoft.Design#CA1021;-Microsoft.Design#CA1010;-Microsoft.Design#CA1011;-Microsoft.Design#CA1009;-Microsoft.Design#CA1050;-Microsoft.Design#CA1026;-Microsoft.Design#CA1019;-Microsoft.Design#CA1031;-Microsoft.Design#CA1047;-Microsoft.Design#CA1000;-Microsoft.Design#CA1048;-Microsoft.Design#CA1051;-Microsoft.Design#CA1002;-Microsoft.Design#CA1061;-Microsoft.Design#CA1006;-Microsoft.Design#CA1046;-Microsoft.Design#CA1045;-Microsoft.Design#CA1038;-Microsoft.Design#CA1008;-Microsoft.Design#CA1028;-Microsoft.Design#CA1004;-Microsoft.Design#CA1035;-Microsoft.Design#CA1063;-Microsoft.Design#CA1032;-Microsoft.Design#CA1023;-Microsoft.Design#CA1033;-Microsoft.Design#CA1039;-Microsoft.Design#CA1016;-Microsoft.Design#CA1014;-Microsoft.Design#CA1017;-Microsoft.Design#CA1018;-Microsoft.Design#CA1027;-Microsoft.Design#CA1059;-Microsoft.Design#CA1060;-Microsoft.Design#CA1034;-Microsoft.Design#CA1013;-Microsoft.Design#CA1036;-Microsoft.Design#CA1044;-Microsoft.Design#CA1041;-Microsoft.Design#CA1025;-Microsoft.Design#CA1052;-Microsoft.Design#CA1053;-Microsoft.Design#CA1057;-Microsoft.Design#CA1058;-Microsoft.Design#CA1001;-Microsoft.Design#CA1049;-Microsoft.Design#CA1054;-Microsoft.Design#CA1056;-Microsoft.Design#CA1055;-Microsoft.Design#CA1030;-Microsoft.Design#CA1003;-Microsoft.Design#CA1007;-Microsoft.Design#CA1043;-Microsoft.Design#CA1024;-Microsoft.Design#CA1062;-Microsoft.Performance#CA1809;-Microsoft.Performance#CA1811;-Microsoft.Performance#CA1812;-Microsoft.Performance#CA1807;-Microsoft.Performance#CA1813;-Microsoft.Performance#CA1823;-Microsoft.Performance#CA1816;-Microsoft.Performance#CA1817;-Microsoft.Performance#CA1800;-Microsoft.Performance#CA1818;-Microsoft.Performance#CA1805;-Microsoft.Performance#CA1810;-Microsoft.Performance#CA1822;-Microsoft.Performance#CA1815;-Microsoft.Performance#CA1814;-Microsoft.Performance#CA1819;-Microsoft.Performance#CA1804;-Microsoft.Performance#CA1820;-Microsoft.Performance#CA1802;-Microsoft.Usage#CA2209;-Microsoft.Usage#CA2236;-Microsoft.Usage#CA2227;-Microsoft.Usage#CA2213;-Microsoft.Usage#CA2216;-Microsoft.Usage#CA2215;-Microsoft.Usage#CA2214;-Microsoft.Usage#CA2222;-Microsoft.Usage#CA2202;-Microsoft.Usage#CA1806;-Microsoft.Usage#CA2217;-Microsoft.Usage#CA2212;-Microsoft.Usage#CA2219;-Microsoft.Usage#CA2201;-Microsoft.Usage#CA2228;-Microsoft.Usage#CA2221;-Microsoft.Usage#CA2220;-Microsoft.Usage#CA2240;-Microsoft.Usage#CA2229;-Microsoft.Usage#CA2238;-Microsoft.Usage#CA2207;-Microsoft.Usage#CA2208;-Microsoft.Usage#CA2235;-Microsoft.Usage#CA2237;-Microsoft.Usage#CA2232;-Microsoft.Usage#CA2223;-Microsoft.Usage#CA2211;-Microsoft.Usage#CA2233;-Microsoft.Usage#CA2225;-Microsoft.Usage#CA2226;-Microsoft.Usage#CA2231;-Microsoft.Usage#CA2224;-Microsoft.Usage#CA2218;-Microsoft.Usage#CA2234;-Microsoft.Usage#CA2241;-Microsoft.Usage#CA2239;-Microsoft.Usage#CA2200;-Microsoft.Usage#CA1801;-Microsoft.Usage#CA2205;-Microsoft.Usage#CA2230;-Microsoft.Naming#CA1718;-Microsoft.Naming#CA1720;-Microsoft.Naming#CA1700;-Microsoft.Naming#CA1712;-Microsoft.Naming#CA1713;-Microsoft.Naming#CA1709;-Microsoft.Naming#CA1708;-Microsoft.Naming#CA1715;-Microsoft.Naming#CA1710;-Microsoft.Naming#CA1707;-Microsoft.Naming#CA1722;-Microsoft.Naming#CA1711;-Microsoft.Naming#CA1716;-Microsoft.Naming#CA1705;-Microsoft.Naming#CA1725;-Microsoft.Naming#CA1719;-Microsoft.Naming#CA1721;-Microsoft.Naming#CA1706;-Microsoft.Naming#CA1724;-Microsoft.Naming#CA1726</CodeAnalysisRules>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Win32Resource>
+    </Win32Resource>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration.Install" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="FrmDarkBase.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmDarkBase.Designer.cs">
+      <DependentUpon>FrmDarkBase.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmDateSelector.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmDateSelector.Designer.cs">
+      <DependentUpon>FrmDateSelector.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ExMonthCalendar.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="ModifyInstallParameter.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ModifyInstallParameter.Designer.cs">
+      <DependentUpon>ModifyInstallParameter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MyJson.cs" />
+    <Compile Include="MyLog.cs" />
+    <Compile Include="MyConfig.cs" />
+    <Compile Include="IQ21Cmn.cs" />
+    <Compile Include="DialysisComKM.cs" />
+    <Compile Include="DialysisComIQ21.cs" />
+    <Compile Include="IQ21Data.cs" />
+    <Compile Include="IKM.cs" />
+    <Compile Include="FrmIQ21.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmIQ21.Designer.cs">
+      <DependentUpon>FrmIQ21.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmKM8900.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmKM8900.designer.cs">
+      <DependentUpon>FrmKM8900.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmKM9000.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmKM9000.Designer.cs">
+      <DependentUpon>FrmKM9000.cs</DependentUpon>
+    </Compile>
+    <Compile Include="KM8900Data.cs" />
+    <Compile Include="KM9000Data.cs" />
+    <Compile Include="MyRest.cs" />
+    <Compile Include="FrmNkkDevice.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmNkkDevice.Designer.cs">
+      <DependentUpon>FrmNkkDevice.cs</DependentUpon>
+    </Compile>
+    <Compile Include="NkkMonDefine.cs" />
+    <Compile Include="FrmOrdSelector.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmOrdSelector.Designer.cs">
+      <DependentUpon>FrmOrdSelector.cs</DependentUpon>
+    </Compile>
+    <Compile Include="AccessorBptxtFile.cs" />
+    <Compile Include="FrmDeviceSelector.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmDeviceSelector.designer.cs">
+      <DependentUpon>FrmDeviceSelector.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmMonitoring.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmMonitoring.designer.cs">
+      <DependentUpon>FrmMonitoring.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmKurSelector.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmKurSelector.designer.cs">
+      <DependentUpon>FrmKurSelector.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="ProjectInstaller.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="ProjectInstaller.Designer.cs">
+      <DependentUpon>ProjectInstaller.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ExBtnNoFocus.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Content Include="Resources\BloodPurify.ico" />
+    <EmbeddedResource Include="FrmDarkBase.resx">
+      <DependentUpon>FrmDarkBase.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmDeviceSelector.resx">
+      <DependentUpon>FrmDeviceSelector.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmDateSelector.resx">
+      <DependentUpon>FrmDateSelector.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmMonitoring.resx">
+      <DependentUpon>FrmMonitoring.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmKurSelector.resx">
+      <DependentUpon>FrmKurSelector.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ModifyInstallParameter.resx">
+      <DependentUpon>ModifyInstallParameter.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmSigma.resx">
+      <DependentUpon>FrmSigma.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <Content Include="device.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="BloodPurify.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Include="FrmSigma.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmSigma.designer.cs">
+      <DependentUpon>FrmSigma.cs</DependentUpon>
+    </Compile>
+    <Compile Include="AppCmn.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\NKKWeight\Source\NKKCommon\NKKCommon.csproj">
+      <Project>{9e38647a-227c-4570-8e08-6bd25d0e3154}</Project>
+      <Name>NKKCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\P2045ReportApp\LayoutDesignerUtility\LayoutDesignerUtilityLib.csproj">
+      <Project>{c141aeba-cfce-4149-abed-e58bdfda67d4}</Project>
+      <Name>LayoutDesignerUtilityLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\P2045ReportApp\SignInLib\SignInLib.csproj">
+      <Project>{2751aad6-21f5-4ae5-acc7-2c4767980a30}</Project>
+      <Name>SignInLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ComDialysisDevice\ComDialysisDevice.csproj">
+      <Project>{5B4D09F5-AD65-4D4B-89B3-8FC043504092}</Project>
+      <Name>ComDialysisDevice</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TcpSocket\TcpSocket.csproj">
+      <Project>{966b65d7-3d59-4a7e-a51b-8a645070951b}</Project>
+      <Name>TcpSocket</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TcpSocket\TcpSocket.csproj">
+      <Project>{966b65d7-3d59-4a7e-a51b-8a645070951b}</Project>
+      <Name>TcpSocket</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="FrmIQ21.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>FrmIQ21.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmKM8900.resx">
+      <DependentUpon>FrmKM8900.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmKM9000.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>FrmKM9000.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmNkkDevice.resx">
+      <SubType>Designer</SubType>
+      <DependentUpon>FrmNkkDevice.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmOrdSelector.resx">
+      <DependentUpon>FrmOrdSelector.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="nkkMonDefine.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="Resources\nameDuplication.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>:無ければコピーのサンプル :echo n | copy /-Y "$(ProjectDir)device.csv" "$(TargetDir)device.csv"</PostBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

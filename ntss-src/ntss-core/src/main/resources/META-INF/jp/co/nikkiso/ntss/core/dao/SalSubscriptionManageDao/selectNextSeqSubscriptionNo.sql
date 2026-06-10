@@ -1,0 +1,1 @@
+select nextval('sal_subscription_manage_subscription_no_seq');

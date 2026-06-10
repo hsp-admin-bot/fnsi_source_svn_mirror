@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Root>
+  <Include>
+    <Section>
+     <!-- 血液型ABO (B,AB) -->
+     <Item>
+      <INI_SECTION>CONV_BLOOD_ABO_TO_FNW</INI_SECTION>
+      <LocalList type='0'>
+       <Value>
+        <Before>1</Before>
+        <After>2</After>
+       </Value>
+       <Value>
+        <Before>2</Before>
+        <After>4</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <!-- 血液型RH変換 (+, ?) -->
+     <Item>
+      <INI_SECTION>CONV_BLOOD_RH_TO_FNW</INI_SECTION> 
+      <LocalList type='0'>
+       <Value>
+        <Before>0</Before>
+        <After>1</After>
+       </Value>
+       <Value>
+        <Before>-</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <!-- 感染症変換(±)以外 -->
+     <Item>
+      <INI_SECTION>CONV_INFECTION_TO_FNW</INI_SECTION> 
+      <LocalList type='0'>
+       <Value>
+        <Before>1</Before>
+        <After>2</After>
+       </Value>
+       <Value>
+        <Before>0</Before>
+        <After>1</After>
+       </Value>
+       <Value>
+        <Before>-</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <!-- 性別変換 (0, 1)-->
+     <Item>
+      <INI_SECTION>CONV_SEX_TO_FNW</INI_SECTION> 
+      <LocalList type='0'>
+       <Value>
+        <Before>0</Before>
+        <After>1</After>
+       </Value>
+       <Value>
+        <Before>1</Before>
+        <After>2</After>
+       </Value>
+      </LocalList>
+     </Item>     
+    </Section>
+    <Individual>
+     <!-- ¥(\) を / に変換-->
+     <Item>
+      <INI_SECTION>CSI_DIALYSISREPORTSND</INI_SECTION>
+      <INI_KEY>PDF_SERVER_FOLDER</INI_KEY>
+      <PublicList>1234</PublicList>
+     </Item>
+     <Item>
+      <INI_SECTION>LOG</INI_SECTION>
+      <INI_KEY>DMP_OUTPUT_PATH</INI_KEY>
+      <PublicList>1234</PublicList>
+     </Item>
+     <Item>
+      <INI_SECTION>REPORT_INFO</INI_SECTION>
+      <INI_KEY>REPORT_OUTPUT_FORDER</INI_KEY>
+      <PublicList>1234</PublicList>
+     </Item>
+     <Item>
+      <INI_SECTION>REPORT_INFO</INI_SECTION>
+      <INI_KEY>REPORT_STORE_FORDER</INI_KEY>
+      <PublicList>1234</PublicList>
+     </Item>
+     <Item>
+      <INI_SECTION>NET_FOLDER</INI_SECTION>
+      <INI_KEY>PATH_1</INI_KEY>
+      <PublicList>1234</PublicList>
+     </Item>
+     <!-- 血液型ABO変換 (B, AB以外)-->
+     <Item>
+      <INI_SECTION>CONV_BLOOD_ABO_TO_FNW</INI_SECTION>
+      <INI_KEY>1</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>0</Before>
+        <After>1</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_BLOOD_ABO_TO_FNW</INI_SECTION>
+      <INI_KEY>2</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>1</Before>
+        <After>2</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_BLOOD_ABO_TO_FNW</INI_SECTION>
+      <INI_KEY>3</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>3</Before>
+        <After>4</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_BLOOD_ABO_TO_FNW</INI_SECTION>
+      <INI_KEY>4</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>2</Before>
+        <After>3</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_BLOOD_ABO_TO_FNW</INI_SECTION>
+      <INI_KEY>?</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>-</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_BLOOD_ABO_TO_FNW</INI_SECTION>
+      <INI_KEY>7</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>1</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_BLOOD_ABO_TO_FNW</INI_SECTION>
+      <INI_KEY>8</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>3</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_BLOOD_ABO_TO_FNW</INI_SECTION>
+      <INI_KEY>9</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>2</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_BLOOD_ABO_TO_FNW</INI_SECTION>
+      <INI_KEY>A</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>0</Before>
+        <After>1</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_BLOOD_ABO_TO_FNW</INI_SECTION>
+      <INI_KEY>Ａ</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>0</Before>
+        <After>1</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <!-- 入外区分変換 (2, 3) -->
+     <Item>
+      <INI_SECTION>CONV_INOUT_TO_FNW</INI_SECTION>
+      <INI_KEY>2</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>1</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_INOUT_TO_FNW</INI_SECTION>
+      <INI_KEY>3</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>1</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <!-- 感染症変換(±) -->
+     <Item>
+      <INI_SECTION>CONV_INFECTION_TO_FNW</INI_SECTION>
+      <INI_KEY>(±)</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>1</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_INFECTION_TO_FNW</INI_SECTION>
+      <INI_KEY>（±）</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>1</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <!-- 検査前後区分変換 (Z1, Z2) -->
+     <Item>
+      <INI_SECTION>CONV_EXAMIN_ORDER_CLASS_TO_FNW</INI_SECTION>
+      <INI_KEY>Z1</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>0</Before>
+        <After>1</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_EXAMIN_ORDER_CLASS_TO_FNW</INI_SECTION>
+      <INI_KEY>Z2</INI_KEY>
+      <LocalList type='0'>
+       <Value>
+        <Before>1</Before>
+        <After>2</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <!-- 性別変換 (3 -> 2) -->
+     <Item>
+      <INI_SECTION>CONV_SEX_TO_FNW</INI_SECTION>
+      <INI_KEY>3</INI_KEY>
+      <Key2>2</Key2>
+      <LocalList type='0'>
+       <Value>
+        <Before>-</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <!-- 性別変換（電子カルテ） -->
+     <Item>
+      <INI_SECTION>CONV_SEX_TO_KARTE</INI_SECTION>
+      <INI_KEY>-</INI_KEY>
+      <Key2>0</Key2>
+      <LocalList type='0'>
+       <Value>
+        <Before>-</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_SEX_TO_KARTE</INI_SECTION>
+      <INI_KEY>0</INI_KEY>
+      <Key2>1</Key2>
+      <LocalList type='0'>
+       <Value>
+        <Before>1</Before>
+        <After>0</After>
+       </Value>
+      </LocalList>
+     </Item>
+     <Item>
+      <INI_SECTION>CONV_SEX_TO_KARTE</INI_SECTION>
+      <INI_KEY>1</INI_KEY>
+      <Key2>2</Key2>
+      <LocalList type='0'>
+       <Value>
+        <Before>2</Before>
+        <After>1</After>
+       </Value>
+      </LocalList>
+     </Item>
+    </Individual>
+  </Include>
+  <Exclude>
+   <!-- 除外 -->
+   <Individual>
+     <Item>
+      <INI_SECTION>CONV_SEX_TO_FNW</INI_SECTION>
+      <INI_KEY>2</INI_KEY>
+     </Item>
+   </Individual>
+  </Exclude>
+  
+  <PublicValueMappingList>	
+    <PublicList name="1234" type="1">	
+    <Value>
+     <Before>\</Before>
+     <After>/</After>
+    </Value>
+    </PublicList>
+  </PublicValueMappingList>
+</Root>

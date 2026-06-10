@@ -1,0 +1,151 @@
+{
+  "chart": {
+    "marginRight": 50,
+    "marginLeft": 45,
+    "width": 800,
+    "height": 500,
+    "animation": false
+  },
+  "exporting": {
+    "enabled": false
+  },
+  "time": { "useUTC": false },
+  "credits": { "enabled": false },
+  "title": {
+    "text": ""
+  },
+  "xAxis": {
+    "type": "datetime",
+    "labels": {
+      "format": "{value:%H:%M}"
+    },
+    "gridLineWidth": 1
+  },
+  "yAxis": [
+    {
+      "title": {
+        "text": "Ht[%]",
+        "margin": 2
+      },
+      "min": #Y1From#,
+      "max": #Y1To#,
+      "alignTicks": false,
+      "labels": {
+        "align": "left",
+        "x": -28,
+        "style": { "width": "50px" },
+        "format": "{value:.1f}"
+      }
+    },
+    {
+      "title": {
+        "text" : "血圧[mmHg]/脈拍[bpm]",
+        "margin": 2
+      },
+      "min": #Y2From#,
+      "max": #Y2To#,
+      "alignTicks": false,
+      "opposite": true,
+      "labels": {
+        "align": "right",
+        "x": 45,
+        "style": { "width": "50px" },
+        "format": "{value:.1f}"
+      }
+    }
+  ],
+  "legend": {
+    "layout": "horizontal",
+    "align": "left",
+    "verticalAlign": "top",
+    "floating": false,
+    "itemWidth": 100,
+    "x": 20,
+    "y": -5
+  },
+  "plotOptions": {
+    "series": {
+      "marker": { "enabled": true },
+      "animation": false
+    }
+  },
+  "series": [
+    {
+      "type": "line",
+      "name": "Ht",
+      "color": "#99FFFF",
+      "data": [#ht#],
+      "yAxis": 0
+    },
+    {
+      "type": "line",
+      "name": "最高血圧",
+      "color": "#FF9933",
+      "data": [#sysBP#],
+      "yAxis": 1
+    },
+     {
+      "type": "line",
+      "name": "最低血圧",
+      "color": "#009911",
+      "data": [#diaBP#],
+      "yAxis": 1
+    },
+    {
+      "type": "line",
+      "name": "脈拍",
+      "color": "#FF0011",
+      "data": [#pulse#],
+      "yAxis": 1
+    },
+    {
+      "type": "scatter",
+      "name": "ΔBV初期化",
+      "color": "#00FF00",
+      "data": [#event1#],
+      "yAxis": 1
+    },
+     {
+      "type": "scatter",
+      "name": "除水停止",
+      "color": "#008000",
+      "data": [#event2#],
+      "yAxis": 1
+    },
+     {
+      "type": "scatter",
+      "name": "除水開始",
+      "color": "#00FFFF",
+      "data": [#event3#],
+      "yAxis": 1
+    },
+     {
+      "type": "scatter",
+      "name": "再循環率測定開始",
+      "color": "#008080",
+      "data": [#event4#],
+      "yAxis": 1
+    },
+     {
+      "type": "scatter",
+      "name": "再循環率測定終了",
+      "color": "#FF00FF",
+      "data": [#event5#],
+      "yAxis": 1
+    },
+     {
+      "type": "scatter",
+      "name": "その他",
+      "color": "#800080",
+      "data": [#event99#],
+      "yAxis": 1
+    },
+     {
+      "type": "scatter",
+      "name": "複数イベント",
+      "color": "#808080",
+      "data": [#event100#],
+      "yAxis": 1
+    }
+  ]
+}

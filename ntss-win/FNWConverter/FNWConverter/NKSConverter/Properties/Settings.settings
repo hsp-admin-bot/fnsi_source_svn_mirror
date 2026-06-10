@@ -1,0 +1,183 @@
+<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="NKSConverter.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="TraceFolder" Type="System.String" Scope="User">
+      <Value Profile="(Default)">.\Log</Value>
+    </Setting>
+    <Setting Name="TraceSize" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">10000000</Value>
+    </Setting>
+    <Setting Name="TraceNumber" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">2000</Value>
+    </Setting>
+    <Setting Name="TraceSpan" Type="System.TimeSpan" Scope="User">
+      <Value Profile="(Default)">14.00:00:00</Value>
+    </Setting>
+    <Setting Name="TraceIsZip" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="ErrorFolder" Type="System.String" Scope="User">
+      <Value Profile="(Default)">.\Log</Value>
+    </Setting>
+    <Setting Name="ErrorSize" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">10000000</Value>
+    </Setting>
+    <Setting Name="ErrorNumber" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">2000</Value>
+    </Setting>
+    <Setting Name="ErrorSpan" Type="System.TimeSpan" Scope="User">
+      <Value Profile="(Default)">14.00:00:00</Value>
+    </Setting>
+    <Setting Name="ErrorIsZip" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="Encoding" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Shift-JIS</Value>
+    </Setting>
+    <Setting Name="DefaultExportFolderPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">.\Export</Value>
+    </Setting>
+    <Setting Name="isSimpleConvertValueDirect" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="ZipFilePassword" Type="System.String" Scope="User">
+      <Value Profile="(Default)">password</Value>
+    </Setting>
+    <Setting Name="ChunkSize" Type="System.String" Scope="User">
+      <Value Profile="(Default)">1000</Value>
+    </Setting>
+    <Setting Name="chkSelectAllSpan" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="chkExclusion" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="chkbBloodCircuit" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="chkbPunctureA" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="chkbPunctureV" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="chkbPunctureSN" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="cmbSeriesCd" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="txtChunkSize" Type="System.String" Scope="User">
+      <Value Profile="(Default)">10</Value>
+    </Setting>
+    <Setting Name="dtpStartDate" Type="System.DateTime" Scope="User">
+      <Value Profile="(Default)">1900-01-01</Value>
+    </Setting>
+    <Setting Name="btnDeleteTable_Visible" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="OraConnStr" Type="System.String" Scope="User">
+      <Value Profile="(Default)">User Id=nkk;Password=nkk;Data Source=127.0.0.1:1521/nkkfn3;Pooling=yes;Max Pool Size=30;Min Pool Size=5;Connection Lifetime=0;</Value>
+    </Setting>
+    <Setting Name="maxFileSize" Type="System.String" Scope="User">
+      <Value Profile="(Default)">500</Value>
+    </Setting>
+    <Setting Name="isDiff" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="param" Type="System.String" Scope="User">
+      <Value Profile="(Default)">diff</Value>
+    </Setting>
+    <Setting Name="uploadServPathKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)">uploadServPath</Value>
+    </Setting>
+    <Setting Name="multipartKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)">uploadFiles</Value>
+    </Setting>
+    <Setting Name="ConvertRestWebServerPort" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="btnDeleteConvTable_Visible" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="DefaultExportFolderPathLen" Type="System.String" Scope="User">
+      <Value Profile="(Default)">30</Value>
+    </Setting>
+    <Setting Name="dialysisChunkSize" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">4</Value>
+    </Setting>
+    <Setting Name="dialysisThreadSize" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">4</Value>
+    </Setting>
+    <Setting Name="ConvertRestFileUploadUrlFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/uploadfile</Value>
+    </Setting>
+    <Setting Name="ConvertRestCheckConnection" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/checkDBConnection</Value>
+    </Setting>
+    <Setting Name="ConverPatMongo" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/copyPatMongo?facilityCd={2}&amp;tableName={3}</Value>
+    </Setting>
+    <Setting Name="ConvertLogFileUploadUrlFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/upload</Value>
+    </Setting>
+    <Setting Name="ConvertRestDeleteTableJobUrlFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/deleteTableJob</Value>
+    </Setting>
+    <Setting Name="ConvertLogin" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/login</Value>
+    </Setting>
+    <Setting Name="ConvertRestExecuteUrlFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/execute</Value>
+    </Setting>
+    <Setting Name="ConvertRestDeleteConvTableJobUrlFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/deleteConvertTableJob</Value>
+    </Setting>
+    <Setting Name="ConvertRestTableStatusUrlFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/tableStatus</Value>
+    </Setting>
+    <Setting Name="ConvertRestStatusUrlFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/status</Value>
+    </Setting>
+    <Setting Name="ConvertRestTableLogUrlFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/tableStatusForLog</Value>
+    </Setting>
+    <Setting Name="ConvertRestExecuteReStartUrlFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/executeRestart</Value>
+    </Setting>
+    <Setting Name="ConvertRestWebServerIp" Type="System.String" Scope="User">
+      <Value Profile="(Default)">http://127.0.0.1:8084</Value>
+    </Setting>
+    <Setting Name="ConvertRestStopJobUrlFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/stop</Value>
+    </Setting>
+    <Setting Name="ConvertgetMstFacilityUrlFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/getMstFacility</Value>
+    </Setting>
+    <Setting Name="ConvertUpdateMstFacilityUrlFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/updateMstFacility</Value>
+    </Setting>
+    <Setting Name="TraceFile" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ConvertTool_TRACE_FNW-FNWSi-Converter</Value>
+    </Setting>
+    <Setting Name="ErrorFile" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ConvertTool_ERROR</Value>
+    </Setting>
+    <Setting Name="ConvertHealthCheck" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/health/check</Value>
+    </Setting>
+    <Setting Name="ConvergetOrdMainFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/getOrdMain</Value>
+    </Setting>
+    <Setting Name="ConvertRestInputFilePath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">/var/lib/ntss-convert/CopySQL</Value>
+    </Setting>
+    <Setting Name="uploadServPathValue" Type="System.String" Scope="User">
+      <Value Profile="(Default)">/var/lib/ntss-convert/CopySQL</Value>
+    </Setting>
+    <Setting Name="ConvertgetPatLatestNo" Type="System.String" Scope="User">
+      <Value Profile="(Default)">{0}{1}/job/convert/getPatLatestNo</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

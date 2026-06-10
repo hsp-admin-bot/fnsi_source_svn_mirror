@@ -1,0 +1,115 @@
+select
+  ord_no,
+  pat_id,
+  fn_pat_id,
+  treat_date,
+  treat_week,
+  facility_cd,
+  facility_name,
+  ind_va_cd,
+  ind_treatment_cd,
+  ind_treatment_name,
+  ind_kur_cd,
+  ind_kur_name,
+  ind_treat_start_time,
+  ind_bed_cd,
+  ind_bed_name,
+  ind_schedule_user_info,
+  ind_cond_info,
+  ind_medi_info,
+  ind_equip_info,
+  ind_ind_comment_info,
+  ind_tare_info,
+  ind_off_water_info,
+  ind_device_set_info,
+  rst_fn_dialysis_no,
+  rst_relation_dialysis_no,
+  rst_edition,
+  rst_is_update_edition,
+  rst_input_class,
+  rst_dialysis_state,
+  rst_treatment_cd,
+  rst_treatment_name,
+  rst_kur_cd,
+  rst_kur_name,
+  rst_bed_cd,
+  rst_bed_name,
+  rst_machine_no,
+  rst_machine_name,
+  rst_cond_send_date,
+  rst_accept_date,
+  rst_start_date,
+  rst_end_date,
+  rst_return_home_date,
+  rst_in_out_class,
+  rst_dialysis_cnt,
+  rst_ward_cd,
+  rst_ward_name,
+  rst_course_cd,
+  rst_course_name,
+  rst_puncture_user_info,
+  rst_return_user_info,
+  rst_charge_user_info,
+  rst_blood_circulate_total,
+  rst_running_time,
+  rst_kt_v,
+  rec_set_date,
+  send_ctl_no,
+  blood_purifier_name,
+  pull_leave_amount,
+  rst_cond_info,
+  rst_medi_info,
+  rst_equip_info,
+  rst_ind_comment_info,
+  rst_tare_info,
+  rst_off_water_info,
+--   add 10196 by kangjie 20240130 start del
+--   rst_device_set_info,
+--   add 10196 by kangjie 20240130 end del
+  rst_weight_info,
+--   add 10196 by kangjie 20240130 start del
+--   rst_vital_info,
+--   add 10196 by kangjie 20240130 end del
+  rst_complaint_info,
+  rst_treatment_info,
+  rst_treat_staff_info,
+  rst_rounds_info,
+  is_del,
+  up_date,
+  reg_date,
+  rst_dw,
+  weight_scale_no,
+  treat_type,
+  is_confirm,
+  ind_dw,
+  rst_purification_cnt,
+  addition_info,
+  up_ind_user_id,
+  up_user_id,
+  rst_edition_date,
+  cur_edition_date
+from
+  ord_main B
+ where
+/*%if null != facilityCd */
+  B.facility_cd = /*facilityCd*/'000000'
+/*%end*/
+   and
+  B.rst_dialysis_state = '0'
+and
+/*%if null != treatDate */
+  B.treat_date  = /*treatDate*/'30001212'
+/*%end*/
+AND
+/*%if null != treatWeek */
+  B.treat_week  = /*treatWeek*/'30001212'
+/*%end*/
+AND
+/*%if null != indKurCd */
+  B.ind_kur_cd  = /*indKurCd*/'0'
+/*%end*/
+AND
+/*%if null != indBedCd */
+  B.ind_bed_cd  = /*indBedCd*/'0'
+/*%end*/
+;

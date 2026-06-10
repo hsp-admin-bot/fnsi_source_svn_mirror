@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<rootNode>
+  <tableInfo>
+    <name>患者検査結果</name>
+    <convertKind>PERIOD</convertKind>
+    <xmlConfigName>PAT_EXAMIN_HST-pat_exam_main</xmlConfigName>
+    <fnwTableName>PAT_EXAMIN_HST</fnwTableName>
+    <ntssTableName>pat_exam_main</ntssTableName>
+    <fnwPk>KEY</fnwPk>
+    <mstSelectorCode></mstSelectorCode>
+    <mstSelectorName></mstSelectorName>
+    <sqlForTool>
+		WITH CONVERT_HISTORY AS(
+		select * from sync_convert_history a
+		inner join sync_convert_history_dtl b
+		on (a.seq_no=b.seq_no) where table_kind = 'EXM'
+		),HST_DETAIL AS(
+		SELECT a.PATID,MIN(REG_DATE) REG_DATE,MAX(UP_DATE) UP_DATE,REG_EXAM_DATE,REG_ORDER_CLASS from PAT_EXAMIN_HST_DETAIL a
+		INNER JOIN PAT_INDEX_INFO c on a.PATID=c.PATID and PAT_STATUS='0'
+		GROUP BY a.PATID,REG_EXAM_DATE,REG_ORDER_CLASS
+		)
+		{NoWITHIndTimePeriod}
+		select
+		a.PATID||','|| TO_CHAR(a.REG_DATE,'yyyy/mm/dd hh24:mi:ss') ||','|| TO_CHAR(a.REG_EXAM_DATE,'yyyy/mm/dd hh24:mi:ss') ||','||a.REG_ORDER_CLASS as KEY,
+		a.PATID,
+		a.PATID as FN_PAT_ID,
+		'[]' as ORDER_LABEL_INFO,
+		EXAM_DATE,
+		TO_CHAR(a.REG_EXAM_DATE,'yyyy-mm-dd hh24:mi:ss') as REG_EXAM_DATE,
+		case a.REG_ORDER_CLASS
+		when '0' then '1'
+		when '1' then '2'
+		when '2' then '0' end as REG_ORDER_CLASS,
+		DATA_GEN_CLASS,
+		DEL_FLG,
+		1 as EXAM_STATUS,
+		'' as EXAM_SET_CD,
+		'0' as IS_ORDER,
+		d.UP_DATE,
+		d.REG_DATE
+		from PAT_EXAMIN_HST a {IndTimePeriodWhere}
+		INNER JOIN HST_DETAIL d
+		on a.PATID = d.PATID and a.REG_ORDER_CLASS=d.REG_ORDER_CLASS
+		and a.REG_EXAM_DATE = d.REG_EXAM_DATE
+		where not exists(select * from PAT_EXAMIN_HST b where a.PATID=b.PATID and a.REG_EXAM_DATE=b.REG_EXAM_DATE and a.REG_ORDER_CLASS=b.REG_ORDER_CLASS and a.REG_EXAM_DATE=b.REG_EXAM_DATE and a.UP_DATE&lt;b.UP_DATE)
+      and exists(select * from PAT_INDEX_INFO c where a.PATID=c.PATID and PAT_STATUS='0')
+      {sqlForSpecifyPeriod}
+      {sqlForExclusiveOutputted}
+      {sqlForSync}
+      order by a.PATID,a.REG_DATE,a.REG_EXAM_DATE,a.REG_ORDER_CLASS
+    </sqlForTool>
+    <sqlForSync>
+      and {0}
+    </sqlForSync>
+    <sqlForSyncTableAlias>a</sqlForSyncTableAlias>
+    <sqlForSpecifyPeriod>
+      and a.EXAM_DATE >= :START_DATE and a.EXAM_DATE &lt;:END_DATE
+    </sqlForSpecifyPeriod>
+    <sqlForExclusiveOutputted>
+		and not exists(
+		select * from CONVERT_HISTORY ch
+		where ch.facility_cd=:facility_cd
+		{sqlForSync}
+		and a.patid=ch.CONVERTTS
+		and ch.table_kind = 'EXM'
+		and a.EXAM_DATE >= ch.start_date
+		and a.EXAM_DATE &lt; ch.end_date + 1)
+    </sqlForExclusiveOutputted>
+    
+    <child>
+      <xmlConfigName>PAT_EXAMIN_HST_DETAIL-pat_exam_main-exam_result_info</xmlConfigName>
+      <fnwTableName>PAT_EXAMIN_HST_DETAIL</fnwTableName>
+      <parentPk>KEY</parentPk>
+      <childPk>KEY</childPk>
+      <jsonName>exam_result_info</jsonName>
+      <sqlForTool>
+		  WITH MST_EXAM_ITEM_SUB AS ( SELECT p.DATA_TYPE,p.UNIT,p.NORMAL_VALUE_UPPER,p.NORMAL_VALUE_LOWER,p.EXAM_ITEM_CD,p.REG_DATE,n.DISP_FLG FROM MST_EXAM_ITEM p
+		  INNER JOIN MST_EXAM_ITEM_SUB_NEW n ON ( p.EXAM_ITEM_CD = n.EXAM_ITEM_CD AND p.REG_DATE = n.REG_DATE)
+		  AND SERIES_CD='{SERIES_CD}'
+		  )
+		  select
+		  a.PATID||','||TO_CHAR(a.REG_DATE,'yyyy/mm/dd hh24:mi:ss')||','||TO_CHAR(a.REG_EXAM_DATE,'yyyy/mm/dd hh24:mi:ss')||','||a.REG_ORDER_CLASS as KEY,
+		  a.REG_EXAM_DATE,
+		  a.EXAM_ITEM_CODE,
+		  a.EXAM_ITEM_NAME,
+		  a.EXAM_RST,
+		  a.EXAM_CLASS_RST,
+		  a.COMMENTS,
+		  m.DATA_TYPE,
+		  m.UNIT,
+		  m.NORMAL_VALUE_UPPER,
+		  m.NORMAL_VALUE_LOWER,
+		  eh.EXAM_DATE,
+		  row_number() over (
+		  partition by a.PATID,a.REG_DATE,a.REG_EXAM_DATE,a.REG_ORDER_CLASS
+		  order by a.PATID,a.REG_DATE,a.REG_EXAM_DATE,a.REG_ORDER_CLASS,a.EXAM_ITEM_CODE) as DISP_ORDER
+		  from PAT_EXAMIN_HST_DETAIL a
+		  inner join PAT_EXAMIN_HST eh on(
+		  a.PATID=eh.PATID
+		  and a.REG_DATE=eh.REG_DATE
+		  and a.REG_EXAM_DATE=eh.REG_EXAM_DATE
+		  and a.REG_ORDER_CLASS=eh.REG_ORDER_CLASS)
+		  left outer join MST_EXAM_ITEM_SUB m on(a.EXAM_ITEM_CODE=m.EXAM_ITEM_CD)
+		  where not exists(select * from PAT_EXAMIN_HST_DETAIL b where a.PATID=b.PATID and a.REG_DATE=b.REG_DATE and a.REG_EXAM_DATE=b.REG_EXAM_DATE and a.REG_ORDER_CLASS=b.REG_ORDER_CLASS and a.EXAM_ITEM_CODE=b.EXAM_ITEM_CODE and a.UP_DATE&lt;b.UP_DATE)
+		  and exists(select * from PAT_INDEX_INFO c where a.PATID=c.PATID and PAT_STATUS='0')
+		  {sqlForSpecifyPeriod}
+		  {sqlForExclusiveOutputted}
+		  {sqlForSync}
+		  order by a.PATID,a.REG_DATE,a.REG_EXAM_DATE,a.REG_ORDER_CLASS,a.EXAM_ITEM_CODE
+	  </sqlForTool>
+      <sqlForSync>
+        and {0}
+      </sqlForSync>
+      <sqlForSyncTableAlias>a</sqlForSyncTableAlias>
+      <sqlForSpecifyPeriod>
+        and eh.EXAM_DATE >= :START_DATE and eh.EXAM_DATE &lt;:END_DATE
+	  </sqlForSpecifyPeriod>
+      <sqlForExclusiveOutputted>
+      </sqlForExclusiveOutputted>
+    </child>
+  </tableInfo>
+</rootNode>

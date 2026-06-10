@@ -1,0 +1,1 @@
+select nextval('mst_pat_search_detail_search_cd_seq');

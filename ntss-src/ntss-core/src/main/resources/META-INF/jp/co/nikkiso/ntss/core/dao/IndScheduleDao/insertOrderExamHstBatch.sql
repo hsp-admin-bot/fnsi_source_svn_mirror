@@ -1,0 +1,63 @@
+INSERT INTO pat_exam_main_hst (
+    exam_main_cd,
+    pat_id,
+    facility_cd,
+    ord_no,
+    fn_pat_id,
+    reg_exam_date,
+    reg_order_class,
+    exam_status,
+    order_comment,
+    order_exam_set_info,
+    exam_order_info,
+    order_label_info,
+    data_gen_class,
+    result_exam_date,
+    result_comment,
+    exam_result_info,
+    cop_order_no1,
+    cop_order_no2,
+    is_lock,
+    ind_user_id,
+    is_del,
+    reg_date,
+    reg_staff,
+    up_date,
+    up_staff,
+    is_order,
+    phy_ord_class)
+VALUES
+    /*%for  patExamMainHst : patExamMainHstList*/
+(
+    /* patExamMainHst.examMainCd*/0,
+    /* patExamMainHst.patId*/0,
+    /* patExamMainHst.facilityCd*/'000000',
+    /* patExamMainHst.ordNo*/0,
+    /* patExamMainHst.fnPatId*/null,
+    /* patExamMainHst.regExamDate*/null,
+    /* patExamMainHst.regOrderClass*/null,
+    /* patExamMainHst.examStatus*/null,
+    /* patExamMainHst.orderComment*/null,
+    /* patExamMainHst.orderExamSetInfo*/null,
+    /* patExamMainHst.examOrderInfo*/null,
+    /* patExamMainHst.orderLabelInfo*/null,
+    /* patExamMainHst.dataGenClass*/null,
+    /* patExamMainHst.resultExamDate*/null,
+    /* patExamMainHst.resultComment*/null,
+    /* patExamMainHst.examResultInfo*/null,
+    /* patExamMainHst.copOrderNo1*/null,
+    /* patExamMainHst.copOrderNo2*/null,
+    /* patExamMainHst.isLock*/null,
+    /* patExamMainHst.indUserId*/null,
+    /* patExamMainHst.isDel*/null,
+    current_timestamp,
+    /* patExamMainHst.regStaff*/null,
+    current_timestamp,
+    /* patExamMainHst.upStaff*/null,
+    /* patExamMainHst.isOrder*/null,
+    /* patExamMainHst.phy_ord_class*/null
+)
+/*%if patExamMainHst_has_next */
+/*# "," */
+/*%end*/
+/*%end*/

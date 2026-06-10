@@ -1,0 +1,61 @@
+spring:
+  datasource:
+    default:
+      jdbc-url: jdbc:postgresql://localhost:5433/ntsstest_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkktest5
+      password: nkktest5
+      type: com.zaxxer.hikari.HikariDataSource
+      maximumPoolSize: 1
+    personal:
+      jdbc-url: jdbc:postgresql://localhost:5433/ntsstest_db6?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkktest6
+      password: nkktest6
+      type: com.zaxxer.hikari.HikariDataSource
+      maximumPoolSize: 1
+    auth:
+      jdbc-url: jdbc:postgresql://localhost:5433/ntsstest_db4?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkktest4
+      password: nkktest4
+      type: com.zaxxer.hikari.HikariDataSource
+      maximumPoolSize: 1
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+  application:
+    name: ntss-m-notice
+  jmx:
+    default-domain: ntss-m-notice
+
+doma:
+  dialect: postgres
+
+securityporicy:
+  accesskeycheck: true
+
+spring.thymeleaf.cache: false
+
+logging:
+  level:
+    org.springframework.transaction.interceptor: TRACE
+
+cloud:
+  aws:
+    region:
+      auto: false
+      static: ap-northeast-1 # 東京リージョン
+    credentials:
+      accessKey: AKIAJDQJBT6P6C2NMPYA
+      secretKey: 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
+
+ntss:
+  m-notice:
+    mail:
+      sesRegion: us-west-2
+      fromAddress: NTSS-Support@nikkiso.co.jp
+    viewer:
+      url: 'http://localhost:8080/ntss-admin-web/#/?key=%s&FUNC=00103&FACILITYCD=%s&MACHINETYPECD=%s&MACHINESERIAL=%s'
+    nikkiso-facility-cd: nkknkk
+    nikkiso-user-mail-address-regex: ^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@nikkiso\.(co|biz\.ezweb\.ne)\.jp$

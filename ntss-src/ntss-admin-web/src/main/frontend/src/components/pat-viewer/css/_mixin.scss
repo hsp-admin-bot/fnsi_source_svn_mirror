@@ -1,0 +1,58 @@
+/**
+ * 使い回す共通スタイル定義(変数)
+ */
+
+/* 項目名列(一覧の最左端列)の縦文字部分の幅 */
+$title-vertical-width: 35px;
+
+/* 項目名列(一覧の最左端列)の幅 */
+$title-horizon-width: 135px;
+
+
+/** 使い回す共通スタイル定義(css) */
+
+/* 文字の縦書きスタイル(左から右方向) */
+@mixin vertical-writing-lr {
+  -webkit-writing-mode: vertical-lr;
+  -ms-writing-mode: tb-lr;
+  writing-mode: vertical-lr;
+}
+
+/* 項目名列(一覧の最左端列)の幅 */
+@mixin title-width {
+  max-width: $title-vertical-width + $title-horizon-width;
+  min-width: $title-vertical-width + $title-horizon-width;
+}
+
+/* 文字の縦書きセルの幅 */
+@mixin title-vertical-width {
+  max-width: $title-vertical-width;
+  min-width: $title-vertical-width;
+}
+
+/* 文字の縦書きセルの幅 */
+@mixin title-horizon-width {
+  max-width: $title-horizon-width;
+  min-width: $title-horizon-width;
+}
+
+/* 表の罫線のスタイル定義 */
+@mixin list-border-style {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  -o-box-sizing: border-box;
+  box-sizing: border-box;
+  border-bottom: solid 1px var(--ntss-border-color);
+  border-right: solid 1px var(--ntss-border-color);
+}
+
+/* 改行の定義 */
+@mixin word-break {
+  word-break: break-all;
+}
+
+/* divの中央揃え定義 */
+@mixin div-center {
+  align-items: center;
+  display: flex;
+}

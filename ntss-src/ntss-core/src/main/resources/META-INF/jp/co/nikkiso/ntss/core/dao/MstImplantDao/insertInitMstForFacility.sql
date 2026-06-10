@@ -1,0 +1,31 @@
+insert into mst_implant (
+  facility_cd,
+  implant_name,
+  is_disp,
+  is_del,
+  reg_date,
+  up_date
+) values (
+  /*facilityCd*/null,
+  'ペースメーカー',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義手',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義足',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+);

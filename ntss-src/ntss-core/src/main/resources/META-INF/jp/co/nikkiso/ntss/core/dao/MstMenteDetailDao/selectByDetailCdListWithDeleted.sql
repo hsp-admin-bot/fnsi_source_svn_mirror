@@ -1,0 +1,20 @@
+SELECT
+  mainte_detail_cd,
+  facility_cd,
+  mainte_category_cd,
+  mainte_content_1,
+  mainte_content_2,
+  mainte_content_3,
+  is_disp,
+  is_del,
+  reg_date,
+  up_date,
+  edition_no,
+  mainte_class,
+  ans_pattern,
+  is_cmt,
+  ini_text
+FROM
+  mst_mainte_detail
+WHERE
+  mainte_detail_cd in /* detailCdList */(0)

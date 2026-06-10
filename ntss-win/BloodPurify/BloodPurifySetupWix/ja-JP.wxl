@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  BloodPurify（特殊浄化通信アプリ）インストーラー 日本語ローカライゼーション
+  WiX v4 WXL ファイル（LayoutDesignerSetupWix と同構成）
+
+  目的:
+    Package Name="FNWSi 特殊浄化通信アプリ" およびデスクトップショートカット名は
+    変更せず、インストールウィザード画面の表示名のみ "FNWSi Blood Purify" に統一する。
+-->
+<WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl"
+                 Culture="ja-JP"
+                 Codepage="932">
+
+  <!-- .NET Framework 要件エラーメッセージ（将来 Product.wxs で !(loc.xxx) 参照用） -->
+  <String Id="LaunchConditionNetFx45"
+          Value=".NET Framework 4.5 以上が必要です。&#xA;&#xA;下記 URL からインストール後、再度セットアップを実行してください。&#xA;https://go.microsoft.com/fwlink/?LinkId=225704" />
+
+  <!-- ウィザード画面タイトル（英字製品名） -->
+  <String Id="AdvancedWelcomeEulaDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="BrowseDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="CancelDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="CustomizeDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="DiskCostDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="ErrorDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="ExitDialog_Title" Value="FNWSi Blood Purify" />
+  <String Id="FatalError_Title" Value="FNWSi Blood Purify" />
+  <String Id="FeaturesDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="FilesInUse_Title" Value="FNWSi Blood Purify" />
+  <String Id="InstallDirDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="InstallScopeDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="InvalidDirDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="LicenseAgreementDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="MaintenanceTypeDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="MaintenanceWelcomeDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="MsiRMFilesInUse_Title" Value="FNWSi Blood Purify" />
+  <String Id="OutOfDiskDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="OutOfRbDiskDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="PrepareDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="ProgressDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="ResumeDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="SetupTypeDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="UserExit_Title" Value="FNWSi Blood Purify" />
+  <String Id="VerifyReadyDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="WaitForCostingDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="WelcomeDlg_Title" Value="FNWSi Blood Purify" />
+  <String Id="WelcomeEulaDlg_Title" Value="FNWSi Blood Purify" />
+
+  <!-- 本文・ラベル（アプリ表示名: FNWSi Blood Purify） -->
+  <String Id="WelcomeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Blood Purify セットアップ ウィザードへようこそ。" />
+  <String Id="WelcomeDlgDescription" Value="セットアップでは、FNWSi Blood Purify をコンピュータにインストールします。続行する場合は［次へ］を、セットアップを終了する場合は［キャンセル］をクリックしてください。" />
+  <!-- PrepareDlg は本文とは別に PrepareDlgTitle が [ProductName] を参照する（WelcomeDlgTitle だけでは準備画面が直らない） -->
+  <String Id="PrepareDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Blood Purify セットアップ ウィザードへようこそ。" />
+  <String Id="ResumeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Blood Purify セットアップ ウィザードの再開" />
+  <String Id="InstallDirDlgFolderLabel" Value="FNWSi Blood Purify のインストール先:" />
+  <String Id="MaintenanceTypeDlgRemoveText" Value="FNWSi Blood Purify をコンピュータから削除します。" />
+  <String Id="ProgressDlgTextInstalling" Value="FNWSi Blood Purify をインストールしています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleInstalling" Value="{\WixUI_Font_Title}FNWSi Blood Purify のインストール中" />
+  <String Id="ProgressDlgTextChanging" Value="FNWSi Blood Purify を変更しています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleChanging" Value="{\WixUI_Font_Title}FNWSi Blood Purify を変更中" />
+  <String Id="ProgressDlgTextRepairing" Value="FNWSi Blood Purify を修復しています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleRepairing" Value="{\WixUI_Font_Title}FNWSi Blood Purify を修復中" />
+  <String Id="ProgressDlgTextRemoving" Value="FNWSi Blood Purify を削除しています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleRemoving" Value="{\WixUI_Font_Title}FNWSi Blood Purify を削除中" />
+  <String Id="ProgressDlgTextUpdating" Value="FNWSi Blood Purify を更新しています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleUpdating" Value="{\WixUI_Font_Title}FNWSi Blood Purify を更新中" />
+  <String Id="VerifyReadyDlgInstallTitle" Value="{\WixUI_Font_Title}FNWSi Blood Purify のインストール準備完了。" />
+  <String Id="VerifyReadyDlgInstallText" Value="FNWSi Blood Purify をインストールするには［インストール］をクリックしてください。設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgInstallDescription" Value="FNWSi Blood Purify をインストールするには［インストール］をクリックしてください。設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="ExitDialogTitle" Value="{\WixUI_Font_Title}FNWSi Blood Purify セットアップ ウィザードが完了しました" />
+  <String Id="ExitDialogDescription" Value="セットアップ ウィザードを終了するには、完了ボタンをクリックします。" />
+  <String Id="UserExitTitle" Value="{\WixUI_Font_Title}FMWSi Blood Purify セットアップ ウィザードは中断されました" />
+  <String Id="UserExitDescription1" Value="FMWSi Blood Purify のセットアップが中断されました。" />
+  <String Id="UserExitDescription2" Value="システムは変更されていません。このプログラムを後でインストールするには、インストーラーを再実行してください。セットアップ ウィザードを終了するには、［完了］ボタンをクリックします。" />
+  <String Id="UserExitDescription" Value="FMWSi Blood Purify のセットアップが中断されました。システムは変更されていません。このプログラムを後でインストールするには、インストーラーを再実行してください。セットアップ ウィザードを終了するには、［完了］ボタンをクリックします。" />
+  <String Id="UserExitText" Value="FMWSi Blood Purify のセットアップが中断されました。システムは変更されていません。このプログラムを後でインストールするには、インストーラーを再実行してください。セットアップ ウィザードを終了するには、［完了］ボタンをクリックします。" />
+
+  <!-- 保守モード（再インストール）で [ProductName] 由来の表示を固定 -->
+  <String Id="MaintenanceWelcomeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Blood Purify セットアップ ウィザードへようこそ。" />
+  <String Id="MaintenanceWelcomeDlgDescription" Value="セットアップ ウィザードでは、FNWSi Blood Purify の機能を変更したり、修復したり、削除したりできます。続行するには［次へ］をクリックしてください。" />
+  <String Id="MaintenanceTypeDlgRepairText" Value="FNWSi Blood Purify を修復します。" />
+  <String Id="MaintenanceTypeDlgChangeText" Value="FNWSi Blood Purify の機能を変更します。" />
+  <String Id="VerifyReadyDlgRepairTitle" Value="{\WixUI_Font_Title}FNWSi Blood Purify の修復準備完了。" />
+  <String Id="VerifyReadyDlgRemoveTitle" Value="{\WixUI_Font_Title}FNWSi Blood Purify の削除準備完了。" />
+  <String Id="VerifyReadyDlgRepairText" Value="FNWSi Blood Purify のインストールを修復するには［修復］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgRemoveText" Value="コンピュータから FNWSi Blood Purify を削除するには［削除］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgChangeText" Value="FNWSi Blood Purify の機能を変更するには［変更］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgUpdateText" Value="FNWSi Blood Purify を更新するには［更新］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgRepairDescription" Value="FNWSi Blood Purify のインストールを修復するには［修復］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgRemoveDescription" Value="FNWSi Blood Purify をコンピュータから削除するには［削除］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <!-- WiX UI の実装差分に備えた互換キー -->
+  <String Id="VerifyReadyDlgDescription" Value="FNWSi Blood Purify のインストールを修復するには［修復］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgDescriptionInstall" Value="FNWSi Blood Purify をインストールするには［インストール］をクリックしてください。設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgDescriptionRepair" Value="FNWSi Blood Purify のインストールを修復するには［修復］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgDescriptionRemove" Value="FNWSi Blood Purify をコンピュータから削除するには［削除］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+
+</WixLocalization>

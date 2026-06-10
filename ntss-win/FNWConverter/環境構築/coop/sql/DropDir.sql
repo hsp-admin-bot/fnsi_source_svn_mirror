@@ -1,0 +1,2 @@
+DROP DIRECTORY FnwDumpDir;
+EXIT;

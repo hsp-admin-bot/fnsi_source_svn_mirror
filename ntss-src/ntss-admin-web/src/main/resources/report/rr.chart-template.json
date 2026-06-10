@@ -1,0 +1,66 @@
+{
+  "chart": {
+    "marginRight": 50,
+    "marginLeft": 45,
+    "width": 800,
+    "height": 500,
+    "animation": false
+  },
+  "exporting": {
+    "enabled": false
+  },
+  "time": { "useUTC": false },
+  "credits": { "enabled": false },
+  "title": {
+    "text": ""
+  },
+  "xAxis": {
+    "type": "datetime",
+    "labels": {
+      "format": "{value:%H:%M}"
+    },
+    "tickInterval": 1800000,
+    "gridLineWidth": 1
+  },
+  "yAxis": [
+    {
+      "title": {
+        "text": "[%]",
+        "margin": 2
+      },
+      "min": #YFrom#,
+      "max": #YTo#,
+      "alignTicks": false,
+      "labels": {
+        "align": "left",
+        "x": -28,
+        "style": { "width": "50px" },
+        "formart": "{value:.1f}"
+      }
+    }
+  ],
+  "legend": {
+    "layout": "horizontal",
+    "align": "left",
+    "verticalAlign": "top",
+    "floating": false,
+    "itemWidth": 100,
+    "x": 20,
+    "y": -5
+  },
+  "plotOptions": {
+    "series": {
+      "marker": { "enabled": true },
+      "animation": false
+    }
+  },
+  "series": [
+    {
+      "type": "line",
+      "name": "再循環率",
+      "color": "#99FFFF",
+      "data": [#recirculationRate#],
+      "yAxis": 0
+    }
+  ]
+}

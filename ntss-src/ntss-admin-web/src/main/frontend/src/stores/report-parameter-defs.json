@@ -1,0 +1,34 @@
+{
+  "report_parameter_defs": {
+    "description": "帳票パラメータ定義",
+    "report_parameter_items": {
+      "patId": {
+        "description": "患者ID",
+        "00601": "pat-info/selectedPatId",
+        "00602": "pat-info/selectedPatId"
+      },
+      "ordNo": {
+        "description": "オーダー番号",
+        "00601": "treatment-record/common/getOrdNo",
+        "00606": "treatment-record/common/getOrdNo",
+        "00607": "treatment-record/common/getOrdNo"
+      },
+      "date": {
+        "description": "日付（YYYYMMDD文字列）",
+        "00901": "schedule-list/getReportParamFromDate"
+      },
+      "fromDate": {
+        "description": "範囲開始日付（YYYYMMDD文字列）",
+        "00901": "schedule-list/getReportParamFromDate"
+      },
+      "toDate": {
+        "description": "範囲終了日付（YYYYMMDD文字列）",
+        "00901": "schedule-list/getReportParamToDate"
+      },
+      "machine_no": {
+        "description": "装置番号"
+
+      }
+    }
+  }
+}

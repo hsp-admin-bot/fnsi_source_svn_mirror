@@ -1,0 +1,26 @@
+INSERT INTO mst_coop_filename(
+facility_cd,
+coop_cd,
+coop_cd_index,
+coop_version,
+pdf_name,
+dump_name,
+compression_name,
+is_disp,
+is_del,
+user_id,
+reg_date,
+up_date)
+VALUES(
+/* mcfn.facilityCd */null,
+/* mcfn.coopCd*/null,
+/* mcfn.coopCdIndex*/null,
+/* mcfn.coopVersion*/'',
+/* mcfn.pdfName */null,
+/* mcfn.dumpName */null,
+/* mcfn.compressionName */null,
+/* mcfn.isDisp */'1',
+/* mcfn.isDel */'0',
+/* mcfn.userId */null,
+to_timestamp(/*mcfn.regDate*/null, 'YYYY-MM-DD HH24:MI:SS'),
+to_timestamp(/*mcfn.upDate*/null, 'YYYY-MM-DD HH24:MI:SS'))

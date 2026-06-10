@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<authority_settings>
+  <job_authority_list>
+    <fnw_job_class_cd>0</fnw_job_class_cd>
+    <!--JOB_CLASS_NAME:未設定-->
+    <user_settings>
+      {
+      "theme": 0,
+      "font_size": 1,
+      "is_disp_menu": 1,
+      "use_functions": [
+      "001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "013", "016", "017", "018"
+      ],
+      "initial_function": "001"
+      }
+    </user_settings>
+    <user_type>1</user_type>
+    <administrator>1</administrator>
+    <default_menu_settings></default_menu_settings>
+  </job_authority_list>
+  <job_authority_list>
+    <fnw_job_class_cd>1</fnw_job_class_cd>
+    <!--JOB_CLASS_NAME:医師-->
+    <user_settings>
+      {
+      "theme": 0,
+      "font_size": 1,
+      "is_disp_menu": 1,
+      "use_functions": [
+      "001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "013", "016", "017", "018"
+      ],
+      "initial_function": "001"
+      }
+    </user_settings>
+    <user_type>1</user_type>
+    <administrator>1</administrator>
+    <default_menu_settings></default_menu_settings>
+  </job_authority_list>
+  <job_authority_list>
+    <fnw_job_class_cd>2</fnw_job_class_cd>
+    <!--JOB_CLASS_NAME:看護士-->
+    <user_settings>
+      {
+      "theme": 0,
+      "font_size": 1,
+      "is_disp_menu": 1,
+      "use_functions": [
+      "001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "013", "016", "017", "018"
+      ],
+      "initial_function": "001"
+      }
+    </user_settings>
+    <user_type>1</user_type>
+    <administrator>1</administrator>
+    <default_menu_settings></default_menu_settings>
+  </job_authority_list>
+  <job_authority_list>
+    <fnw_job_class_cd>3</fnw_job_class_cd>
+    <!--JOB_CLASS_NAME:臨床工学技士-->
+    <user_settings>
+      {
+      "theme": 0,
+      "font_size": 1,
+      "is_disp_menu": 1,
+      "use_functions": [
+      "001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "013", "016", "017", "018"
+      ],
+      "initial_function": "001"
+      }
+    </user_settings>
+    <user_type>1</user_type>
+    <administrator>1</administrator>
+    <default_menu_settings></default_menu_settings>
+  </job_authority_list>
+  <job_authority_list>
+    <fnw_job_class_cd>4</fnw_job_class_cd>
+    <!--JOB_CLASS_NAME:日機装-->
+    <user_settings>
+      {
+      "theme": 0,
+      "font_size": 1,
+      "is_disp_menu": 1,
+      "use_functions": [
+      "001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "013", "016", "017", "018"
+      ],
+      "initial_function": "001"
+      }
+    </user_settings>
+    <user_type>1</user_type>
+    <administrator>1</administrator>
+    <default_menu_settings></default_menu_settings>
+  </job_authority_list>
+  <!--XMLファイルに設定がないjob_class_cdの場合のデフォルト設定-->
+  <job_authority_list_default>
+    <fnw_job_class_cd></fnw_job_class_cd>
+    <user_settings>
+      {
+      "theme": 0,
+      "font_size": 1,
+      "is_disp_menu": 1,
+      "use_functions": [
+      "001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "013", "016", "017", "018"
+      ],
+      "initial_function": "001"
+      }
+    </user_settings>
+    <user_type>1</user_type>
+    <administrator>1</administrator>
+    <default_menu_settings></default_menu_settings>
+  </job_authority_list_default>
+  <admin_user_authority_list>
+    <fnw_staff_cd>admin</fnw_staff_cd>
+    <user_settings>
+      {
+      "theme": 0,
+      "font_size": 1,
+      "is_disp_menu": 1,
+      "use_functions": [
+      "001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "013", "016", "017", "018"
+      ],
+      "initial_function": "001"
+      }
+    </user_settings>
+    <user_type>1</user_type>
+    <administrator>1</administrator>
+  </admin_user_authority_list>
+</authority_settings>

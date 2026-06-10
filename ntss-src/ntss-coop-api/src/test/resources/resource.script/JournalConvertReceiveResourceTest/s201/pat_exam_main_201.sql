@@ -1,0 +1,56 @@
+DELETE FROM pat_exam_main
+WHERE facility_cd = 'F_h201';
+
+INSERT INTO
+  pat_exam_main(
+  pat_id,
+  facility_cd,
+  ord_no,
+  fn_pat_id,
+  reg_exam_date,
+  reg_order_class,
+  exam_status,
+  order_comment,
+  order_exam_set_info,
+  exam_order_info,
+  order_label_info,
+  data_gen_class,
+  result_exam_date,
+  result_comment,
+  exam_result_info,
+  cop_order_no1,
+  cop_order_no2,
+  is_lock,
+  ind_user_id,
+  is_del,
+  reg_date,
+  reg_staff,
+  up_date,
+  up_staff
+  )
+VALUES(
+  /*entity.patId*/1000201,
+  /*entity.facilityCd*/'F_h201',
+  /*entity.ordNo*/null,
+  /*entity.fnPatId*/'',
+  to_timestamp(/*entity.regExamDate*/'2020-03-24', 'YYYY-MM-DD HH24:MI:SS'),
+  /*entity.regOrderClass*/'',
+  /*entity.examStatus*/'',
+  /*entity.orderComment*/'',
+  /*entity.orderExamSetInfo*/'{}',
+  /*entity.examOrderInfo*/'{}',
+  /*entity.orderLabelInfo*/'{}',
+  /*entity.dataGenClass*/'',
+  /*entity.resultExamDate*/null,
+  /*entity.resultComment*/'',
+  /*entity.examResultInfo*/'{}',
+  /*entity.copOrderNo1*/123123,
+  /*entity.copOrderNo2*/null,
+  /*entity.isLock*/'',
+  /*entity.indUserId*/null,
+  /*entity.isDel*/'0',
+  to_timestamp(/*entity.regDate*/'2020-03-24', 'YYYY-MM-DD HH24:MI:SS'),
+  /*entity.regStaff*/null,
+  to_timestamp(/*entity.upDate*/'2020-03-24', 'YYYY-MM-DD HH24:MI:SS'),
+  /*entity.upStaff*/null
+);

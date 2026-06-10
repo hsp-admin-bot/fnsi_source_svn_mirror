@@ -1,0 +1,367 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{400786B7-83EA-4707-9D6E-FE3C292E51E2}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>CoopSettingTool.App</RootNamespace>
+    <AssemblyName>FNWSiCoopSettingTool</AssemblyName>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Resources\CoopSettingTool.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="log4net, Version=2.0.17.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\log4net.2.0.17\lib\\net45\\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="MaterialSkin">
+      <HintPath>..\packages\MaterialSkin.0.2.1\lib\MaterialSkin.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Ninject">
+      <HintPath>..\packages\Ninject.3.3.4\lib\net45\Ninject.dll</HintPath>
+    </Reference>
+    <Reference Include="NLog">
+      <HintPath>..\packages\NLog.4.6.8\lib\net45\NLog.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration.Install" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.DirectoryServices" />
+    <Reference Include="System.Linq.Dynamic, Version=1.0.6132.35681, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Linq.Dynamic.1.0.8\lib\net40\System.Linq.Dynamic.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Controllers\Implements\BaseController.cs" />
+    <Compile Include="Controllers\Implements\CoopLayoutDetailSettingController.cs" />
+    <Compile Include="Controllers\Implements\CoopDistributeSettingController.cs" />
+    <Compile Include="Controllers\Implements\CoopLayoutSettingController.cs" />
+    <Compile Include="Controllers\Implements\CoopFacilitySettingController.cs" />
+    <Compile Include="Controllers\Implements\CoopInstallController.cs" />
+    <Compile Include="Controllers\Implements\CoopSettingController.cs" />
+    <Compile Include="Controllers\Implements\IfEdgeSettingController.cs" />
+    <Compile Include="Controllers\Implements\LoginController.cs" />
+    <Compile Include="Controllers\Implements\MainMenuController.cs" />
+    <Compile Include="Controllers\Implements\OrderNumberSettingController.cs" />
+    <Compile Include="Controllers\Implements\ReleaseInfoController.cs" />
+    <Compile Include="Controllers\Implements\SelectFacilityController.cs" />
+    <Compile Include="Controllers\Interfaces\IBaseController.cs" />
+    <Compile Include="Controllers\Interfaces\ICoopLayoutDetailSettingController.cs" />
+    <Compile Include="Controllers\Interfaces\ICoopDistributeSettingController.cs" />
+    <Compile Include="Controllers\Interfaces\ICoopLayoutSettingController.cs" />
+    <Compile Include="Controllers\Interfaces\ICoopFacilitySettingController.cs" />
+    <Compile Include="Controllers\Interfaces\ICoopInstallController.cs" />
+    <Compile Include="Controllers\Interfaces\ICoopSettingController.cs" />
+    <Compile Include="Controllers\Interfaces\IIfEdgeSettingController.cs" />
+    <Compile Include="Controllers\Interfaces\ILoginController.cs" />
+    <Compile Include="Controllers\Interfaces\IMainMenuController.cs" />
+    <Compile Include="Controllers\Interfaces\IOrderNumberSettingController.cs" />
+    <Compile Include="Controllers\Interfaces\IReleaseInfoController.cs" />
+    <Compile Include="Controllers\Interfaces\ISelectFacilityController.cs" />
+    <Compile Include="Dialogues\XmlEditDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogues\XmlEditDialog.Designer.cs">
+      <DependentUpon>XmlEditDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Dialogues\JsonEditDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogues\JsonEditDialog.Designer.cs">
+      <DependentUpon>JsonEditDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Dialogues\CoopCdSelectDialogue.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogues\CoopCdSelectDialogue.Designer.cs">
+      <DependentUpon>CoopCdSelectDialogue.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Dialogues\GifImage.cs" />
+    <Compile Include="Dialogues\JsonSerializerOptions.cs" />
+    <Compile Include="Dialogues\LoadingDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogues\LoadingDialog.Designer.cs">
+      <DependentUpon>LoadingDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Dialogues\ModifyConfigDialogue.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogues\ModifyConfigDialogue.Designer.cs">
+      <DependentUpon>ModifyConfigDialogue.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Dialogues\OtpInputDialogue.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialogues\OtpInputDialogue.Designer.cs">
+      <DependentUpon>OtpInputDialogue.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DI\CompositionRoot.cs" />
+    <Compile Include="Enums\MessageTypeEnum.cs" />
+    <Compile Include="Models\Implements\BaseModel.cs" />
+    <Compile Include="Models\Implements\CoopLayoutDetailSettingModel.cs" />
+    <Compile Include="Models\Implements\CoopDistributeSettingModel.cs" />
+    <Compile Include="Models\Implements\CoopLayoutSettingModel.cs" />
+    <Compile Include="Models\Implements\CoopFacilitySettingModel.cs" />
+    <Compile Include="Models\Implements\CoopInstallModel.cs" />
+    <Compile Include="Models\Implements\CoopSettingModel.cs" />
+    <Compile Include="Models\Implements\IfEdgeSettingModel.cs" />
+    <Compile Include="Models\Implements\OrderNumberSettingModel.cs" />
+    <Compile Include="Models\Implements\ReleaseInfoModel.cs" />
+    <Compile Include="Models\Implements\SelectFacilityModel.cs" />
+    <Compile Include="Models\Implements\LoginModel.cs" />
+    <Compile Include="Models\Implements\MainMenuModel.cs" />
+    <Compile Include="Models\Interfaces\IBaseModel.cs" />
+    <Compile Include="Models\Interfaces\ICoopLayoutDetailSettingModel.cs" />
+    <Compile Include="Models\Interfaces\ICoopDistributeSettingModel.cs" />
+    <Compile Include="Models\Interfaces\ICoopLayoutSettingModel.cs" />
+    <Compile Include="Models\Interfaces\ICoopFacilitySettingModel.cs" />
+    <Compile Include="Models\Interfaces\ICoopInstallModel.cs" />
+    <Compile Include="Models\Interfaces\ICoopSettingModel.cs" />
+    <Compile Include="Models\Interfaces\IIfEdgeSettingModel.cs" />
+    <Compile Include="Models\Interfaces\IOrderNumberSettingModel.cs" />
+    <Compile Include="Models\Interfaces\IReleaseInfoModel.cs" />
+    <Compile Include="Models\Interfaces\ISelectFacilityModel.cs" />
+    <Compile Include="Models\Interfaces\ILoginModel.cs" />
+    <Compile Include="Models\Interfaces\IMainMenuModel.cs" />
+    <Compile Include="Module\ApplicationModule.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="ProjectInstaller.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="ProjectInstaller.designer.cs">
+      <DependentUpon>ProjectInstaller.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Views\Implements\BaseView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\CoopLayoutDetailSettingView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\CoopLayoutDetailSettingView.Designer.cs">
+      <DependentUpon>CoopLayoutDetailSettingView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Implements\CoopDistributeSettingView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\CoopDistributeSettingView.Designer.cs">
+      <DependentUpon>CoopDistributeSettingView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Implements\CoopLayoutSettingView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\CoopLayoutSettingView.Designer.cs">
+      <DependentUpon>CoopLayoutSettingView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Implements\CoopInstallView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\CoopInstallView.Designer.cs">
+      <DependentUpon>CoopInstallView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Implements\CoopSettingView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\CoopSettingView.Designer.cs">
+      <DependentUpon>CoopSettingView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Implements\IfEdgeSettingView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\IfEdgeSettingView.Designer.cs">
+      <DependentUpon>IfEdgeSettingView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Implements\LoginView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\LoginView.designer.cs">
+      <DependentUpon>LoginView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Implements\MainMenuView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\MainMenuView.Designer.cs">
+      <DependentUpon>MainMenuView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Implements\CoopFacilitySettingView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\CoopFacilitySettingView.Designer.cs">
+      <DependentUpon>CoopFacilitySettingView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Implements\OrderNumberSettingView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\OrderNumberSettingView.Designer.cs">
+      <DependentUpon>OrderNumberSettingView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Implements\ReleaseInfoView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\ReleaseInfoView.Designer.cs">
+      <DependentUpon>ReleaseInfoView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Implements\SelectFacilityView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\Implements\SelectFacilityView.Designer.cs">
+      <DependentUpon>SelectFacilityView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Interfaces\ICoopLayoutDetailSettingView.cs" />
+    <Compile Include="Views\Interfaces\ICoopDistributeSettingView.cs" />
+    <Compile Include="Views\Interfaces\ICoopLayoutSettingView.cs" />
+    <Compile Include="Views\Interfaces\ICoopFacilitySettingView.cs" />
+    <Compile Include="Views\Interfaces\ICoopInstallView.cs" />
+    <Compile Include="Views\Interfaces\ICoopSettingView.cs" />
+    <Compile Include="Views\Interfaces\IIfEdgeSettingView.cs" />
+    <Compile Include="Views\Interfaces\IMainMenuView.cs" />
+    <Compile Include="Views\Interfaces\IBaseView.cs" />
+    <Compile Include="Views\Interfaces\ILoginView.cs" />
+    <Compile Include="Views\Interfaces\IOrderNumberSettingView.cs" />
+    <Compile Include="Views\Interfaces\IReleaseInfoView.cs" />
+    <Compile Include="Views\Interfaces\ISelectFacilityView.cs" />
+    <EmbeddedResource Include="Dialogues\XmlEditDialog.resx">
+      <DependentUpon>XmlEditDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Dialogues\JsonEditDialog.resx">
+      <DependentUpon>JsonEditDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Dialogues\CoopCdSelectDialogue.resx">
+      <DependentUpon>CoopCdSelectDialogue.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Dialogues\LoadingDialog.resx">
+      <DependentUpon>LoadingDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Dialogues\ModifyConfigDialogue.resx">
+      <DependentUpon>ModifyConfigDialogue.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Dialogues\OtpInputDialogue.resx">
+      <DependentUpon>OtpInputDialogue.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <EmbeddedResource Include="Views\Implements\BaseView.resx">
+      <DependentUpon>BaseView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\Implements\CoopLayoutDetailSettingView.resx">
+      <DependentUpon>CoopLayoutDetailSettingView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\Implements\CoopDistributeSettingView.resx">
+      <DependentUpon>CoopDistributeSettingView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\Implements\CoopLayoutSettingView.resx">
+      <DependentUpon>CoopLayoutSettingView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\Implements\CoopInstallView.resx">
+      <DependentUpon>CoopInstallView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\Implements\CoopSettingView.resx">
+      <DependentUpon>CoopSettingView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\Implements\IfEdgeSettingView.resx">
+      <DependentUpon>IfEdgeSettingView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\Implements\LoginView.resx">
+      <DependentUpon>LoginView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\Implements\MainMenuView.resx">
+      <DependentUpon>MainMenuView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\Implements\CoopFacilitySettingView.resx">
+      <DependentUpon>CoopFacilitySettingView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\Implements\OrderNumberSettingView.resx">
+      <DependentUpon>OrderNumberSettingView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\Implements\ReleaseInfoView.resx">
+      <DependentUpon>ReleaseInfoView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\Implements\SelectFacilityView.resx">
+      <DependentUpon>SelectFacilityView.cs</DependentUpon>
+    </EmbeddedResource>
+    <None Include="Assets\Help\manual.pdf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\imgs\search-icon.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CoopSettingTool.LogHelper\CoopSettingTool.Log.csproj">
+      <Project>{56c0fe55-0ab2-4443-ba0a-872b3802ee0f}</Project>
+      <Name>CoopSettingTool.Log</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CoopSettingTool.Service\CoopSettingTool.Service.csproj">
+      <Project>{298abf82-ded2-4923-90c5-61f7f5c78d94}</Project>
+      <Name>CoopSettingTool.Service</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\imgs\loading.gif">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\CoopSettingTool.ico" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

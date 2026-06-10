@@ -1,0 +1,9 @@
+server:
+  port: 8090
+  servlet:
+    context-path: /ntss-client-comm
+
+ntss:
+  client-comm:
+    serverType: 1
+     

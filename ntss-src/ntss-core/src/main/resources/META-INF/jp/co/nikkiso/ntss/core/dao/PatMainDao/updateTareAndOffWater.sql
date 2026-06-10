@@ -1,0 +1,11 @@
+update pat_main
+set
+/*%if null != tareInfo*/
+  tare_info = jsonb_merge_recursive(tare_info::jsonb, /*tareInfo*/'{}'::jsonb),
+/*%end*/
+/*%if null != offWaterInfo*/
+  off_water_info = jsonb_merge_recursive(off_water_info::jsonb, /*offWaterInfo*/'{}'::jsonb),
+/*%end*/
+  up_date = CURRENT_TIMESTAMP
+where
+  pat_id = /*patId*/1

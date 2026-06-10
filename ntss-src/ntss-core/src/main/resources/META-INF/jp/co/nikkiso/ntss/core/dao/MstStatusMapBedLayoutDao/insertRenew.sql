@@ -1,0 +1,22 @@
+insert into mst_status_map_bed_layout(
+  facility_cd,
+  layout_name,
+  bed_layout,
+  background_image,
+  is_del,
+  is_disp,
+  is_home_dialysis,
+  reg_date,
+  up_date
+)
+values(
+  /*param.facilityCd*/'999999',
+  /*param.layoutName*/'',
+  /*param.bedLayout*/'{}'::jsonb,
+  /*param.backgroundImage*/E'\\000'::bytea,
+  '0',
+  '1',
+  /*param.isHomeDialysis*/'0',
+  /*param.regDate*/null,
+  /*param.upDate*/null
+);

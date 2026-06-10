@@ -1,0 +1,75 @@
+<SsiData Type="PAT_INF"><!-- 患者属性情報 -->
+  <PatientData><!-- 患者情報 -->
+    <PatientID>99990507</PatientID>
+    <PatientName>SSI テスト</PatientName>
+    <PatientKanaName>エスエスアイ テスト</PatientKanaName>
+    <PatinentSex>0</PatinentSex>
+    <PatientBirthDay>19900801</PatientBirthDay>
+
+    <PatientEtcInfo><!-- 患者付属情報 -->
+      <PatientBloodTypeABO>4</PatientBloodTypeABO>
+      <PatientBloodTypeRH>1</PatientBloodTypeRH>
+      <PostNumber>001-0002</PostNumber>
+      <Address>東京都千代田区霞が関</Address>
+      <Tel>999-9999</Tel>
+      <Comment>患者情報コメント</Comment>
+    </PatientEtcInfo>
+
+    <PatientDIALYSISInfo><!-- 患者透析情報 -->
+      <DIALYSISStartYMD></DIALYSISStartYMD>
+      <GENSIKKAN Code="1991"></GENSIKKAN>
+      <GENSIKKANYMD></GENSIKKANYMD>
+      <TENKI></TENKI>
+      <TENKIYMD></TENKIYMD>
+      <DIEDOF Code="1"></DIEDOF>
+      <DOUNYU></DOUNYU><!-- 導入院所; 連携対象外 -->
+      <SYOKAI></SYOKAI><!-- 紹介院所; 連携対象外 -->
+      <Ctr></Ctr>
+      <CTR_UPDATE></CTR_UPDATE>
+      <Doctor Code="12345678"></Doctor>
+      <DialysisDoctor Code="12341234"></DialysisDoctor>
+      <DialysisNurse Code="53106812"></DialysisNurse>
+    </PatientDIALYSISInfo>
+
+    <AdmissionInfo><!-- 入院情報 -->
+      <AdmissionStatus></AdmissionStatus>
+      <Ward Code=""></Ward>
+      <InRoom Code=""></InRoom><!-- 連携対象外 -->
+      <Bed Code=""></Bed><!-- 連携対象外 -->
+      <AdmissionDate></AdmissionDate><!-- 連携対象外 -->
+      <DischargeDate></DischargeDate><!-- 連携対象外 -->
+      <AdmissionSnk Code=""></AdmissionSnk>
+      <AdmissionDoctor Code=""></AdmissionDoctor>
+    </AdmissionInfo>
+
+    <InsuranceInfo><!-- 主保険情報 -->
+      <InsuranceNumber>P1111</InsuranceNumber>
+      <InsuranceDivision>1</InsuranceDivision>
+      <InsuredSign>321</InsuredSign>
+      <InsuredNumber>123489</InsuredNumber>
+    </InsuranceInfo>
+
+    <InfectionInfo><!-- 感染症情報 -->
+      <Infection Code="C2019">
+        <Status>1</Status>
+        <Comment></Comment><!-- 連携対象外 -->
+        <Date>20200410</Date>
+      </Infection>
+    </InfectionInfo>
+
+    <AllergyInfo><!-- アレルギー情報 -->
+      <Allergy Code="872">
+        <Status>1</Status>
+        <Comment>アレルギー情報コメント</Comment>
+        <Date></Date><!-- 連携対象外 -->
+      </Allergy>
+    </AllergyInfo>
+
+    <DrugAllergyInfo><!-- 薬剤アレルギー情報 -->
+      <Drug Code="10021">
+        <Status>3</Status>
+        <Comment>薬剤アレルギー情報コメント</Comment>
+      </Drug>
+    </DrugAllergyInfo>
+  </PatientData>
+</SsiData>

@@ -1,0 +1,1 @@
+select nextval('pat_personal_main_pat_id_seq');

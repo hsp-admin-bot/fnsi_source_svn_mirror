@@ -1,0 +1,24 @@
+insert into pat_ind_approve_history 
+(
+  ord_no,
+  approve_kind,
+  approve_bef_id,
+  approve_aft_id,
+  user_id,
+  sign_type,
+  reg_date,
+  up_date,
+  facility_cd
+)
+values
+(
+  /*patIndApprove.ordNo*/null,
+  /*patIndApprove.approveKind*/null,
+  /*patIndApprove.approveBefId*/null,
+  /*patIndApprove.approveAftId*/null,
+  /*patIndApprove.userId*/null,
+  /*patIndApprove.signType*/null,
+  /*patIndApprove.regDate*/null,
+  /*patIndApprove.upDate*/null,
+  /*patIndApprove.facilityCd*/null
+)

@@ -1,0 +1,3 @@
+SELECT DIRECTORY_PATH
+FROM all_directories
+WHERE all_directories.DIRECTORY_NAME ='EX_TABLE';

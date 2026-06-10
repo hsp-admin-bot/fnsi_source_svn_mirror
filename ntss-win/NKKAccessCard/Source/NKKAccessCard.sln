@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29609.76
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKAccessCardService", "NKKAccessCardService\NKKAccessCardService.csproj", "{92AE63B8-9713-40D8-9D7B-3EA31B81BA81}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKAccessCard", "NKKAccessCard\NKKAccessCard.csproj", "{12BC2886-0EDF-43B5-9B75-0DDC9DB4CE68}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKAccessCardTool", "NKKAccessCardTool\NKKAccessCardTool.csproj", "{29D0EE11-64C3-4629-A8A0-B0A51FE45EEB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKAccessCardApp", "NKKAccessCardApp\NKKAccessCardApp.csproj", "{F4714181-EAA9-4476-8F2B-A6453C68F530}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKCommon", "..\..\NKKWeight\Source\NKKCommon\NKKCommon.csproj", "{9E38647A-227C-4570-8E08-6BD25D0E3154}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "NKKAccessCardServiceSetup", "NKKAccessCardServiceSetup\NKKAccessCardServiceSetup.vdproj", "{CA330A5D-AB70-43BF-94AD-E893D248FCE2}"
+EndProject
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "NKKAccessCardSetupWix", "NKKAccessCardSetupWix\NKKAccessCardSetupWix.wixproj", "{D3E4F5A6-B7C8-9012-ABCD-EF3456789012}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{92AE63B8-9713-40D8-9D7B-3EA31B81BA81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92AE63B8-9713-40D8-9D7B-3EA31B81BA81}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92AE63B8-9713-40D8-9D7B-3EA31B81BA81}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92AE63B8-9713-40D8-9D7B-3EA31B81BA81}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12BC2886-0EDF-43B5-9B75-0DDC9DB4CE68}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12BC2886-0EDF-43B5-9B75-0DDC9DB4CE68}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12BC2886-0EDF-43B5-9B75-0DDC9DB4CE68}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12BC2886-0EDF-43B5-9B75-0DDC9DB4CE68}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29D0EE11-64C3-4629-A8A0-B0A51FE45EEB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29D0EE11-64C3-4629-A8A0-B0A51FE45EEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29D0EE11-64C3-4629-A8A0-B0A51FE45EEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29D0EE11-64C3-4629-A8A0-B0A51FE45EEB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F4714181-EAA9-4476-8F2B-A6453C68F530}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4714181-EAA9-4476-8F2B-A6453C68F530}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4714181-EAA9-4476-8F2B-A6453C68F530}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4714181-EAA9-4476-8F2B-A6453C68F530}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA330A5D-AB70-43BF-94AD-E893D248FCE2}.Debug|Any CPU.ActiveCfg = Debug
+		{CA330A5D-AB70-43BF-94AD-E893D248FCE2}.Release|Any CPU.ActiveCfg = Release
+		{D3E4F5A6-B7C8-9012-ABCD-EF3456789012}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{D3E4F5A6-B7C8-9012-ABCD-EF3456789012}.Release|Any CPU.ActiveCfg = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {40F6CF7C-22D2-44F1-A0FE-197157DF73AA}
+	EndGlobalSection
+EndGlobal

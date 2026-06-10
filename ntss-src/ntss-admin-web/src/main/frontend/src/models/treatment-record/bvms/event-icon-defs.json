@@ -1,0 +1,14 @@
+{
+  "event_icon_defs": {
+    "description": "list of event icon",
+    "event_items": [
+      { "cd": 1, "name": "ΔBV初期化", "path": "img/treatment-record/bvms/event-icon/icon_1.png" },
+      { "cd": 2, "name": "除水停止", "path": "img/treatment-record/bvms/event-icon/icon_2.png" },
+      { "cd": 3, "name": "除水開始", "path": "img/treatment-record/bvms/event-icon/icon_3.png" },
+      { "cd": 4, "name": "再循環率測定開始", "path": "img/treatment-record/bvms/event-icon/icon_4.png" },
+      { "cd": 5, "name": "再循環率測定終了", "path": "img/treatment-record/bvms/event-icon/icon_5.png" },
+      { "cd": 99, "name": "その他", "path": "img/treatment-record/bvms/event-icon/icon_99.png" },
+      { "cd": 100, "name": "複数イベント", "path": "img/treatment-record/bvms/event-icon/icon_100.png" }
+    ]
+  }
+}

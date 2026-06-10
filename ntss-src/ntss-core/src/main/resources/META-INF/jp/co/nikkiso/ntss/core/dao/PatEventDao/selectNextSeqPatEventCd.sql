@@ -1,0 +1,1 @@
+select nextval('pat_event_pat_event_cd_seq');

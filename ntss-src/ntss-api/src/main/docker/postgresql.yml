@@ -1,0 +1,20 @@
+version: '2'
+services:
+    ntss-postgresql:
+        image: postgres:15.2
+        # volumes:
+        #     - ~/volumes/ntss/postgresql/:/var/lib/postgresql/data/
+        environment:
+            - POSTGRES_USER=ntss
+            - POSTGRES_PASSWORD=ntss
+        ports:
+            - 5432:5432
+    ntss-test-db:
+        image: postgres:15.2
+        # volumes:
+        #     - ~/volumes/ntss/postgresql/:/var/lib/postgresql/data/
+        environment:
+            - POSTGRES_USER=ntsstest
+            - POSTGRES_PASSWORD=ntsstest
+        ports:
+            - 5433:5432

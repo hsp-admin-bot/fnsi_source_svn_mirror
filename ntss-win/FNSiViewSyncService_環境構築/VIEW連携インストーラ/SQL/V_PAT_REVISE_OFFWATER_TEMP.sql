@@ -1,0 +1,76 @@
+DROP TABLE V_PAT_REVISE_OFFWATER_TEMP
+;
+CREATE TABLE V_PAT_REVISE_OFFWATER_TEMP (
+    hosppatid VARCHAR2(4000),
+    patid VARCHAR2(4000),
+    name VARCHAR2(4000),
+    ctlno VARCHAR2(4000),
+    "update" VARCHAR2(4000),
+    revisename VARCHAR2(4000),
+    reviseweight VARCHAR2(4000),
+    monupdate VARCHAR2(4000),
+    monrevisename VARCHAR2(4000),
+    monreviseweight VARCHAR2(4000),
+    tueupdate VARCHAR2(4000),
+    tuerevisename VARCHAR2(4000),
+    tuereviseweight VARCHAR2(4000),
+    wedupdate VARCHAR2(4000),
+    wedrevisename VARCHAR2(4000),
+    wedreviseweight VARCHAR2(4000),
+    thuupdate VARCHAR2(4000),
+    thurevisename VARCHAR2(4000),
+    thureviseweight VARCHAR2(4000),
+    friupdate VARCHAR2(4000),
+    frirevisename VARCHAR2(4000),
+    frireviseweight VARCHAR2(4000),
+    satupdate VARCHAR2(4000),
+    satrevisename VARCHAR2(4000),
+    satreviseweight VARCHAR2(4000),
+    sunupdate VARCHAR2(4000),
+    sunrevisename VARCHAR2(4000),
+    sunreviseweight VARCHAR2(4000),
+    isfirst VARCHAR2(4000)
+)
+ORGANIZATION EXTERNAL (
+    TYPE ORACLE_LOADER
+   DEFAULT DIRECTORY EX_TABLE
+    ACCESS PARAMETERS (
+        RECORDS DELIMITED BY '>ÅJj^q-(\r\n'
+        SKIP 1
+        NOLOGFILE
+        FIELDS TERMINATED BY ','
+        OPTIONALLY ENCLOSED BY '"'
+        (
+            hosppatid CHAR(4000),
+            patid CHAR(4000),
+            name CHAR(4000),
+            ctlno CHAR(4000),
+            "update" CHAR(4000),
+            revisename CHAR(4000),
+            reviseweight CHAR(4000),
+            monupdate CHAR(4000),
+            monrevisename CHAR(4000),
+            monreviseweight CHAR(4000),
+            tueupdate CHAR(4000),
+            tuerevisename CHAR(4000),
+            tuereviseweight CHAR(4000),
+            wedupdate CHAR(4000),
+            wedrevisename CHAR(4000),
+            wedreviseweight CHAR(4000),
+            thuupdate CHAR(4000),
+            thurevisename CHAR(4000),
+            thureviseweight CHAR(4000),
+            friupdate CHAR(4000),
+            frirevisename CHAR(4000),
+            frireviseweight CHAR(4000),
+            satupdate CHAR(4000),
+            satrevisename CHAR(4000),
+            satreviseweight CHAR(4000),
+            sunupdate CHAR(4000),
+            sunrevisename CHAR(4000),
+            sunreviseweight CHAR(4000),
+            isfirst CHAR(4000)
+        )
+    )
+    LOCATION ('V_PAT_REVISE_OFFWATER_TEMP.csv')
+);

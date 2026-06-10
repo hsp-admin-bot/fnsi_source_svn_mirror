@@ -1,0 +1,1 @@
+SELECT SETVAL('pat_personal_main_pat_id_seq', 10399);

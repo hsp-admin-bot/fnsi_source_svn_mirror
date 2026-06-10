@@ -1,0 +1,129 @@
+# -Dspring.profiles.activeの指定なし
+# これがないと登録されてるJOBが全て起動時に実行される。
+
+# 以下全て開発環境の設定にしておく。
+# -Dspring.profiles.activeの指定なしでも開発環境の設定で動作するようになるため。
+spring:
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration,
+      org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+  data:
+    mongodb:
+      host: dev-docdb-cluster.cluster-chzddp07crsf.ap-northeast-1.docdb.amazonaws.com
+      port: 27017
+      database: ntss
+      username: nkk
+      password: nkk
+      field-naming-strategy: org.springframework.data.mapping.model.SnakeCaseFieldNamingStrategy
+
+  batch:
+    chunkSize: 99999999 #ファイル単位でトランザクションをかけたいため大きい数値を設定
+    job.enabled: false
+    jdbc:
+      initialize-schema: always
+
+  task: annotation-driven
+
+  main:
+    allow-circular-references: true
+
+  # spring_batchのjob情報関連テーブル作成DB設定
+  datasource:
+    jdbc-url:
+    username: convert
+    password: convert
+    table_prefix: ntss.
+    driverClassName: org.postgresql.Driver
+    hikari:
+      auto-commit: false
+
+  servlet:
+    multipart:
+      max-file-size: 5000MB
+      max-request-size: 5000MB
+      enabled: true
+datasource:
+  h2:
+    driverClassName: org.h2.Driver
+    jdbc-url: jdbc:h2:mem:test
+    username: sa
+    password:
+  nkk4:
+    jdbc-url: jdbc:postgresql://dev-ntss-platform-service-cluster.cluster-chzddp07crsf.ap-northeast-1.rds.amazonaws.com:5432/ntss_db4
+    username: nkk4
+    password: nkk4
+    table_prefix: ntss.
+    driverClassName: org.postgresql.Driver
+  nkk5:
+    jdbc-url: jdbc:postgresql://dev-ntss-platform-service-cluster.cluster-chzddp07crsf.ap-northeast-1.rds.amazonaws.com:5432/ntss_db5
+    username: nkk5
+    password: nkk5
+    table_prefix: ntss.
+    driverClassName: org.postgresql.Driver
+  nkk6:
+    jdbc-url: jdbc:postgresql://dev-ntss-platform-service-cluster.cluster-chzddp07crsf.ap-northeast-1.rds.amazonaws.com:5432/ntss_db6
+    username: nkk6
+    password: nkk6
+    table_prefix: ntss.
+    driverClassName: org.postgresql.Driver
+  convert:
+    jdbc-url:
+    username: convert
+    password: convert
+    table_prefix: ntss.
+    driverClassName: org.postgresql.Driver
+
+nkk4_prefix: ntss.
+nkk5_prefix: ntss.
+nkk6_prefix: ntss.
+convert_prefix: ntss.
+
+csv_path: /var/log/ntss-convert/Count
+token:
+  #单ビット：分
+  token_timeout : 60
+
+#lobackのLogback-spring.xml構成のロード
+logging:
+  config: classpath:logbackConfig/Logback-spring.xml
+
+# Zipファイルのパスワード
+zip-file-config:
+  password: password
+
+# 完了したファイルの退避場所
+completed-file-config:
+  path: /var/log/ntss-convert/completed
+
+#add 2022-11-15 bug #7882 患者イベントのVA画像がコンバートされていない 孫 start
+cloud:
+  aws:
+    endpoint:
+    region:
+      auto: false
+      static: ap-northeast-1
+    stack:
+      auto: false
+
+ntss:
+  logging:
+    rolling:
+      max-history-app: 0
+  web-api:
+    set-next-pat-url: http://internal-dev-ntss-central-link-alb-766853658.ap-northeast-1.elb.amazonaws.com:8080/ntss-web-api/util/SetNextPatInfo
+    set-ord-material-save : http://internal-dev-ntss-central-link-alb-766853658.ap-northeast-1.elb.amazonaws.com:8080/ntss-web-api/convertUtil/SetOrdMaterialSave
+    set-ord-rp-material-save : http://internal-dev-ntss-central-link-alb-766853658.ap-northeast-1.elb.amazonaws.com:8080/ntss-web-api/convertUtil/setOrdRPMaterialSave
+    header-name: 'SSECCAYEK'
+    header-value: 'NTSS-NKK-ESM-TDC-YSK'
+  bbs-info:
+    s3-bucket: 'dev-ntss-s3-root-service/BBS'
+  pat-event:
+    s3-bucket: 'dev-ntss-s3-root-service/%s/PEvent'
+    cache-dir: '/opt/fnsi/cache/pat-evente'
+#add 2022-11-15 bug #7882 患者イベントのVA画像がコンバートされていない 孫 end
+---
+spring:
+  autoconfigure:
+    exclude:
+  config:
+    import: classpath:./tableSetting/tableSetting.yml

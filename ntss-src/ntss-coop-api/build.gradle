@@ -1,0 +1,170 @@
+import org.gradle.internal.os.OperatingSystem
+
+buildscript {
+  repositories {
+//    jcenter()
+    mavenLocal()
+    mavenCentral()
+    maven { url "https://start.spring.io/plugins-release" }
+    maven { url "https://start.spring.io/milestone" }
+    maven { url "https://plugins.gradle.org/m2/" }
+  }
+  dependencies {
+    classpath "org.springframework.boot:spring-boot-gradle-plugin:${spring_boot_version}"
+  }
+}
+
+apply plugin: 'maven-publish'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'war'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'idea'
+defaultTasks 'bootRun'
+
+bootJar {
+  archiveBaseName = 'ntss-coop-api'
+  mainClass = 'jp.co.nikkiso.ntss.coop_api.NtssCoopApiApplication'
+  manifest {
+    attributes 'Start-Class': 'jp.co.nikkiso.ntss.coop_api.NtssCoopApiApplication'
+  }
+  launchScript()
+}
+
+bootWar {
+  mainClass = 'jp.co.nikkiso.ntss.coop_api.NtssCoopApiApplication'
+}
+
+war {
+  enabled = true
+  archiveBaseName = 'ntss-coop-api'
+}
+
+jar {
+  enabled = true // Jarを作成する(依存元に組み込む)
+}
+
+springBoot {
+  mainClass = 'jp.co.nikkiso.ntss.coop_api.NtssCoopApiApplication'
+  buildInfo()
+}
+
+if (OperatingSystem.current().isWindows()) {
+  task pathingJar(type: Jar) {
+    dependsOn configurations.runtimeClasspath
+    archiveAppendix = 'pathing'
+
+    doFirst {
+      manifest {
+        attributes 'Class-Path': configurations.runtimeClasspath.getFiles().collect {
+          it.toURI().toString().replaceFirst(/file:\/+/, '/').replaceAll(' ', '%20')
+        }.join(' ')
+      }
+    }
+  }
+
+  bootRun {
+    dependsOn pathingJar
+    doFirst {
+      classpath = files("$buildDir/classes/java/main", "$buildDir/resources/main", pathingJar.archiveFile)
+    }
+  }
+} else {
+  bootRun {
+    jvmArgs = ["-Dspring.output.ansi.enabled=ALWAYS"]
+  }
+}
+
+ext {
+  snippetsDir = file('build/generated-snippets')
+  apiDocDir = file('build/api-docs')
+}
+
+apply from: 'gradle/eclipse.gradle'
+
+if (project.hasProperty('prod')) {
+  apply from: 'gradle/profile_prod.gradle'
+} else {
+  apply from: 'gradle/profile_dev.gradle'
+}
+
+test {
+  outputs.dir snippetsDir
+  // CI用にテスト時のprofileを設定
+  if (project.hasProperty('ci')) {
+    jvmArgs = ["-Dspring.profiles.active=ci"]
+  }
+  maxHeapSize = "1024m"
+}
+
+description = ''
+
+repositories {
+  mavenLocal()
+  mavenCentral()
+//  jcenter()
+  maven { url 'https://start.spring.io/milestone' }
+  maven { url 'https://start.spring.io/snapshot' }
+  maven { url 'https://repository.jboss.org/nexus/content/repositories/releases' }
+  maven { url 'https://oss.sonatype.org/content/repositories/releases' }
+  maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+  maven { url 'https://repo.maven.apache.org/maven2' }
+}
+
+dependencies {
+  implementation "org.springframework.boot:spring-boot-autoconfigure"
+  implementation "org.springframework.boot:spring-boot-starter-web"
+  providedRuntime "org.springframework.boot:spring-boot-starter-tomcat"
+  implementation "org.springframework.boot:spring-boot-starter-jdbc"
+  implementation "org.springframework.boot:spring-boot-starter-actuator"
+  implementation "org.springframework.boot:spring-boot-starter-websocket"
+  implementation "org.springframework.boot:spring-boot-starter-security"
+  implementation 'org.projectlombok:lombok:1.18.28'
+  annotationProcessor 'org.projectlombok:lombok:1.18.28'
+  testImplementation ("org.springframework.boot:spring-boot-starter-test") {
+    exclude group: 'com.vaadin.external.google', module: 'android-json'
+  }
+//  implementation group: "com.fasterxml.jackson.core", name: "jackson-core", version: '2.10.0'
+  implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.9'
+  implementation group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.10'
+  implementation group: 'org.apache.commons', name: 'commons-csv', version: '1.7'
+  implementation group: 'commons-beanutils', name: 'commons-beanutils', version: "${commons_beanutils_version}"
+  implementation group: 'org.apache.commons', name: 'commons-compress', version: '1.20'
+  testImplementation "org.springframework.boot:spring-boot-test"
+  testImplementation "junit:junit"
+  testImplementation "org.mockito:mockito-core"
+  implementation "org.json:json:20180813"
+  implementation project(':ntss-api')
+//  implementation 'org.mongodb:mongo-java-driver:3.10.1'
+  implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+  testCompileOnly 'org.projectlombok:lombok:1.18.28'
+  testAnnotationProcessor 'org.projectlombok:lombok:1.18.28'
+  implementation "org.springframework.boot:spring-boot-starter-aop"
+  implementation "org.seasar.doma.boot:doma-spring-boot-starter:${doma_spring_version}"
+  implementation "org.seasar.doma:doma:2.24.0"
+  annotationProcessor "org.seasar.doma:doma:2.24.0"
+  implementation "com.amazonaws:aws-java-sdk-dynamodb:${aws_sdk_v1_version}"
+  implementation "com.amazonaws:aws-java-sdk-s3:${aws_sdk_v1_version}"
+  implementation 'org.jsoup:jsoup:1.12.1'
+  implementation group: 'com.google.guava', name: 'guava', version: '27.1-jre'
+  implementation group: 'org.apache.commons', name: 'commons-collections4', version: '4.3'
+}
+
+clean { delete "target" }
+
+task cleanResources(type: Delete) { delete 'build/resources' }
+
+task wrapper(type: Wrapper) { gradleVersion = '7.2' }
+
+assemble.dependsOn bootJar
+
+tasks.withType(Test) {
+    systemProperty "file.encoding", "UTF-8"
+}
+
+// Doma2のSQLファイルをJavaのコンパイル前にコピーしておく
+// SQLファイルが存在するかしないとJavaのコンパイル時にSQLファイルが存在するかのチェックでエラーになるため。
+processResources.destinationDir = compileJava.destinationDir
+compileJava.dependsOn processResources
+
+processResources.dependsOn cleanResources,bootBuildInfo
+bootBuildInfo.mustRunAfter cleanResources

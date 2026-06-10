@@ -1,0 +1,17 @@
+cloud:
+  aws:
+    endpoint: http://localhost:4568
+    credentials:
+      accessKey: ntss
+      secretKey: ntss
+
+ntss:
+  logging:
+    appender:
+      file-name: /opt/ntss-admin-web/log/{0}/{0}.log
+    rolling:
+      file-name-pattern:  /opt/ntss-admin-web/log/{0}/{0}_%d'{'yyyyMMdd'}'.log
+      max-history: 14
+  admin-web:
+    data-gathering:
+      url: 'http://internal-ntss-central-link-alb-1207475684.ap-northeast-1.elb.amazonaws.com:8080/data_gathering/api/request/device'

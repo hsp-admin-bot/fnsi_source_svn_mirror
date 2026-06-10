@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SsiData Type="PAT_INF">
+  <!-- 患者属性情報 -->
+  <PatientData>
+    <!-- 患者情報 -->
+    <PatientID>
+      <!-- 患者ＩＤ ゼロサプレスなしの8桁 -->
+      <!-- ＊必須項目とする -->
+    </PatientID>
+    <PatientName>
+      <!-- 氏名(漢字) FNWの氏名として取り込む。 -->
+    </PatientName>
+    <PatientKanaName>
+      <!-- カナ氏名 セイとメイの間には半角カナ -->
+    </PatientKanaName>
+    <PatinentSex>
+      <!-- 性別 "M"：男性／"F"：女性／"O"：不明 (3.1.3.2参照) -->
+    </PatinentSex>
+    <PatientBirthDay>
+      <!-- 生年月日 "YYYYMMDD"形式 (*1) -->
+    </PatientBirthDay>
+    <PatientEtcInfo>
+      <!-- 患者付属情報 -->
+      <PatientBloodTypeABO>
+        <!-- 血液型(ABO型) "０"：未定／"１"：A／"２"：B／ ３"：O／"４"：AB (3.1.3.3参照) -->
+      </PatientBloodTypeABO>
+      <PatientBloodTypeRH>
+        <!-- 血液型(RH型) "０"：未定／"１"：Rh+／"２"：Rh- (3.1.3.4参照) -->
+      </PatientBloodTypeRH>
+      <PostNumber>
+        <!-- 郵便番号 本人連絡先に取り込むものとする。 -->
+      </PostNumber>
+      <Address>
+        <!-- 住所 本人連絡先に取り込むものとする。 -->
+      </Address>
+      <Tel>
+        <!-- 電話番号 本人連絡先に取り込むものとする。 -->
+      </Tel>
+      <Comment>
+        <!-- 患者コメント 患者メモに取り込むものとする。 ＊上書きによる登録とする。-->
+      </Comment>
+    </PatientEtcInfo>
+    <PatientDIALYSISInfo>
+      <!-- 患者透析情報 -->
+      <DIALYSISStartYMD>
+        <!-- 透析導入日 "YYYYMMDD"形式 (*1) -->
+      </DIALYSISStartYMD>
+      <GENSIKKAN Code="">
+        <!-- 原疾患 (3.1.3.5参照) -->
+        <!-- Code 原疾患コード -->
+      </GENSIKKAN>
+      <GENSIKKANYMD>
+        <!-- 原疾患発病日 "YYYYMMDD"形式 (*1) -->
+      </GENSIKKANYMD>
+      <TENKI>
+        <!-- 転帰 (3.1.3.6参照) -->
+      </TENKI>
+      <TENKIYMD>
+        <!-- 転帰日 (3.1.3.6参照) -->
+      </TENKIYMD>
+      <DIEDOF Code="">
+        <!-- 死亡原因 (3.1.3.6参照) -->
+        <!-- Code 死亡原因コード -->
+      </DIEDOF>
+      <DOUNYU>
+        <!-- 導入院所 ＊取込対象外とする。(施設コードが無い為) -->
+      </DOUNYU>
+      <SYOKAI>
+        <!-- 紹介院所 ＊取込対象外とする。(施設コードが無い為) -->
+      </SYOKAI>
+      <Ctr>
+        <!-- CTR値 (3.1.3.12参照) 本タグは、<Ctr>もしくは、<CTR>の両データ対象とする。<Ctr>を優先として取り込むものとする。 -->
+      </Ctr>
+      <CTR_UPDATE>
+        <!-- CTR更新日 "YYYYMMDD"形式 (*1) 検査日時として取り込む。但し、時間は”00:00”とする。 -->
+      </CTR_UPDATE>
+      <Doctor Code="">
+        <!-- 患者主治医 担当医１、担当医２に取り込む。 取り込み元情報の切り替えは連携設定で指定する。 -->
+        <!-- Code 医師コード (3.1.3.13　参照) -->
+      </Doctor>
+      <DialysisDoctor Code="">
+        <!-- 透析主治医 アルファベットを含む -->
+        <!-- Code 医師コード ＊スタッフマスタに登録されていない場合、担当医設定は行わないものとする。 -->
+      </DialysisDoctor>
+      <DialysisNurse Code="">
+        <!-- 透析看護師 担当スタッフ１に取り込む。 ＊スタッフマスタに登録されていない場合、担当スタッフ設定は行わないものとする。 -->
+        <!-- Code 看護師コード (3.1.3.14　参照) -->
+      </DialysisNurse>
+    </PatientDIALYSISInfo>
+    <AdmissionInfo>
+      <!-- 入院情報 -->
+      <AdmissionStatus>
+        <!-- 入院属性 "0"：未入院／"1"：入院中／ "2"：入院予約中 ＊”入院予約中” は未入院とする。 (3.1.3.7参照) -->
+      </AdmissionStatus>
+      <Ward Code="">
+        <!-- 病棟名称 入院中の場合のみ取り込むものとする -->
+        <!-- Code 病棟コード ＊病棟マスタに存在しない場合は、マスタ登録を行うものとする。 -->
+      </Ward>
+      <InRoom Code="">
+        <!-- 病室名称 ＊取込対象外とする。 -->
+        <!-- Code 病室コード ＊取込対象外とする。 -->
+      </InRoom>
+      <Bed Code="">
+        <!-- ベッド名称 ＊取込対象外とする。 -->
+        <!-- Code ベッドコード ＊取込対象外とする。 -->
+      </Bed>
+      <AdmissionDate>
+        <!-- 入院(予定)日 "YYYYMMDD"形式 (*1) ＊取込対象外とする。 -->
+      </AdmissionDate>
+      <DischargeDate>
+        <!-- 退院(予定)日 "YYYYMMDD"形式 (*1) ＊取込対象外とする。 -->
+      </DischargeDate>
+      <AdmissionSnk Code="">
+        <!-- 入院診療科 -->
+        <!-- Code 診療科コード ＊診療科マスタに存在しない場合は、マスタ登録を行うものとする。 -->
+      </AdmissionSnk>
+      <AdmissionDoctor Code="">
+        <!-- 入院主治医 担当医１、担当医２に取り込む。 取り込み元情報の切り替えは連携設定で指定する。 (3.1.3.13　参照) アルファベットを含む -->
+        <!-- Code 医師コード ＊スタッフマスタに登録されていない場合、担当医設定は行わないものとする。 -->
+      </AdmissionDoctor>
+    </AdmissionInfo>
+    <InsuranceInfo>
+      <!-- 主保険情報 -->
+      <InsuranceNumber>
+        <!-- 保険者番号 -->
+      </InsuranceNumber>
+      <InsuranceDivision>
+        <!-- 本人区分 "1"：本人／"3"：家族 ＊本人は、被保険者として登録する。 ＊家族は、被扶養者として登録する。 (3.1.3.8参照) -->
+      </InsuranceDivision>
+      <InsuredSign>
+        <!-- 被保険者記号 -->
+      </InsuredSign>
+      <InsuredNumber>
+        <!-- 被保険者番号 -->
+      </InsuredNumber>
+    </InsuranceInfo>
+    <InfectionInfo>
+      <!-- 感染症情報 -->
+      <Infection Code="">
+        <!-- 感染症名称 -->
+        <!-- Code 感染症コード アルファベットを含む ＊感染症マスタに存在しない場合は、マスタ登録を行うものとする。 -->
+        <Status>
+          <!-- 状態 "0"：未検査／"1"：+／"2"：-／"3"：± (3.1.3.9参照) -->
+        </Status>
+        <Comment>
+          <!-- コメント ＊取込対象外とする。 -->
+        </Comment>
+        <Date>
+          <!-- 開始日付 "YYYYMMDD"形式 (*1) 検査日として取り込む -->
+        </Date>
+      </Infection>
+    </InfectionInfo>
+    <AllergyInfo>
+      <!-- アレルギー情報 -->
+      <Allergy Code="">
+        <!-- 禁忌名称 (3.1.3.11参照) -->
+        <!-- Code 感染症コード アルファベットを含む ＊マスタ登録は行わないものとする。 -->
+        <Status>
+          <!-- 状態 "0"：未検査／"1"：+／"2"：-／"3"：± "+"のもののみ取り込む。 (3.1.3.9参照) ※要素が存在しない場合は"+"として扱う -->
+        </Status>
+        <Comment>
+          <!-- コメント 禁忌の備考枠に取り込む。 -->
+        </Comment>
+        <Date>
+          <!-- 開始日付 "YYYYMMDD"形式 (*1) ＊取込対象外とする。 -->
+        </Date>
+      </Allergy>
+    </AllergyInfo>
+    <DrugAllergyInfo>
+      <!-- 薬剤アレルギー情報 -->
+      <Drug Code="">
+        <!-- 薬品名称 (3.1.3.11参照) -->
+        <!-- Code 薬品コード ＊薬剤マスタに存在しない場合は、マスタ登録を行うものとする。 -->
+        <Status>
+          <!-- 状態 "0"：未検査／"1"：+／"2"：-／"3"：± "+"のもののみ取り込む。 (3.1.3.9参照) ※要素が存在しない場合は"+"として扱う -->
+        </Status>
+        <Comment>
+          <!-- コメント 禁忌の備考枠に取り込む。 -->
+        </Comment>
+      </Drug>
+    </DrugAllergyInfo>
+  </PatientData>
+</SsiData>

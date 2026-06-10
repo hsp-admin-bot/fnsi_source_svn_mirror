@@ -1,0 +1,46 @@
+INSERT
+	INTO
+		V_PAT_STATUS(
+			PATID,
+			DIALYSIS_DATE,
+			DIALYSIS_TIME,
+			START_PLAN_DATE,
+			ENTER_FLG,
+			ENTER_DATE,
+			MACHINE_CHECK_FLG,
+			MACHINE_CHECK_DATE,
+			DIALSIS_START_FLG,
+			DIALSIS_START_DATE,
+			OFFWATER_FLG,
+			OFFWATER_DATE,
+			WASTE_FLUID_FLG,
+			WASTE_FLUID_DATE,
+			WEIGHT_AFTER_FLG,
+			WEIGHT_AFTER_DATE,
+			RECOVERY_BTN_FLG,
+			RECOVERY_BTN_DATE,
+			UP_DATE,
+			DIALYSIS_NO
+		)
+	SELECT
+		CASE WHEN LENGTHB(hosppatid) > 12 THEN SUBSTRB(hosppatid, -12) ELSE hosppatid END,
+		CASE WHEN LENGTHB(dialysisdate) > 8 THEN SUBSTRB(dialysisdate, -8) ELSE dialysisdate END,
+		CASE WHEN LENGTHB(dialysistime) > 6 THEN SUBSTRB(dialysistime, -6) ELSE dialysistime END,
+		TO_DATE(startplandate, 'YYYY-MM-DD hh24:mi:ss'),
+		CASE WHEN LENGTHB(enterflg) > 1 THEN SUBSTRB(enterflg, -1) ELSE enterflg END,
+		TO_DATE(enterdate, 'YYYY-MM-DD hh24:mi:ss'),
+		CASE WHEN LENGTHB(machinecheckflg) > 1 THEN SUBSTRB(machinecheckflg, -1) ELSE machinecheckflg END,
+		TO_DATE(machinecheckdate, 'YYYY-MM-DD hh24:mi:ss'),
+		CASE WHEN LENGTHB(dialsisstartflg) > 1 THEN SUBSTRB(dialsisstartflg, -1) ELSE dialsisstartflg END,
+		TO_DATE(dialsisstartdate, 'YYYY-MM-DD hh24:mi:ss'),
+		CASE WHEN LENGTHB(offwaterflg) > 1 THEN SUBSTRB(offwaterflg, -1) ELSE offwaterflg END,
+		TO_DATE(offwaterdate, 'YYYY-MM-DD hh24:mi:ss'),
+		CASE WHEN LENGTHB(tefluidflg) > 1 THEN SUBSTRB(tefluidflg, -1) ELSE tefluidflg END,
+		TO_DATE(tefluiddate, 'YYYY-MM-DD hh24:mi:ss'),
+		CASE WHEN LENGTHB(weightafterflg) > 1 THEN SUBSTRB(weightafterflg, -1) ELSE weightafterflg END,
+		TO_DATE(weightafterdate, 'YYYY-MM-DD hh24:mi:ss'),
+		CASE WHEN LENGTHB(recoverybtnflg) > 1 THEN SUBSTRB(recoverybtnflg, -1) ELSE recoverybtnflg END,
+		TO_DATE(recoverybtndate, 'YYYY-MM-DD hh24:mi:ss'),
+		TO_DATE("update", 'YYYY-MM-DD hh24:mi:ss' ),
+		CASE WHEN LENGTHB(dialysisno) > 20 THEN SUBSTRB(dialysisno, -20) ELSE dialysisno END
+	FROM V_PAT_STATUS2_TEMP

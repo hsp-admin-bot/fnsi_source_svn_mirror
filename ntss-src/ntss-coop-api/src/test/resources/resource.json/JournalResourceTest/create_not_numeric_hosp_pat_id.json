@@ -1,0 +1,16 @@
+{
+  "facility_cd":"TEST06",
+  "coop_cd":"1",
+  "coop_cd_index":"W",
+  "crud":"C",
+  "direction":"S",
+  "base_date":"20200602",
+  "ana_result":"1",
+  "coop_result":"9",
+  "ord_no":100,
+  "coop_ord_no":"101",
+  "hosp_pat_id":"DUMMY",
+  "pat_id":201,
+  "message64":"VEVTVF9NT0NL",
+  "user_id":123
+}

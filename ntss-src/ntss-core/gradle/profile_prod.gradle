@@ -1,0 +1,41 @@
+apply plugin: 'org.springframework.boot'
+apply plugin: 'com.github.node-gradle.node'
+
+ext { logbackLoglevel = "INFO" }
+
+dependencies {
+}
+
+def profiles = 'prod'
+
+bootRun { args = [] }
+
+task npmTest(type: NpmTask, dependsOn: 'npm_install') {
+  //args = ["test"]
+  args = ["-v"]
+}
+
+task npmRunBuild(type: NpmTask, dependsOn: 'npm_install') {
+  args = ["run", "build"]
+}
+
+war { webAppDirName = 'build/www/' }
+
+processResources {
+  filesMatching('**/logback-spring.xml') {
+    filter {
+      it.replace('#logback.loglevel#', logbackLoglevel)
+    }
+  }
+  filesMatching('**/application.yml') {
+    filter {
+      it.replace('#project.version#', version)
+    }
+    filter {
+      it.replace('#spring.profiles.active#', profiles)
+    }
+  }
+}
+
+test.dependsOn npmTest
+processResources.dependsOn npmRunBuild

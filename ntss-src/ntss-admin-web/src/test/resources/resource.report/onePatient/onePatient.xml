@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<ReportDefinition>
+  <report type="OnePatient" hasTmpl="1" />
+  <paramTable>
+    <param id="C2:H2" dispType="0" dataCode="pat_id" sqlCode="1" dataType="string" isShrink="0" dispLength="50" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="" />
+    <param id="C4:D4" dispType="0" dataCode="rst_start_date" sqlCode="7" dataType="DateTime" isShrink="1" dispLength="" filterType="" dispFormat="yyyy/MM/dd" formula="" groupID="" isInTmpl="1" isNewPage="" />
+    <param id="C5:D5" dispType="0" dataCode="rst_start_date" sqlCode="7" dataType="DateTime" isShrink="1" dispLength="" filterType="" dispFormat="HH:mm" formula="" groupID="" isInTmpl="1" isNewPage="" />
+    <param id="K2:L2" dispType="0" dataCode="pat_sex" sqlCode="1" dataType="string" isShrink="0" dispLength="16" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="">
+      <convTable cls="">
+        <conv code="-" item="不明" disp="不明" />
+        <conv code="0" item="男性" disp="男性" />
+        <conv code="1" item="女性" disp="女性" />
+      </convTable>
+    </param>
+    <param id="C6:D6" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="1" dispLength="" filterType="" dispFormat="%.2f" formula="" groupID="" isInTmpl="1" isNewPage="" />
+    <param id="C7:D7" dispType="0" dataCode="rst_dw" sqlCode="7" dataType="decimal" isShrink="1" dispLength="" filterType="" dispFormat="%.2f" formula="" groupID="" isInTmpl="1" isNewPage="" />
+    <param id="C8:D8" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="1" dispLength="" filterType="" dispFormat="%.2f" formula="" groupID="" isInTmpl="1" isNewPage="" />
+    <param id="C9:D9" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="1" isNewPage="" />
+    <param id="C10:D10" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="1" isNewPage="" />
+    <param id="C12" dispType="0" dataCode="rst_treatment_cd" sqlCode="7" dataType="string" isShrink="1" dispLength="" filterType="Examin" dispFormat="" formula="" groupID="検査.検査結果.検査.検査結果.内" isInTmpl="1" isNewPage="">
+      <filterTable>
+        <filter code="0001" before="1" after="0" other="0" />
+      </filterTable>
+    </param>
+    <param id="C14" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="Examin" dispFormat="" formula="" groupID="検査.検査結果.検査.検査結果.内" isInTmpl="1" isNewPage="">
+      <filterTable>
+        <filter code="0003" before="1" after="0" other="0" />
+      </filterTable>
+    </param>
+    <param id="C15" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="Examin" dispFormat="" formula="" groupID="検査.検査結果.検査.検査結果.内" isInTmpl="1" isNewPage="">
+      <filterTable>
+        <filter code="0004" before="1" after="0" other="0" />
+      </filterTable>
+    </param>
+    <param id="C16" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="Examin" dispFormat="" formula="" groupID="検査.検査結果.検査.検査結果.内" isInTmpl="1" isNewPage="">
+      <filterTable>
+        <filter code="0005" before="1" after="0" other="0" />
+      </filterTable>
+    </param>
+    <param id="C17" dispType="0" dataCode="rst_bed_cd" sqlCode="7" dataType="string" isShrink="1" dispLength="" filterType="Examin" dispFormat="" formula="" groupID="検査.検査結果.検査.検査結果.内" isInTmpl="1" isNewPage="">
+      <filterTable>
+        <filter code="0006" before="1" after="0" other="0" />
+      </filterTable>
+    </param>
+    <param id="C13" dispType="0" dataCode="rst_kur_cd" sqlCode="7" dataType="string" isShrink="1" dispLength="" filterType="Examin" dispFormat="" formula="" groupID="検査.検査結果.検査.検査結果.内" isInTmpl="1" isNewPage="">
+      <filterTable>
+        <filter code="0002" before="1" after="0" other="0" />
+      </filterTable>
+    </param>
+    <param id="D13" dispType="0" dataCode="rst_kur_name" sqlCode="7" dataType="string" isShrink="1" dispLength="" filterType="Examin" dispFormat="" formula="" groupID="検査.検査結果.検査.検査結果.内" isInTmpl="1" isNewPage="">
+      <filterTable>
+        <filter code="0002" before="0" after="1" other="0" />
+      </filterTable>
+    </param>
+    <param id="D14" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="Examin" dispFormat="" formula="" groupID="検査.検査結果.検査.検査結果.内" isInTmpl="1" isNewPage="">
+      <filterTable>
+        <filter code="0003" before="0" after="1" other="0" />
+      </filterTable>
+    </param>
+    <param id="D15" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="Examin" dispFormat="" formula="" groupID="検査.検査結果.検査.検査結果.内" isInTmpl="1" isNewPage="">
+      <filterTable>
+        <filter code="0004" before="0" after="1" other="0" />
+      </filterTable>
+    </param>
+    <param id="D16" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="Examin" dispFormat="" formula="" groupID="検査.検査結果.検査.検査結果.内" isInTmpl="1" isNewPage="">
+      <filterTable>
+        <filter code="0005" before="0" after="1" other="0" />
+      </filterTable>
+    </param>
+    <param id="D17" dispType="0" dataCode="rst_bed_name" sqlCode="7" dataType="string" isShrink="1" dispLength="" filterType="Examin" dispFormat="" formula="" groupID="検査.検査結果.検査.検査結果.内" isInTmpl="1" isNewPage="">
+      <filterTable>
+        <filter code="0006" before="0" after="1" other="0" />
+      </filterTable>
+    </param>
+    <param id="D12" dispType="0" dataCode="rst_treatment_name" sqlCode="7" dataType="string" isShrink="1" dispLength="" filterType="Examin" dispFormat="" formula="" groupID="検査.検査結果.検査.検査結果.内" isInTmpl="1" isNewPage="">
+      <filterTable>
+        <filter code="0001" before="0" after="1" other="0" />
+      </filterTable>
+    </param>
+  </paramTable>
+  <groupTable>
+    <group id="検査.検査結果.検査.検査結果.内" repeatMax="1" isNewPage="0" filterType="" />
+  </groupTable>
+  <tmplRepeat id="C4:D17" repeatMode="Dialysis" repeatMax="5" isNewPage="0" direction="1" />
+</ReportDefinition>

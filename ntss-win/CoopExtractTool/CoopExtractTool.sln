@@ -1,0 +1,35 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.36631.11
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoopExtractTool", "CoopExtractTool\CoopExtractTool.csproj", "{17D561A4-1882-4F84-B743-CA40FC6D64E9}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "CoopExtractToolSetup", "CoopExtractToolSetup\CoopExtractToolSetup.vdproj", "{5A34DBEA-A734-4BAC-8B1F-8526C5CCDCEF}"
+EndProject
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "CoopExtractToolSetupWix", "CoopExtractToolSetupWix\CoopExtractToolSetupWix.wixproj", "{FA37E210-8C94-4D05-B6E3-123456789016}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{17D561A4-1882-4F84-B743-CA40FC6D64E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17D561A4-1882-4F84-B743-CA40FC6D64E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17D561A4-1882-4F84-B743-CA40FC6D64E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17D561A4-1882-4F84-B743-CA40FC6D64E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A34DBEA-A734-4BAC-8B1F-8526C5CCDCEF}.Debug|Any CPU.ActiveCfg = Debug
+		{5A34DBEA-A734-4BAC-8B1F-8526C5CCDCEF}.Debug|Any CPU.Build.0 = Debug
+		{5A34DBEA-A734-4BAC-8B1F-8526C5CCDCEF}.Release|Any CPU.ActiveCfg = Release
+		{5A34DBEA-A734-4BAC-8B1F-8526C5CCDCEF}.Release|Any CPU.Build.0 = Release
+		{FA37E210-8C94-4D05-B6E3-123456789016}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{FA37E210-8C94-4D05-B6E3-123456789016}.Release|Any CPU.ActiveCfg = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {ECCC27A6-4183-49C4-8763-7CA9E8094B46}
+	EndGlobalSection
+EndGlobal

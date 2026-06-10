@@ -1,0 +1,125 @@
+spring:
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration,
+             org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: ntss
+      username: nkk
+      password: nkk
+  datasource:
+    default:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk5
+      password: nkk5
+    personal:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db6?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk6
+      password: nkk6
+    auth:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db4?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk4
+      password: nkk4
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+  application:
+    name: ntss-admin-web
+  jmx:
+    default-domain: ntss-admin-web
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 100MB
+
+amazon:
+  dynamodb:
+    accesskey:
+    secretkey:
+    endpoint: http://localhost:8000
+    region: us-west-2
+
+server:
+  port: 8070
+  servlet:
+    contextPath: /ntss-admin-web
+    session:
+      timeout: 14400
+
+doma:
+  dialect: postgres
+
+logging:
+  file: /tmp/ntss-admin-web.log
+u  level:
+    org.springframework.transaction.interceptor: TRACE
+    org.mongodb.driver: ERROR
+
+cloud:
+  aws:
+    region:
+      auto: false
+      static: ap-northeast-1 # 東京リージョン
+    stack:
+       auto: false
+
+ntss:
+  logging:
+    appender:
+      file-name: /opt/ntss-admin-web/log/{0}/{0}.log
+    rolling:
+      file-name-pattern:  /opt/ntss-admin-web/log/{0}/{0}_%d'{'yyyyMMdd'}'.log
+      max-history: 14
+  report:
+    s3-bucket: 'tdc-s3-example'
+    cache-dir: '/opt/ntss-admin-web/report/cache'
+  bbs-info:
+    s3-bucket: 'tdc-s3-example/BBS'
+  pat-event:
+    s3-bucket: 'tdc-s3-example'
+    cache-dir: '/opt/ntss-admin-web/pat-event/cache'
+  admin-web:
+    data-gathering:
+      url: 'http://localhost:8080/data_gathering/api/request/device'
+      header-name: 'SSECCAYEK'
+      header-value: 'NTSS-NKK-ESM-TDC-YSK'
+    web-api:
+      url: 'http://localhost:8080/ntss-web-api'
+      current-pat-clear: /util/CurrentPatClear
+      set-next-pat: /util/SetNextPatInfo
+      upload: '/upload'
+      header-name: 'SSECCAYEK'
+      header-value: 'NTSS-NKK-ESM-TDC-YSK'
+    web-socket-notify:
+      app-connect-url: 'ws://tdc-public-alb-1851439829.ap-northeast-1.elb.amazonaws.com/ntss-client-comm/ntssclientcomm'
+      app-sv:
+        ws-port: 8080
+        ws-api: '/ntss-client-comm/api/sendclient'
+        header-name: 'SSECCAYEK'
+        header-value: 'NTSS-NKK-ESM-TDC-YSK'
+      device-sv:
+        ws-port: 8080
+        ws-api: '/ntss-client-comm/api/sendclient'
+        header-name: 'SSECCAYEK'
+        header-value: 'NTSS-NKK-ESM-TDC-YSK'
+    sign-in:
+      restriction: false
+    m-notice:
+      header-name: 'SSECCAYEK'
+      header-value: 'NTSS-NKK-ESM-TDC-YSK'
+      maker-notice: /api/makerNotice
+      url: http://localhost:8080/ntss-m-notice
+    coop-api:
+      url: http://localhost:8080/ntss-coop-api
+
+---
+spring:
+  config.activate.on-profile: mongo
+  autoconfigure:
+    exclude:
+      

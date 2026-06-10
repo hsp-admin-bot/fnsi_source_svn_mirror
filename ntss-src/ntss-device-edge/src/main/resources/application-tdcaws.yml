@@ -1,0 +1,49 @@
+spring:
+  datasource:
+    default:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk5
+      password: nkk5
+    personal:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db6?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk6
+      password: nkk6
+    auth:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db4?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk4
+      password: nkk4
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+  application:
+    name: ntss-device-edge
+  jmx:
+    default-domain: ntss-device-edge
+
+doma:
+  dialect: postgres
+
+logging:
+  level:
+    org.springframework.transaction.interceptor: TRACE
+
+cloud:
+  aws:
+    region:
+#      auto: true
+      auto: false
+      static: ap-northeast-1 # 東京リージョン
+    stack:
+      auto: false
+
+ntss:
+  report:
+    s3-bucket: 'tdc-s3-example'
+    cache-dir: '/tmp/report/cache'
+  device-edge:
+    rest:
+      download: http://localhost:8080/ntss-admin-web/api/motion_record/detail/gathering/download
+  

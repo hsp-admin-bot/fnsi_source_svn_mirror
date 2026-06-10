@@ -1,0 +1,19 @@
+insert into mnt_cardapp_port
+(
+guid
+,facility_cd
+,client_key
+,port
+,reg_date
+,up_date
+)
+values
+(
+ /*mntCardappPort.guid*/'000000'
+,/*mntCardappPort.facilityCd*/'000000'
+,/*mntCardappPort.clientKey*/'000000'
+,/*mntCardappPort.port*/0
+,CURRENT_TIMESTAMP(3)
+,CURRENT_TIMESTAMP(3)
+)
+;

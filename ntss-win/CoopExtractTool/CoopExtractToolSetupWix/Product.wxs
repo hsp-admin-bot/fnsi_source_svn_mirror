@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CoopExtractTool WiX v4 インストーラー
+  製品名   : CoopExtractTool
+  バージョン: 1.0.1
+  メーカー : Nikkiso
+  インストール先: C:\FNWSiTools\CoopExtractTool
+
+  画面フロー:
+    ようこそ → インストール先選択 → 確認 → 進捗 → 完了
+
+  機能:
+    - 日本語 UI
+    - バージョンダウングレード検知・ブロック
+    - 実行中プロセスを自動終了（アップグレード/アンインストール時）
+    - アンインストール時に CoopExtractTool.config を保持
+-->
+<?include GeneratedProductCode.wxi?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package
+    Name="CoopExtractTool"
+    Manufacturer="Nikkiso"
+    Version="$(var.ProductVersion)"
+    ProductCode="$(var.ProductCode)"
+    UpgradeCode="{2BBD7E5E-4D8A-4C01-8B8B-11D976CAFA2B}"
+    Language="1041"
+    Codepage="932"
+    InstallerVersion="500"
+    Compressed="yes"
+    Scope="perMachine">
+
+    <SummaryInformation Description="CoopExtractTool インストーラー" Keywords="インストーラー" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="ARPCONTACT"  Value="Nikkiso" />
+    <Property Id="ARPCOMMENTS" Value="CoopExtractTool" />
+    <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
+
+    <Property Id="REBOOT" Value="ReallySuppress" />
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <Property Id="RUNNING_PROCESSES" Secure="yes" />
+    <Property Id="ROOTDRIVE" Value="C:\" />
+
+    <!-- ============================== .NET Framework 4.5 チェック ============================== -->
+    <Property Id="NETFRAMEWORK45" Secure="yes">
+      <RegistrySearch Id="NetFx45Search"
+                      Root="HKLM"
+                      Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"
+                      Name="Release"
+                      Type="raw" />
+    </Property>
+    <Launch Condition="NETFRAMEWORK45"
+            Message=".NET Framework 4.5 以上が必要です。インストールしてから再度実行してください。" />
+
+    <!-- ============================== バージョン管理 ============================== -->
+    <Upgrade Id="{2BBD7E5E-4D8A-4C01-8B8B-11D976CAFA2B}">
+      <UpgradeVersion
+        Minimum="0.0.0"
+        Maximum="$(var.ProductVersion)"
+        IncludeMinimum="yes"
+        IncludeMaximum="no"
+        Property="OLDERVERSIONBEINGUPGRADED"
+        MigrateFeatures="yes" />
+      <UpgradeVersion
+        Minimum="$(var.ProductVersion)"
+        IncludeMinimum="no"
+        Property="NEWERVERSIONALREADYINSTALLED" />
+    </Upgrade>
+
+    <Launch Condition="NOT NEWERVERSIONALREADYINSTALLED"
+            Message="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
+
+    <!-- ============================== ディレクトリ構成 ============================== -->
+    <!--
+      デフォルト: C:\FNWSiTools\CoopExtractTool
+      TARGETDIR(C:\) > FNWSITOOLS(FNWSiTools) > INSTALLFOLDER(CoopExtractTool) > DIR_MAPPING(MappingXML)
+    -->
+    <StandardDirectory Id="TARGETDIR">
+      <Directory Id="FNWSITOOLS" Name="FNWSiTools">
+        <Directory Id="INSTALLFOLDER" Name="CoopExtractTool">
+          <Directory Id="DIR_MAPPING" Name="MappingXML" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+
+    <!-- ============================== コンポーネント ============================== -->
+
+    <!-- (1) メインアプリケーション -->
+    <Component Id="C_MainExe"
+               Guid="{2BBD7E5E-4D8A-4C01-8B8B-11D976CAFA01}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_MainExe"
+            Source="$(var.SrcBin)FNWSiCoopINIConvTool.exe"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (2) FNWSiCoopINIConvTool.exe.config -->
+    <Component Id="C_ExeConfig"
+               Guid="{2BBD7E5E-4D8A-4C01-8B8B-11D976CAFA02}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_ExeConfig"
+            Source="$(var.SrcBin)FNWSiCoopINIConvTool.exe.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (3) CoopExtractTool.config（ユーザー設定を保持） -->
+    <Component Id="C_AppConfig"
+               Guid="{2BBD7E5E-4D8A-4C01-8B8B-11D976CAFA03}"
+               Directory="INSTALLFOLDER"
+               Permanent="yes"
+               NeverOverwrite="yes">
+      <File Id="F_AppConfig"
+            Source="$(var.SrcBin)CoopExtractTool.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (4) MappingXML\CSI.xml -->
+    <Component Id="C_CsiXml"
+               Guid="{2BBD7E5E-4D8A-4C01-8B8B-11D976CAFA04}"
+               Directory="DIR_MAPPING">
+      <File Id="F_CsiXml"
+            Source="$(var.SrcBin)MappingXML\CSI.xml"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (5) デスクトップショートカット -->
+    <Component Id="C_DesktopShortcut"
+               Guid="{2BBD7E5E-4D8A-4C01-8B8B-11D976CAFA10}"
+               Directory="INSTALLFOLDER">
+      <Shortcut Id="SC_CoopExtractTool"
+                Directory="DesktopFolder"
+                Name="FNW設定情報抽出ツール"
+                Target="[INSTALLFOLDER]FNWSiCoopINIConvTool.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\Nikkiso\CoopExtractTool"
+                     Name="ShortcutsInstalled"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+      <RemoveRegistryKey Root="HKCU"
+                         Key="Software\Nikkiso\CoopExtractTool"
+                         Action="removeOnUninstall" />
+    </Component>
+
+    <!-- (6) Oracle.ManagedDataAccess.dll -->
+    <Component Id="C_OracleDll"
+               Guid="{2BBD7E5E-4D8A-4C01-8B8B-11D976CAFA05}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_OracleDll"
+            Source="$(var.SrcBin)Oracle.ManagedDataAccess.dll"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- ============================== フィーチャー ============================== -->
+    <Feature Id="ProductFeature"
+             Title="CoopExtractTool"
+             Level="1"
+             ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentRef Id="C_MainExe" />
+      <ComponentRef Id="C_ExeConfig" />
+      <ComponentRef Id="C_AppConfig" />
+      <ComponentRef Id="C_CsiXml" />
+      <ComponentRef Id="C_OracleDll" />
+      <ComponentRef Id="C_DesktopShortcut" />
+    </Feature>
+
+    <!-- ============================== カスタムアクション ============================== -->
+
+    <!-- 実行中プロセスを強制終了（ファイルロック解放） -->
+    <CustomAction Id="KillRunningInstances"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c taskkill /F /IM FNWSiCoopINIConvTool.exe &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+    <CustomAction Id="CA_DetectRunningProcesses"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_DetectRunningProcesses.vbs" />
+    <CustomAction Id="CA_KillGUIApps"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_KillGUIApps.vbs" />
+
+    <!-- ============================== シーケンス ============================== -->
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallInitialize" />
+      <Custom Action="KillRunningInstances" Before="RemoveFiles" Condition="1" />
+    </InstallExecuteSequence>
+
+    <!-- ============================== UI ============================== -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <UI>
+      <Dialog Id="RunningProcessesDlg" Width="370" Height="270" Title="CoopExtractTool インストーラー">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}実行中アプリケーションの検出" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="15" Text="インストール前にアプリケーションを終了してください。" />
+        <Control Id="RunningAppsLabel" Type="Text" X="20" Y="58" Width="330" Height="30" Text="以下のアプリケーションが実行中のため、インストールを継続できません。" />
+        <Control Id="RunningAppsList" Type="Text" X="30" Y="92" Width="310" Height="90" Text="[RUNNING_PROCESSES]" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton" X="155" Y="243" Width="56" Height="17" Text="&lt; 戻る">
+          <Publish Event="NewDialog" Value="WelcomeDlg" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="MaintenanceTypeDlg" Condition="Installed" />
+        </Control>
+        <Control Id="CloseAndContinue" Type="PushButton" X="215" Y="243" Width="84" Height="17" Default="yes" Text="終了して続行">
+          <Publish Event="DoAction" Value="CA_KillGUIApps" Order="1" Condition="1" />
+          <Publish Event="NewDialog" Value="InstallDirDlg" Order="2" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="2" Condition="Installed" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="307" Y="243" Width="56" Height="17" Cancel="yes" Text="キャンセル">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="DoAction" Value="CA_DetectRunningProcesses" Order="1" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="RunningProcessesDlg" Order="2" Condition="NOT Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="WelcomeDlg"    Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="3" Condition="NOT Installed AND NOT RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="DoAction" Value="CA_DetectRunningProcesses" Order="1" Condition="Installed" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="RunningProcessesDlg" Order="2" Condition="Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" Order="3" Condition="Installed AND NOT RUNNING_PROCESSES" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"    Order="2" Condition="1" />
+    </UI>
+
+  </Package>
+
+</Wix>

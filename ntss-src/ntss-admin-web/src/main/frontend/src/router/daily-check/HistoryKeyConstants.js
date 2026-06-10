@@ -1,0 +1,1 @@
+export const HISTORY_KEY_DAILY_CHECK = "DAILY_CHECK";

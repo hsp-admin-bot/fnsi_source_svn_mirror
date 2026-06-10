@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FNW2FNSI_Converter WiX v4 インストーラー
+  製品名   : FNWSi コンバートツール
+  バージョン: 2.0.24
+  メーカー : Nikkiso
+  インストール先: C:\FNWSiTools\FNWSiConvertTool
+
+  画面フロー:
+    ようこそ → インストール先選択 → 確認 → 進捗 → [設定ダイアログ(CA)] → 完了
+
+  機能:
+    - 日本語 UI
+    - サイレントインストール(/quiet): 設定ダイアログをスキップ
+    - バージョンダウングレード検知・ブロック
+    - 実行中プロセスを自動終了（アップグレード/アンインストール時）
+    - アンインストール時: 環境変数クリーンアップ（InstallUtil /u）
+-->
+<?include GeneratedProductCode.wxi?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package
+    Name="FNWSi コンバートツール"
+    Manufacturer="NIKKISO"
+    Version="$(var.ProductVersion)"
+    ProductCode="$(var.ProductCode)"
+    UpgradeCode="{D3D92813-23E0-4C96-B845-E9430C3E8F30}"
+    Language="1041"
+    Codepage="932"
+    InstallerVersion="500"
+    Compressed="yes"
+    Scope="perMachine">
+
+    <SummaryInformation Description="FNW2FNSI コンバータツール インストーラー" Keywords="インストーラー" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- ============================== アイコン ============================== -->
+    <Icon Id="ConverterIcon" SourceFile="$(var.SrcBin)FNWSiConvertTool.exe" />
+
+    <Property Id="ARPPRODUCTICON" Value="ConverterIcon" />
+    <Property Id="ARPCONTACT"     Value="Nikkiso" />
+    <Property Id="ARPCOMMENTS"    Value="FNW2FNSI コンバータツール" />
+    <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
+
+    <Property Id="REBOOT"                    Value="ReallySuppress" />
+    <Property Id="MSIRESTARTMANAGERCONTROL"  Value="Disable" />
+    <Property Id="ROOTDRIVE"                 Value="C:\" />
+    <Property Id="INSTALLDESKTOPSHORTCUT"    Value="0" />
+    <!-- (6) デスクトップショートカット（既定: 作成しない） -->
+    <Component Id="C_DesktopShortcut"
+               Guid="{F1A2B3C4-D5E6-4789-ABCD-EF1234500001}"
+               Directory="INSTALLFOLDER"
+               Condition="INSTALLDESKTOPSHORTCUT=1">
+      <Shortcut Id="SC_Converter"
+                Directory="DesktopFolder"
+                Name="コンバートツール"
+                Target="[INSTALLFOLDER]FNWSiConvertTool.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="ConverterIcon">
+        <ShortcutProperty Key="System.AppUserModel.ID"
+                          Value="NIKKISO.FNWSi.FNWSiConvertTool" />
+        <ShortcutProperty Key="System.AppUserModel.RelaunchDisplayNameResource"
+                          Value="FNWSi コンバートツール" />
+      </Shortcut>
+      <RegistryValue Root="HKCU"
+                     Key="Software\Nikkiso\FNW2FNSI_Converter"
+                     Name="ShortcutsInstalled"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+      <RemoveRegistryKey Root="HKCU"
+                        Key="Software\Nikkiso\FNW2FNSI_Converter"
+                        Action="removeOnUninstall" />
+    </Component>
+
+
+    <!-- 交互インストール用: 起動中プロセス表示 -->
+    <Property Id="RUNNING_PROCESSES" Secure="yes" />
+
+    <!-- ============================== .NET Framework 4.5 チェック ============================== -->
+    <Property Id="NETFRAMEWORK45" Secure="yes">
+      <RegistrySearch Id="NetFx45Search"
+                      Root="HKLM"
+                      Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"
+                      Name="Release"
+                      Type="raw" />
+    </Property>
+    <Launch Condition="NETFRAMEWORK45"
+            Message=".NET Framework 4.5 以上が必要です。インストールしてから再度実行してください。" />
+
+    <!-- ============================== バージョン管理 ============================== -->
+    <Upgrade Id="{D3D92813-23E0-4C96-B845-E9430C3E8F30}">
+      <UpgradeVersion
+        Minimum="0.0.0"
+        Maximum="$(var.ProductVersion)"
+        IncludeMinimum="yes"
+        IncludeMaximum="no"
+        Property="OLDERVERSIONBEINGUPGRADED"
+        MigrateFeatures="yes" />
+      <UpgradeVersion
+        Minimum="$(var.ProductVersion)"
+        IncludeMinimum="no"
+        OnlyDetect="yes"
+        Property="NEWERVERSIONALREADYINSTALLED" />
+    </Upgrade>
+    <Launch Condition="NOT NEWERVERSIONALREADYINSTALLED"
+            Message="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
+
+    <!-- ============================== ディレクトリ構成 ============================== -->
+    <StandardDirectory Id="TARGETDIR">
+      <Directory Id="FNWSITOOLS" Name="FNWSiTools">
+        <Directory Id="INSTALLFOLDER" Name="FNWSiConvertTool">
+          <Directory Id="ICONSFOLDER" Name="Icons" />
+          <Directory Id="SQLFOLDER"   Name="SQL" />
+          <!-- oracle_Client は exe / exe.config / FNW2FNSI_Converter.config と同階層 -->
+          <Directory Id="DIR_ORACLE_CLIENT" Name="oracle_Client" />
+          <Directory Id="TOOLSFOLDER" Name="Tools">
+            <Directory Id="DIR_KANKYOKOCHIKU" Name="環境構築">
+              <Directory Id="DIR_01_FNW_SETUP" Name="01_FNW(移行元)環境用スクリプト" />
+              <Directory Id="DIR_02_NEXT_SETUP" Name="02_次世代(移行先)環境用スクリプト" />
+              <Directory Id="DIR_COOP_SETUP" Name="coop" />
+            </Directory>
+            <!-- ソースは環境構築\coop と同一。旧レイアウト: Tools\連携設定（環境構築\coop も別途維持） -->
+            <Directory Id="DIR_RENKEI_SETTINGS" Name="連携設定" />
+          </Directory>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+    <StandardDirectory Id="WindowsFolder" />
+
+    <!-- ============================== コンポーネント ============================== -->
+
+    <!-- (1) メインアプリケーション -->
+    <Component Id="C_MainExe"
+               Guid="{B1A2C3D4-E5F6-4789-ABCD-EF1234500001}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_MainExe"
+            Source="$(var.SrcBin)FNWSiConvertTool.exe"
+            KeyPath="yes" />
+      <RemoveFile Id="RF_InstallState"
+                  Name="FNW2FNSI_Converter.InstallState"
+                  On="uninstall" />
+    </Component>
+
+    <!-- (2) FNWSiConvertTool.exe.config -->
+    <Component Id="C_ExeConfig"
+               Guid="{B1A2C3D4-E5F6-4789-ABCD-EF1234500002}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_ExeConfig"
+            Source="$(var.SrcBin)FNWSiConvertTool.exe.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (3) アプリ設定ファイル（既存設定を上書きしない） -->
+    <Component Id="C_AppConfig"
+               Guid="{B1A2C3D4-E5F6-4789-ABCD-EF1234500003}"
+               Directory="INSTALLFOLDER"
+               Permanent="yes"
+               NeverOverwrite="yes">
+      <File Id="F_AppConfig"
+            Source="$(var.SrcBin)FNW2FNSI_Converter.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (4) 共有 DLL 群 -->
+    <ComponentGroup Id="CG_SharedDlls" Directory="INSTALLFOLDER">
+      <Component Guid="{D1000001-0000-4000-8000-000000000001}"><File Source="$(var.SrcBin)ConvertCommon.dll" /></Component>
+      <Component Guid="{D1000002-0000-4000-8000-000000000002}"><File Source="$(var.SrcBin)Common.dll" /></Component>
+      <Component Guid="{D1000003-0000-4000-8000-000000000003}"><File Source="$(var.SrcBin)IOControl.dll" /></Component>
+      <Component Guid="{D1000004-0000-4000-8000-000000000004}"><File Source="$(var.SrcBin)Mono.Security.dll" /></Component>
+      <Component Guid="{D1000006-0000-4000-8000-000000000006}"><File Source="$(var.SrcBin)Renci.SshNet.dll" /></Component>
+      <Component Guid="{D1000008-0000-4000-8000-000000000008}"><File Source="$(var.SrcBin)Newtonsoft.Json.dll" /></Component>
+      <Component Guid="{D1000009-0000-4000-8000-000000000009}"><File Source="$(var.SrcBin)Oracle.ManagedDataAccess.dll" /></Component>
+      <Component Guid="{D100000B-0000-4000-8000-00000000000B}"><File Source="$(var.SrcBin)ICSharpCode.SharpZipLib.dll" /></Component>
+    </ComponentGroup>
+
+    <!-- (5) Icons フォルダ -->
+    <ComponentGroup Id="CG_Icons" Directory="ICONSFOLDER">
+      <Component Guid="{E1000001-0000-4000-8000-000000000001}"><File Source="$(var.SrcBin)Icons\convert.png" /></Component>
+      <Component Guid="{E1000002-0000-4000-8000-000000000002}"><File Source="$(var.SrcBin)Icons\setting.png" /></Component>
+      <Component Guid="{E1000003-0000-4000-8000-000000000003}"><File Source="$(var.SrcBin)Icons\update.png" /></Component>
+    </ComponentGroup>
+
+    <!-- (6) 環境構築 直下ファイル -->
+    <Component Id="C_EnvBuildGuide"
+               Guid="{E1000004-0000-4000-8000-000000000004}"
+               Directory="DIR_KANKYOKOCHIKU">
+      <File Id="F_EnvBuildGuide"
+            Source="$(var.EnvBuildRoot)コンバートスクリプト実行手順.xlsx"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- ============================== フィーチャー ============================== -->
+    <Feature Id="ProductFeature"
+             Title="FNWSi コンバートツール"
+             Level="1"
+             ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentRef Id="C_MainExe" />
+      <ComponentRef Id="C_ExeConfig" />
+      <ComponentRef Id="C_AppConfig" />
+      <ComponentRef Id="C_EnvBuildGuide" />
+      <ComponentGroupRef Id="CG_SharedDlls" />
+      <ComponentGroupRef Id="CG_Icons" />
+      <ComponentRef Id="C_DesktopShortcut" />
+      <ComponentGroupRef Id="CG_SqlFiles" />
+      <ComponentGroupRef Id="CG_ToolFilesFnw01" />
+      <ComponentGroupRef Id="CG_ToolFilesNext02" />
+      <ComponentGroupRef Id="CG_ToolFilesCoop" />
+      <ComponentGroupRef Id="CG_ToolFilesCoopRenkei" />
+      <ComponentGroupRef Id="CG_OracleClient" />
+    </Feature>
+
+    <!-- ============================== カスタムアクション ============================== -->
+
+    <!-- 実行中プロセスを強制終了（ファイルロック解放） -->
+    <CustomAction Id="KillRunningInstances"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c taskkill /F /IM FNWSiConvertTool.exe &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- 交互インストール用: 起動中プロセス検出 -->
+    <CustomAction Id="CA_DetectRunningProcesses"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_DetectRunningProcesses.vbs" />
+
+    <!-- 交互インストール用: 「終了して続行」押下時に即時終了 -->
+    <CustomAction Id="CA_KillGUIApps"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_KillGUIApps.vbs" />
+
+    <!-- インストール用: InstallUtil 実行パスをプロパティに設定 -->
+    <CustomAction Id="SetInstallProperty"
+                  Property="RunInstallUtil"
+                  Value="&quot;[INSTALLFOLDER]FNWSiConvertTool.exe&quot;" />
+
+    <!-- サイレントインストール時: /silent=1 をアセンブリパスの前に配置 -->
+    <CustomAction Id="SetInstallPropertySilent"
+                  Property="RunInstallUtil"
+                  Value="/silent=1 &quot;[INSTALLFOLDER]FNWSiConvertTool.exe&quot;" />
+
+    <!-- InstallUtil.exe で ProjectInstaller を実行（64ビットOS用） -->
+    <!-- Return="ignore": OnAfterInstall は Session 0 では UserInteractive=false のため UI 表示なし（実質ノーオペレーション）-->
+    <CustomAction Id="RunInstallUtil"
+                  Directory="WindowsFolder"
+                  ExeCommand="Microsoft.NET\Framework64\v4.0.30319\InstallUtil.exe /LogToConsole=false /LogFile= [RunInstallUtil]"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- InstallUtil.exe で ProjectInstaller を実行（32ビットOS用） -->
+    <CustomAction Id="RunInstallUtil32"
+                  Directory="WindowsFolder"
+                  ExeCommand="Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /LogToConsole=false /LogFile= [RunInstallUtil]"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- アンインストール用: InstallUtil /u 実行パスをプロパティに設定 -->
+    <CustomAction Id="SetUninstallProperty"
+                  Property="RunUninstallUtil"
+                  Value="&quot;[INSTALLFOLDER]FNWSiConvertTool.exe&quot;" />
+
+    <!-- InstallUtil.exe /u で OnAfterUninstall を実行（64ビットOS用） -->
+    <CustomAction Id="RunUninstallUtil"
+                  Directory="WindowsFolder"
+                  ExeCommand="Microsoft.NET\Framework64\v4.0.30319\InstallUtil.exe /u /LogToConsole=false /LogFile= [RunUninstallUtil]"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- InstallUtil.exe /u で OnAfterUninstall を実行（32ビットOS用） -->
+    <CustomAction Id="RunUninstallUtil32"
+                  Directory="WindowsFolder"
+                  ExeCommand="Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /u /LogToConsole=false /LogFile= [RunUninstallUtil]"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- ============================== シーケンス ============================== -->
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallInitialize" />
+
+      <!-- 実行中プロセスを終了（常時） -->
+      <Custom Action="KillRunningInstances" Before="RemoveFiles" Condition="1" />
+
+      <!-- アンインストール時（アップグレード除く）: 環境変数クリーンアップ -->
+      <Custom Action="SetUninstallProperty" Before="RunUninstallUtil"
+              Condition="REMOVE AND NOT UPGRADINGPRODUCTCODE" />
+      <Custom Action="RunUninstallUtil" Before="RemoveFiles"
+              Condition="REMOVE AND NOT UPGRADINGPRODUCTCODE AND VersionNT64" />
+      <Custom Action="RunUninstallUtil32" Before="RemoveFiles"
+              Condition="REMOVE AND NOT UPGRADINGPRODUCTCODE AND NOT VersionNT64" />
+
+      <!-- 新規インストール / 修復 / アップグレード時: 設定ダイアログ -->
+      <Custom Action="SetInstallProperty" Before="RunInstallUtil"
+              Condition="NOT REMOVE" />
+      <Custom Action="SetInstallPropertySilent" After="SetInstallProperty"
+              Condition="NOT REMOVE AND UILevel &lt; 5" />
+      <Custom Action="RunInstallUtil" After="InstallFiles"
+              Condition="NOT REMOVE AND VersionNT64" />
+      <Custom Action="RunInstallUtil32" After="InstallFiles"
+              Condition="NOT REMOVE AND NOT VersionNT64" />
+    </InstallExecuteSequence>
+
+    <!-- ============================== UI ============================== -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <UI>
+      <Dialog Id="RunningProcessesDlg" Width="370" Height="270" Title="FNWSi Convert Tool">
+        <Control Id="BannerBitmap" Type="Bitmap"
+                 X="0" Y="0" Width="370" Height="44"
+                 TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line"
+                 X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Title" Type="Text"
+                 X="15" Y="6" Width="340" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}実行中アプリケーションの検出" />
+        <Control Id="Description" Type="Text"
+                 X="25" Y="23" Width="340" Height="15"
+                 Text="インストール前にアプリケーションを終了してください。" />
+        <Control Id="RunningAppsLabel" Type="Text"
+                 X="20" Y="58" Width="330" Height="30"
+                 Text="以下のプロセスが実行中のため、インストールを継続できません。" />
+        <Control Id="RunningAppsList" Type="Text"
+                 X="30" Y="92" Width="310" Height="90"
+                 Text="[RUNNING_PROCESSES]" />
+        <Control Id="BottomLine" Type="Line"
+                 X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton"
+                 X="155" Y="243" Width="56" Height="17"
+                 Text="&lt; 戻る">
+          <Publish Event="NewDialog" Value="WelcomeDlg" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="MaintenanceTypeDlg" Condition="Installed" />
+        </Control>
+        <Control Id="CloseAndContinue" Type="PushButton"
+                 X="215" Y="243" Width="84" Height="17"
+                 Default="yes" Text="終了して続行">
+          <Publish Event="DoAction" Value="CA_KillGUIApps" Order="1" Condition="1" />
+          <Publish Event="NewDialog" Value="InstallDirDlg" Order="2" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="2" Condition="Installed" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton"
+                 X="307" Y="243" Width="56" Height="17"
+                 Cancel="yes" Text="キャンセル">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+      <!-- 交互: 起動中プロセスがある場合は RunningProcessesDlg へ -->
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="DoAction" Value="CA_DetectRunningProcesses" Order="1"
+               Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="NewDialog" Value="RunningProcessesDlg" Order="2"
+               Condition="NOT Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="NewDialog" Value="InstallDirDlg" Order="3"
+               Condition="NOT Installed AND NOT RUNNING_PROCESSES" />
+
+      <!-- 交互: 修復ボタン押下時も検出 -->
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="DoAction" Value="CA_DetectRunningProcesses"
+               Order="1" Condition="Installed" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="NewDialog" Value="RunningProcessesDlg"
+               Order="2" Condition="Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="NewDialog" Value="VerifyReadyDlg"
+               Order="2" Condition="Installed AND NOT RUNNING_PROCESSES" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"    Order="2" Condition="1" />
+    </UI>
+
+  </Package>
+
+</Wix>

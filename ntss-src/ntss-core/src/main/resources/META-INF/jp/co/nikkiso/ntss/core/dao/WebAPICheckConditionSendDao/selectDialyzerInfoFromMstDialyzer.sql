@@ -1,0 +1,11 @@
+select
+	UFR_WARNING_MAX,
+	UFR_WARNING_MIN,
+	UFR_WARNING_REDUCTION ,
+	BLOODAMT,
+	ALQD_FLOOD_VOL ,
+	UREA_CLEARANCE
+from
+  MST_DIALYZER
+where
+  dialyzer_cd = /*dialyzerCd*/1

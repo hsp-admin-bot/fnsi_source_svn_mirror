@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://ntss-platform-rds.chzddp07crsf.ap-northeast-1.rds.amazonaws.com:5432/ntss?currentSchema=ntss_provisional
+#    url: jdbc:postgresql://ntss-platform-rds.clizq2mnnwjp.ap-northeast-1.rds.amazonaws.com:5432/ntss?currentSchema=ntss_provisional
+    driver-class-name: org.postgresql.Driver
+    username: nkk
+    password: nkk
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+
+doma:
+  dialect: postgres
+
+logging:
+  level:
+    org.springframework.transaction.interceptor: TRACE
+
+cloud:
+  aws:
+    region:
+      auto: true
+    stack:
+       auto: false

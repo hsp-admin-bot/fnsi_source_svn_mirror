@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DLL", "DLL", "{95664174-9E55-4C45-AC6A-DA41D383150A}"
+	ProjectSection(SolutionItems) = preProject
+		DLL\Common.dll = DLL\Common.dll
+		DLL\IOControl.dll = DLL\IOControl.dll
+		DLL\Mono.Security.dll = DLL\Mono.Security.dll
+		DLL\Renci.SshNet.dll = DLL\Renci.SshNet.dll
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKSConverter", "NKSConverter\NKSConverter.csproj", "{5C093485-4F29-4073-8323-5320750E5632}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConvertCommon", "ConvertCommon\ConvertCommon.csproj", "{F9D0302F-FC02-4C37-9275-0A891D788D01}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "NKSConverterSetup", "NKSConverterSetup\NKSConverterSetup.vdproj", "{32278F10-399A-4460-A68D-191CC4D70957}"
+EndProject
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "NKSConverterSetupWix", "NKSConverterSetupWix\NKSConverterSetupWix.wixproj", "{A7F3E2B1-8C94-4D05-B6E3-123456789012}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5C093485-4F29-4073-8323-5320750E5632}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C093485-4F29-4073-8323-5320750E5632}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C093485-4F29-4073-8323-5320750E5632}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5C093485-4F29-4073-8323-5320750E5632}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C093485-4F29-4073-8323-5320750E5632}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C093485-4F29-4073-8323-5320750E5632}.Release|x86.ActiveCfg = Release|Any CPU
+		{F9D0302F-FC02-4C37-9275-0A891D788D01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9D0302F-FC02-4C37-9275-0A891D788D01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9D0302F-FC02-4C37-9275-0A891D788D01}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F9D0302F-FC02-4C37-9275-0A891D788D01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9D0302F-FC02-4C37-9275-0A891D788D01}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9D0302F-FC02-4C37-9275-0A891D788D01}.Release|x86.ActiveCfg = Release|Any CPU
+		{32278F10-399A-4460-A68D-191CC4D70957}.Debug|Any CPU.ActiveCfg = Debug
+		{32278F10-399A-4460-A68D-191CC4D70957}.Debug|x86.ActiveCfg = Debug
+		{32278F10-399A-4460-A68D-191CC4D70957}.Release|Any CPU.ActiveCfg = Release
+		{32278F10-399A-4460-A68D-191CC4D70957}.Release|x86.ActiveCfg = Release
+		{A7F3E2B1-8C94-4D05-B6E3-123456789012}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{A7F3E2B1-8C94-4D05-B6E3-123456789012}.Debug|x86.ActiveCfg = Debug|x86
+		{A7F3E2B1-8C94-4D05-B6E3-123456789012}.Release|Any CPU.ActiveCfg = Release|x86
+		{A7F3E2B1-8C94-4D05-B6E3-123456789012}.Release|x86.ActiveCfg = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5206DAF6-87B7-4040-A256-1CA2FE2C3283}
+	EndGlobalSection
+EndGlobal

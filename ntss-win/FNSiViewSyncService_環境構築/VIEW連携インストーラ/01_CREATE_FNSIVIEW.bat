@@ -1,0 +1,1 @@
+sqlplus sys/fnsiview@fnsiview as sysdba @SQL\CREATE_FNSIVIEW.sql

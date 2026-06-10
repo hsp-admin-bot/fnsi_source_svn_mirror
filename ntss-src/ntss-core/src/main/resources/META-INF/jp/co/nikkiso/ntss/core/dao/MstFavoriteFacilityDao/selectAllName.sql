@@ -1,0 +1,9 @@
+SELECT
+        A.MEDICAL_INSTITUTION_CD,
+        A.FACILITY_NAME AS FAVORITE_FACILITY_NAME
+    FROM
+        SYS_FACILITY A
+    WHERE
+        A.IS_DEL = '0'
+        AND A.IS_DISP = '1'
+        AND A.MEDICAL_INSTITUTION_CD IN /* medicalinstitutioncds */(NULL)

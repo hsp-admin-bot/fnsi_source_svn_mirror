@@ -1,0 +1,1 @@
+select nextval('bbs_info_bbs_ctl_no_seq');

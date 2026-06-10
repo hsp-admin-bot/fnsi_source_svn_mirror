@@ -1,0 +1,27 @@
+INSERT INTO 
+  mnt_recalc_que(
+  status, 
+  facility_cd, 
+  reg_date, 
+  end_date, 
+  content,
+  detail,
+  reg_id,
+  up_id,
+  del_flg,
+  up_date, 
+  disp_flg
+)
+VALUES(
+  /*entity.status*/0,
+  /*entity.facilityCd*/'',
+  CURRENT_TIMESTAMP,
+  /*entity.endDate*/null,
+  /*entity.content*/null,
+  /*entity.detail*/null,
+  /*entity.regId*/null,
+  /*entity.upId*/null,
+  /*entity.delFlg*/0,
+  CURRENT_TIMESTAMP,
+  /*entity.dispFlg*/1
+);

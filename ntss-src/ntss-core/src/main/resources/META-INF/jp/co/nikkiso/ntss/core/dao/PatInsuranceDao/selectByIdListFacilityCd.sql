@@ -1,0 +1,57 @@
+select
+	insurance_cd,
+	pat_id,
+	facility_cd,
+	ctl_no,
+	fn_pat_id,
+	insu_class,
+	insu_name,
+	insu_name_short,
+    json_build_object(
+            'insu_pat_name', personal_info_decrypt((insu_info::json->>'insu_pat_name')::text),
+            'insu_no', personal_info_decrypt((insu_info::json->>'insu_no'))::text,
+            'insu_kbn', (insu_info::json->>'insu_kbn')::text,
+            'insu_pat_mark', personal_info_decrypt((insu_info::json->>'insu_pat_mark')::text),
+            'insu_pat_no', personal_info_decrypt((insu_info::json->>'insu_pat_no')::text),
+            'cki_class', (insu_info::json->>'cki_class')::text,
+            'kki_class', (insu_info::json->>'kki_class')::text,
+            'und_six', (insu_info::json->>'und_six')::text,
+            'futan-g', (insu_info::json->>'futan-g')::text,
+            'futan-n', (insu_info::json->>'futan-n')::text
+        ) as insu_info,
+    json_build_object(
+            'insu_pub_name', personal_info_decrypt((insu_pub_info::json->>'insu_pub_name')::text),
+            'insu_pub_no', personal_info_decrypt((insu_pub_info::json->>'insu_pub_no')::text),
+            'insu_pub_pat_no', personal_info_decrypt((insu_pub_info::json->>'insu_pub_pat_no')::text),
+            'passbook_no', personal_info_decrypt((insu_pub_info::json->>'passbook_no')::text)
+        ) as insu_pub_info,
+    json_build_object(
+            'insu_cd', (insu_set_info::json->>'insu_cd')::text,
+            'insu_pub1_cd', (insu_set_info::json->>'insu_pub1_cd')::text,
+            'insu_pub2_cd', (insu_set_info::json->>'insu_pub2_cd')::text,
+            'insu_pub3_cd', (insu_set_info::json->>'insu_pub3_cd')::text,
+            'insu_pub4_cd', (insu_set_info::json->>'insu_pub4_cd')::text
+        ) as insu_set_info,
+    json_build_object(
+            'insu_self_name', (insu_self_info::json->>'insu_self_name')::text
+        ) as insu_self_info,
+	is_selected,
+	is_disp,
+	is_del,
+	coop_code,
+	is_coop,
+	reg_date,
+	up_date,
+	start_date,
+	end_date,
+	check_date,
+    memo1,
+    memo2
+from
+  pat_insurance
+where
+  is_del = '0'
+and pat_id in /* patIdList */(null)
+and facility_cd = /* facilityCd */null
+;
+

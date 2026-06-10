@@ -1,0 +1,312 @@
+/**
+ * 患者経過総合ビューア - スタイル定義
+ */
+
+/* _mixin.scssの読み込み */
+@import 'mixin.scss';
+
+/* 一覧全体のdiv */
+.list-content {
+  position: fixed;  
+  overflow-x: auto;
+  overflow-y: auto;
+  margin-left: 3px;
+  background-color: var(--ntss-base-background-color);
+}
+
+/* 一覧のヘッダー部分のdiv */
+.list-header-div {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* 一覧のヘッダー部分の行 */
+.list-header-row {
+  height: auto;
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+}
+
+/* 一覧のヘッダー部分のセル(基準日を当日にするボタン) */
+.list-header-today-btn {
+  @include div-center;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  -o-box-sizing: border-box;
+  box-sizing: border-box;
+  border-bottom: solid 1px var(--ntss-border-color);
+  padding: 0px 3px;
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+}
+
+/* 一覧のヘッダー部分のセル(一番左の項目名を表示する列のセル) */
+.list-header-col-title {
+  @include list-border-style;
+  @include div-center;
+  @include title-width;
+  justify-content: flex-end;
+  padding-right: 7px;
+  /* 横スクロール時固定表示 */
+  left: 0px;
+  position: sticky;
+  position: -webkit-sticky;
+  z-index: 3;
+  /* 背景色が横のセルと同じだと透過してしまうため微妙に変える */
+  background-color: #343434; 
+}
+
+/* 一覧のヘッダー部分のセル(日付部分) */
+.list-header-col {
+  @include list-border-style;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  min-width: 75px;
+  > div {
+    padding-top: 3px;
+    padding-bottom: 3px;
+    height: calc(100% - 6px);
+  }
+}
+
+/* 一覧のヘッダー部分のセル(日付左寄せ) */
+.list-header-col-align-left {
+  text-align: left;
+  padding-left: 7px;
+}
+
+/* 一覧のコンテンツ部分の行(高さのみ) */
+.list-content-row-height {
+  height: auto;
+}
+
+/* 一覧のコンテンツ部分の行 */
+.list-content-row {
+  display: flex;
+  flex-flow: wrap;
+  height: auto;
+}
+
+/* 一覧のコンテンツ部分のセル(一番左の項目名を表示する列のセル) */
+.list-content-col-title {
+  @include word-break;
+  @include title-width;
+  @include list-border-style;
+  padding: 1px 3px;
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+  /* 横スクロール時固定表示 */
+  left: 0px;
+  position: sticky;
+  position: -webkit-sticky;
+  z-index: 1;
+  white-space: pre-line;
+}
+
+/* 一覧のコンテンツ部分のセル(一番左の項目名を表示する列のセル) ※LF適用 */
+.list-content-lf-col-title {
+  @include word-break;
+  @include title-width;
+  padding: 1px 3px;
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+  border-right: solid 1px var(--ntss-border-color);
+  /* 横スクロール時固定表示 */
+  left: 0px;
+  position: sticky;
+  position: -webkit-sticky;
+  z-index: 1;
+}
+
+/* 一覧のコンテンツ部分の項目列の縦横分かれる場合の縦書き文字列セル */
+.list-content-col-title-vertical {
+  @include word-break;
+  @include vertical-writing-lr;
+  @include title-vertical-width;
+  @include list-border-style;
+  @include div-center;
+  padding: 5px 3px;
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+  /* 横スクロール時固定表示 */
+  left: 0px;
+  position: sticky;
+  position: -webkit-sticky;
+  z-index: 1;
+}
+
+/* 一覧のコンテンツ部分の項目列の縦横分かれる場合の横書き文字列セル */
+.list-content-col-title-horizon {
+  @include word-break;
+  @include title-horizon-width;
+  @include list-border-style;
+  padding: 1px 3px;
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+  /* 横スクロール時固定表示 */
+  left: 35px;
+}
+
+/* クリック不可のコンテンツセル */
+.list-content-col-not-clicked {
+  background-color: var(--ntss-header-background-disabled-color);
+}
+
+/* 一覧のコンテンツ部分のセル(データ表示部分) */
+.list-content-col {
+  @include word-break;
+  @include list-border-style;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  min-width: 75px;
+  height: auto;
+  color: var(--ntss-base-color);
+}
+
+
+/* 一覧の治療状況項目列 */
+.item-status-style {
+  background-color: var(--ntss-base-background-color);
+  height: auto;
+}
+
+
+/* 一覧の治療状況データセル */
+.list-content-status-col {
+  @include word-break;
+  @include list-border-style;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  min-width: 75px;
+  height: auto;
+  color: var(--ntss-base-color);
+}
+
+/* 一覧の治療状況表示図形 */
+.status-figure {
+  width: 90%;
+  height: 25%;
+  border-radius: 100px;
+  margin: auto;
+  position: relative;
+  padding-top: 2%;
+  display: inline-flex;
+}
+
+/**
+ * ポップオーバー関連
+ */
+
+ /* onsen-ui で定義されている定義を上書き(本CSSを上書きしないと横幅が変更出来ない) */
+.popover-content /deep/ .popover--top,
+.popover-content /deep/ .popover--right,
+.popover-content /deep/ .popover--left,
+.popover-content /deep/ .popover--bottom {
+  width: initial;
+}
+
+/* 表示条件設定の大枠 */
+.popover-content-condition /deep/ .popover__content {
+  max-width: 410px;
+  height: 100%;
+  padding: 7.5px 7.5px 0px 7.5px;
+}
+
+/* 治療予定メニューの大枠 */
+.popover-content-treatplan-menu /deep/ .popover__content {
+  width: 200px;
+  min-height: auto;
+}
+
+/* 外枠 */
+.popover-content-div {
+  margin: 5px;
+  font-size: 1.5em;
+}
+
+/* 行 */
+.popover-content-row {
+  margin-bottom: 10px;
+}
+
+/* セル(1行) */
+.popover-content-col {
+  @include div-center;
+  width: 100%;
+}
+
+/* セル(左側) */
+.popover-content-col-left {
+  @include div-center;
+  flex: 0 0 40%;
+}
+
+/* セル(右側) */
+.popover-content-col-right {
+  @include div-center;
+  flex: 0 0 60%;
+}
+
+/* フッター */
+.popover-content-footer {
+  margin-bottom: 10px;
+  height: 30px;
+}
+
+/* フッター(左寄せ) */
+.popover-content-footer-left {
+  float: left;
+}
+
+/* フッター(右寄せ) */
+.popover-content-footer-right {
+  float: right;
+}
+
+/* チェックボックス */
+.popover-content-checkbox {
+  vertical-align: middle;
+}
+
+/* ラジオボタン */
+.popover-content-radio {
+  padding-right: 3px;
+}
+
+/*  通常ボタン */
+.popover-content-button {
+  padding: 0px;
+  width: 100%;
+}
+
+/* テキストボックス、セレクトボックス */
+ons-input /deep/ .text-input,
+ons-select /deep/ .select-input {
+  font-size: inherit;
+  height: auto;
+}
+
+/* 2番目の治療予定 */
+.list-content-2rd {
+  background-color: var(--ntss-list-content-2nd-background-color);
+}
+
+/* 3番目の治療予定 */
+.list-content-3rd {
+  background-color: var(--ntss-list-content-3nd-background-color);
+}
+
+/* 一覧のヘッダー部分のページングボタン */
+.list-paging-btn {
+  @include div-center;
+  align-items: center;
+  text-align: center;
+  max-width: 15px;
+  min-width: 15px;
+  padding: 3px 4px;
+}

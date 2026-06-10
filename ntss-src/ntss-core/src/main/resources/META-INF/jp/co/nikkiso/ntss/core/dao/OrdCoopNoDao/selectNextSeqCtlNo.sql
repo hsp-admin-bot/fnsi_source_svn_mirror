@@ -1,0 +1,1 @@
+select nextval('ord_coop_no_ctl_no_seq');

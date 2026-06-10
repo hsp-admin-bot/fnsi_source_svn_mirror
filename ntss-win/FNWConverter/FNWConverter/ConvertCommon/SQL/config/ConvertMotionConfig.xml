@@ -1,0 +1,443 @@
+<?xml version="1.0" encoding="shift_jis" ?>
+<!--装置記録情報コンバート-->
+<rootNode>
+	<tableInfo>
+		<name>装置ログデータ</name>
+		<convertKind>MOTION</convertKind>
+		<xmlConfigName>LOG_DEV_LOG-mnt_motion_record</xmlConfigName>
+		<fnwTableName>LOG_DEV_LOG</fnwTableName>
+		<ntssTableName>mnt_motion_record</ntssTableName>
+		<fnwPk>LOG_SEQ_NO</fnwPk>
+		<sqlForTool>
+			WITH  PAT_FLG_LIST AS (
+			SELECT
+			a.OPE_CD
+			, CASE WHEN n.PAT_FLG= '1' THEN
+			　　　　	CASE WHEN  n.ALARM_FLG='2' THEN
+			　　　　　　　	   CASE WHEN  VALUE in('0','1','4','5')  THEN '1'  ELSE '2'  END
+			　　　　	WHEN  n.ALARM_FLG='1' THEN
+			　　　　　　　	   CASE WHEN  VALUE in('0','1','2','3')  THEN '1'  ELSE '2'  END
+			　　　　	ELSE  CASE WHEN  VALUE in('0','2','4','6')  THEN '1'  ELSE '2'  END
+			　　　　	END
+			ELSE '0' END  AS PAT_FLG
+			FROM
+			MST_LOG_MESSAGE a
+			INNER JOIN MST_LOG_MESSAGE_SUB_NEW n ON
+			a.OPE_CD = n.OPE_CD
+			AND a.UP_DATE = n.UP_DATE and n.SERIES_CD='{4}'
+			CROSS JOIN  (SELECT  VALUE FROM SYS_SYSTEM_DEFINE WHERE ID='511' and SERIES_CD='{4}' )
+			)
+			SELECT
+			ldl.OCCUR_DATE as event_reg_date,
+			null as m_notice_status,
+			ldl.LOG_SEQ_NO as log_seq_no,
+			null as device_edge_no,
+			ldl.DEVICE_NO as machine_type_cd,
+			ldl.DEVICE_NO as machine_serial,
+			ldl.DEVICE_NO as com_format_cd,
+			1 as data_type,
+			null as test_type,
+			null as gathering_manage_no,
+			null as email_send_date,
+			null as email_text,
+			trim(ldl.LOG_CD) as machine_record_cd,
+			ldl.LOG_MESSAGE as machine_record_message,
+			null as contents,
+			ldl.LOG_NUMBER1 || ',' || ldl.LOG_NUMBER2 || ',' || ldl.LOG_NUMBER3 || ',' || ldl.LOG_NUMBER4 as machine_record_aux_data,
+			null as email_address,
+			'0' as email_name,
+			null as remarks,
+			0 as is_correction,
+			null as user_id,
+			case when  rd.DEVICE_NO is not null then   rd.DIALYSIS_NO || ',' || TO_CHAR(ldl.occur_date,'YYYY-MM-DD HH24:MI:SS')
+			else null end  as ord_no,
+			0 as log_type,
+			ldl.OCCUR_DATE as reg_date,
+			ldl.OCCUR_DATE as up_date,
+			null as is_correction_up_date,
+			0 as service_support_type,
+			null as service_support_user_id,
+			null as service_support_up_date,
+			CASE WHEN   P.PAT_FLG IN('1','0') THEN '0'  ELSE '1' END as REPORT_DISP_FLG,
+			ldl.OCCUR_DATE as occur_date,
+			null as m_notice_status,
+			ldl.DEVICE_NO as device_no,
+			ldl.LOG_CD as log_cd,
+			ldl.LOG_MESSAGE as log_message,
+			ldl.LOG_NUMBER1 || ',' || ldl.LOG_NUMBER2 || ',' || ldl.LOG_NUMBER3 || ',' || ldl.LOG_NUMBER4 as log_number,
+			'1' as device_type
+			FROM ({0}) ldl
+			INNER JOIN MST_DEVICE m on m.DEVICE_NO=ldl.DEVICE_NO and m.SERIES_CD='{4}'
+			AND NOT EXISTS ( SELECT * FROM MST_DEVICE b WHERE m.DEVICE_NO = b.DEVICE_NO AND m.UP_DATE &lt; b.UP_DATE )
+			LEFT JOIN RST_DIALYSIS rd on ldl.DEVICE_NO =rd.DEVICE_NO and  ldl.occur_date &gt;= rd.ENTER_DATE AND ldl.occur_date &lt;=  rd.LEAVE_DATE and rd.REC_CLASS = '0'
+			LEFT JOIN  PAT_FLG_LIST P ON TRIM(P.OPE_CD)  = TRIM(ldl.LOG_CD)
+			WHERE ldl.OCCUR_DATE &gt;=:START_DATE
+			AND ldl.OCCUR_DATE &lt; :END_DATE
+			{1}
+			order by ldl.OCCUR_DATE　desc,ldl.LOG_MESSAGE
+		</sqlForTool>
+		<sqlForSync>
+		</sqlForSync>
+	</tableInfo>
+	<tableInfo>
+		<name>装置メンテナンスデータ</name>
+		<convertKind>MOTION</convertKind>
+		<xmlConfigName>LOG_DEV_MENTE-mnt_motion_record</xmlConfigName>
+		<fnwTableName>LOG_DEV_MENTE</fnwTableName>
+		<ntssTableName>mnt_motion_record</ntssTableName>
+		<fnwPk>MENTE_SEQ_NO</fnwPk>
+		<sqlForTool>
+			WITH UFRC_DATE AS (
+			SELECT
+			ldm.OCCUR_DATE as event_reg_date,
+			null as m_notice_status,
+			ldm.MENTE_SEQ_NO AS mente_seq_no,
+			null as device_edge_no,
+			ldm.DEVICE_NO as machine_type_cd,
+			ldm.DEVICE_NO as machine_serial,
+			ldm.DEVICE_NO as com_format_cd,
+			4 as data_type,
+			1 as test_type,
+			null as gathering_manage_no,
+			null as email_send_date,
+			null as email_text,
+			null as machine_record_cd,
+			'配管（UFRC）自己診断' as machine_record_message,
+			ldm.MENTE_DATA as contents,
+			null as machine_record_aux_data,
+			null as email_address,
+			'0' as email_name,
+			null as remarks,
+			0 as is_correction,
+			null as user_id,
+			null  as ord_no,
+			0 as log_type,
+			ldm.OCCUR_DATE as reg_date,
+			ldm.OCCUR_DATE as up_date,
+			null as is_correction_up_date,
+			0 as service_support_type,
+			null as service_support_user_id,
+			null as service_support_up_date,
+			'0' as report_disp_flg,
+			'配管（UFRC）自己診断' AS log_message,
+			ldm.DEVICE_NO AS device_no,
+			'1' AS device_type,
+			ldm.UFRC_MEASURE_DATE AS occur_date
+			FROM
+			( {0} ) ldm
+			WHERE
+			ldm.UFRC_MEASURE_DATE IS NOT NULL
+			),
+			LEAK_DATE AS (
+			SELECT
+			ldm.OCCUR_DATE as event_reg_date,
+			null as m_notice_status,
+			ldm.MENTE_SEQ_NO AS mente_seq_no,
+			null as device_edge_no,
+			ldm.DEVICE_NO as machine_type_cd,
+			ldm.DEVICE_NO as machine_serial,
+			ldm.DEVICE_NO as com_format_cd,
+			4 as data_type,
+			2 as test_type,
+			null as gathering_manage_no,
+			null as email_send_date,
+			null as email_text,
+			null as machine_record_cd,
+			'漏血自己診断' as machine_record_message,
+			ldm.MENTE_DATA as contents,
+			null as machine_record_aux_data,
+			null as email_address,
+			'0' as email_name,
+			null as remarks,
+			0 as is_correction,
+			null as user_id,
+			null  as ord_no,
+			0 as log_type,
+			ldm.OCCUR_DATE as reg_date,
+			ldm.OCCUR_DATE as up_date,
+			null as is_correction_up_date,
+			0 as service_support_type,
+			null as service_support_user_id,
+			null as service_support_up_date,
+			'0' as report_disp_flg,
+			'漏血自己診断' AS log_message,
+			ldm.DEVICE_NO AS device_no,
+			'1' AS device_type,
+			ldm.LEAK_MEASURE_DATE AS occur_date
+			FROM
+			( {0} ) ldm
+			WHERE
+			ldm.LEAK_MEASURE_DATE IS NOT NULL
+			),
+			QD_DATE AS (
+			SELECT
+			ldm.OCCUR_DATE as event_reg_date,
+			null as m_notice_status,
+			ldm.MENTE_SEQ_NO AS mente_seq_no,
+			null as device_edge_no,
+			ldm.DEVICE_NO as machine_type_cd,
+			ldm.DEVICE_NO as machine_serial,
+			ldm.DEVICE_NO as com_format_cd,
+			4 as data_type,
+			3 as test_type,
+			null as gathering_manage_no,
+			null as email_send_date,
+			null as email_text,
+			null as machine_record_cd,
+			'透析液流量自己診断' as machine_record_message,
+			ldm.MENTE_DATA as contents,
+			null as machine_record_aux_data,
+			null as email_address,
+			'0' as email_name,
+			null as remarks,
+			0 as is_correction,
+			null as user_id,
+			null  as ord_no,
+			0 as log_type,
+			ldm.OCCUR_DATE as reg_date,
+			ldm.OCCUR_DATE as up_date,
+			null as is_correction_up_date,
+			0 AS service_support_type,
+			null as service_support_user_id,
+			null as service_support_up_date,
+			'0' as report_disp_flg,
+			'透析液流量自己診断' AS log_message,
+			ldm.DEVICE_NO AS device_no,
+			'1' AS device_type,
+			ldm.QD_MEASURE_DATE AS occur_date
+			FROM
+			( {0} ) ldm
+			WHERE
+			ldm.QD_MEASURE_DATE IS NOT NULL
+			),
+			DENSITY_DATE AS (
+			SELECT
+			ldm.OCCUR_DATE as event_reg_date,
+			null as m_notice_status,
+			ldm.MENTE_SEQ_NO AS mente_seq_no,
+			null as device_edge_no,
+			ldm.DEVICE_NO as machine_type_cd,
+			ldm.DEVICE_NO as machine_serial,
+			ldm.DEVICE_NO as com_format_cd,
+			4 as data_type,
+			4 as test_type,
+			null as gathering_manage_no,
+			null as email_send_date,
+			null as email_text,
+			null as machine_record_cd,
+			'濃度自己診断' as machine_record_message,
+			ldm.MENTE_DATA as contents,
+			null as machine_record_aux_data,
+			null as email_address,
+			'0' as email_name,
+			null as remarks,
+			0 as is_correction,
+			null as user_id,
+			null  as ord_no,
+			0 as log_type,
+			ldm.OCCUR_DATE as reg_date,
+			ldm.OCCUR_DATE as up_date,
+			null as is_correction_up_date,
+			0 as service_support_type,
+			null as service_support_user_id,
+			null as service_support_up_date,
+			'0'  as report_disp_flg,
+			'濃度自己診断' AS log_message,
+			ldm.DEVICE_NO AS device_no,
+			'1' AS device_type,
+			ldm.DENSITY_MEASURE_DATE AS occur_date
+			FROM
+			( {0} ) ldm
+			WHERE
+			ldm.DENSITY_MEASURE_DATE IS NOT NULL
+			),
+			CCP_SELFDIAG_DATE AS (
+			SELECT
+			ldm.OCCUR_DATE as event_reg_date,
+			null as m_notice_status,
+			ldm.MENTE_SEQ_NO AS mente_seq_no,
+			null as device_edge_no,
+			ldm.DEVICE_NO as machine_type_cd,
+			ldm.DEVICE_NO as machine_serial,
+			ldm.DEVICE_NO as com_format_cd,
+			4 as data_type,
+			7 as test_type,
+			null as gathering_manage_no,
+			null as email_send_date,
+			null as email_text,
+			null as machine_record_cd,
+			'自己診断結果' as machine_record_message,
+			ldm.MENTE_DATA as contents,
+			null as machine_record_aux_data,
+			null as email_address,
+			'0' as email_name,
+			null as remarks,
+			0 as is_correction,
+			null as user_id,
+			null as ord_no,
+			0 as log_type,
+			ldm.OCCUR_DATE as reg_date,
+			ldm.OCCUR_DATE as up_date,
+			null as is_correction_up_date,
+			0 as service_support_type,
+			null as service_support_user_id,
+			null as service_support_up_date,
+			'0'  as report_disp_flg,
+			'自己診断結果' AS log_message,
+			ldm.DEVICE_NO AS device_no,
+			'1' AS device_type,
+			ldm.CCP_SELFDIAG_MEASURE_DATE AS occur_date
+			FROM
+			( {0} ) ldm
+			WHERE
+			ldm.CCP_SELFDIAG_MEASURE_DATE IS NOT NULL
+			), MST_DEVICE_list AS(
+			SELECT
+			m.DEVICE_NO,m.DEVICE_TYPE_CD,
+			m.UP_DATE,nvl(lead (m.UP_DATE, 1, NULL) over (PARTITION BY  m.DEVICE_NO ORDER BY m.DEVICE_NO,m.UP_DATE ASC), SYSDATE) AS enddate
+			FROM
+			MST_DEVICE m
+			where m.SERIES_CD='{4}'
+			AND NOT EXISTS ( SELECT * FROM MST_DEVICE b WHERE m.DEVICE_NO = b.DEVICE_NO AND m.UP_DATE &lt; b.UP_DATE )
+			)
+			select * from(
+			SELECT
+			a.* ,b.DEVICE_TYPE_CD
+			FROM
+			UFRC_DATE a INNER JOIN MST_DEVICE_list b on  a.DEVICE_NO=b.DEVICE_NO and  event_reg_date>b.UP_DATE and  event_reg_date&lt;b.enddate UNION ALL
+			SELECT
+			a.* ,b.DEVICE_TYPE_CD
+			FROM
+			LEAK_DATE a INNER JOIN MST_DEVICE_list b on  a.DEVICE_NO=b.DEVICE_NO and  event_reg_date>b.UP_DATE and  event_reg_date&lt;b.enddate UNION ALL
+			SELECT
+			a.* ,b.DEVICE_TYPE_CD
+			FROM
+			QD_DATE a INNER JOIN MST_DEVICE_list b on  a.DEVICE_NO=b.DEVICE_NO and  event_reg_date>b.UP_DATE and  event_reg_date&lt;b.enddate UNION ALL
+			SELECT
+			a.* ,b.DEVICE_TYPE_CD
+			FROM
+			DENSITY_DATE a INNER JOIN MST_DEVICE_list b on  a.DEVICE_NO=b.DEVICE_NO and  event_reg_date>b.UP_DATE and  event_reg_date&lt;b.enddate UNION ALL
+			SELECT
+			a.* ,b.DEVICE_TYPE_CD
+			FROM
+			CCP_SELFDIAG_DATE a INNER JOIN MST_DEVICE_list b on  a.DEVICE_NO=b.DEVICE_NO and  event_reg_date>b.UP_DATE and  event_reg_date&lt;b.enddate)
+			WHERE up_date &gt;= :START_DATE
+			AND up_date &lt;:END_DATE
+			{1}
+		</sqlForTool>
+		<sqlForSync>
+		</sqlForSync>
+	</tableInfo>
+	<tableInfo>
+		<name>機械メンテナンスデータ</name>
+		<convertKind>MOTION</convertKind>
+		<xmlConfigName>LOG_MCN_MENTE-mnt_motion_record</xmlConfigName>
+		<fnwTableName>LOG_MCN_MENTE</fnwTableName>
+		<ntssTableName>mnt_motion_record</ntssTableName>
+		<fnwPk>MENTE_SEQ_NO</fnwPk>
+		<sqlForTool>
+			WITH PIPE_DATE AS (
+			SELECT
+			lmm.OCCUR_DATE as event_reg_date,
+			null as m_notice_status,
+			lmm.MENTE_SEQ_NO AS mente_seq_no,
+			null as device_edge_no,
+			lmm.DEVICE_NO as machine_type_cd,
+			lmm.DEVICE_NO as machine_serial,
+			lmm.DEVICE_NO as com_format_cd,
+			4 as data_type,
+			5 as test_type,
+			null as gathering_manage_no,
+			null as email_send_date,
+			null as email_text,
+			null as machine_record_cd,
+			'配管テスト' as machine_record_message,
+			MENTE_DATA as contents	,
+			null as machine_record_aux_data,
+			null as email_address,
+			'0' as email_name,
+			null as remarks,
+			0 as is_correction,
+			null as user_id,
+			null  as ord_no,
+			0 as log_type,
+			lmm.OCCUR_DATE as reg_date,
+			lmm.OCCUR_DATE as up_date,
+			null as is_correction_up_date,
+			0 as service_support_type,
+			null as service_support_user_id,
+			null as service_support_up_date,
+			'0'  as report_disp_flg,
+			'配管テスト' AS log_message,
+			PIPE_MEASURE_DATE as occur_date,
+			lmm.DEVICE_NO as device_no,
+			'2' as device_type
+			FROM
+			( {0} ) lmm
+			INNER JOIN MST_DEVICE m on m.DEVICE_NO=lmm.DEVICE_NO and m.SERIES_CD='{4}'
+			AND NOT EXISTS ( SELECT * FROM MST_DEVICE b WHERE m.DEVICE_NO = b.DEVICE_NO AND m.UP_DATE &lt; b.UP_DATE )
+			WHERE
+			lmm.PIPE_MEASURE_DATE IS NOT NULL
+			AND lmm.DEVICE_ID != 'E'
+			),
+			DILUTION_DATE AS (
+			SELECT
+			lmm.OCCUR_DATE as event_reg_date,
+			null as m_notice_status,
+			lmm.MENTE_SEQ_NO AS mente_seq_no,
+			null as device_edge_no,
+			lmm.DEVICE_NO as machine_type_cd,
+			lmm.DEVICE_NO as machine_serial,
+			lmm.DEVICE_NO as com_format_cd,
+			4 as data_type,
+			6 as test_type,
+			null as gathering_manage_no,
+			null as email_send_date,
+			null as email_text,
+			null as machine_record_cd,
+			'希釈テスト' as machine_record_message,
+			lmm.MENTE_DATA as contents,
+			null as machine_record_aux_data,
+			null as email_address,
+			'0' as email_name,
+			null as remarks,
+			0 as is_correction,
+			null as user_id,
+			null  as ord_no,
+			0 as log_type,
+			lmm.OCCUR_DATE as reg_date,
+			lmm.OCCUR_DATE as up_date,
+			null as is_correction_up_date,
+			0 as service_support_type,
+			null as service_support_user_id,
+			null as service_support_up_date,
+			'0'  as report_disp_flg,
+			'希釈テスト' AS log_message,
+			DILUTION_MEASURE_DATE as occur_date,
+			lmm.DEVICE_NO as device_no,
+			'2' as device_type
+			FROM
+			( {0} ) lmm
+			INNER JOIN MST_DEVICE m on m.DEVICE_NO=lmm.DEVICE_NO and m.SERIES_CD='{4}'
+			AND NOT EXISTS ( SELECT * FROM MST_DEVICE b WHERE m.DEVICE_NO = b.DEVICE_NO AND m.UP_DATE &lt; b.UP_DATE )
+			WHERE
+			lmm.DILUTION_MEASURE_DATE IS NOT NULL
+			AND lmm.DEVICE_ID != 'E'
+			)
+			select * from(
+			SELECT
+			*
+			FROM
+			PIPE_DATE UNION ALL
+			SELECT
+			*
+			FROM
+			DILUTION_DATE)
+			WHERE up_date &gt;= :START_DATE
+			AND up_date &lt;:END_DATE
+			{1}
+		</sqlForTool>
+		<sqlForSync>
+		</sqlForSync>
+	</tableInfo>
+</rootNode>

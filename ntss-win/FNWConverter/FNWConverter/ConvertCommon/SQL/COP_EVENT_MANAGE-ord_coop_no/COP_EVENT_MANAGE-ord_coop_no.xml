@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<rootNode>
+	<tableInfo>
+		<name>連携オーダ番号</name>
+		<convertKind>MST</convertKind>
+		<xmlConfigName>COP_EVENT_MANAGE-ord_coop_no</xmlConfigName>
+		<fnwTableName>COP_EVENT_MANAGE</fnwTableName>
+		<ntssTableName>ord_coop_no</ntssTableName>
+		<fnwPk>SPECIFIC_KEY</fnwPk>
+		<mstSelectorCode></mstSelectorCode>
+		<mstSelectorName></mstSelectorName>
+		<sqlForTool>
+			WITH CONVERT_HISTORY AS(
+			select * from sync_convert_history a
+			inner join sync_convert_history_dtl b
+			on (a.seq_no=b.seq_no) where table_kind = 'ORD'
+			),PAT_BASIC_INFO_NORMAL AS ( SELECT PATID, DISP_PATID FROM PAT_BASIC_INFO GROUP BY PATID, DISP_PATID ),
+			SYNC_COOP_CONVERT_SET_NORMAL AS (SELECT t.FNSI_COOP_VERSION,t.COOP_ID FROM ( SELECT scce.FNSI_COOP_VERSION, scce.FNW_COOP_ID, ccshd.COOP_ID, ROW_NUMBER() OVER (
+			PARTITION BY ccshd.COOP_ID ORDER BY CASE  WHEN scce.FNW_COOP_ID IS NOT NULL THEN 1 ELSE 2 END, LENGTH(scce.FNW_COOP_ID) DESC, CASE
+			WHEN scce.FNSI_COOP_VERSION IS NOT NULL AND scce.FNSI_COOP_VERSION &lt;&gt; '-' THEN 1 ELSE 2 END) rn FROM COP_COOP_SEND_HST_DETAIL ccshd LEFT JOIN SYNC_COOP_CONVERT_SET scce 
+			ON ( ( scce.FNW_COOP_ID IS NOT NULL AND LENGTH(scce.FNW_COOP_ID) IN (2,3,5)  AND ccshd.COOP_ID LIKE scce.FNW_COOP_ID || '%' )  OR scce.FNW_COOP_ID IS NULL  )) t WHERE t.rn = 1)
+			select
+			*
+			from (
+			select
+			sccsn.FNSI_COOP_VERSION,
+			case
+			when cem.COOP_ID ='EGM01' or cem.COOP_ID ='FNX01'  then 'ini_dial'
+			when cem.COOP_ID ='EGM02' or cem.COOP_ID ='FNX02'  or cem.COOP_ID ='STD01' or cem.COOP_ID ='40000' or cem.COOP_ID ='NEC01'  or cem.COOP_ID ='NIS01'  or cem.COOP_ID ='NIS03'  or cem.COOP_ID ='SNY01'  or cem.COOP_ID ='TSM02'
+			or   cem.COOP_ID ='THC01' or cem.COOP_ID ='50000'  or cem.COOP_ID ='KOB01' or cem.COOP_ID ='BML01' or cem.COOP_ID ='SSI02'  or cem.COOP_ID ='SCM01'  or cem.COOP_ID ='SCM10'  or cem.COOP_ID ='KIC01'  or cem.COOP_ID ='STD12'
+			or   cem.COOP_ID ='STD14' or cem.COOP_ID ='IMS01'  or cem.COOP_ID ='EGM00' or cem.COOP_ID ='FNX03' or cem.COOP_ID ='60000'  or cem.COOP_ID ='NIS00'  or cem.COOP_ID ='SNY05'  or cem.COOP_ID ='THC00'  or cem.COOP_ID ='50100'
+			or   cem.COOP_ID ='KOB02' or cem.COOP_ID ='KOB03'  or cem.COOP_ID ='KIC02' or cem.COOP_ID ='STD13' or cem.COOP_ID ='STD15'  or cem.COOP_ID ='STD16'  or cem.COOP_ID ='IMS00'  or cem.COOP_ID ='IMS02'  or cem.COOP_ID ='FF001'
+			then 'profile'
+			when cem.COOP_ID ='SNY02' or cem.COOP_ID ='BML02' or cem.COOP_ID ='SCM04' then 'accept'
+			when cem.COOP_ID ='SSI01' or cem.COOP_ID ='HBR01'or cem.COOP_ID ='STD17'  then 'ord_dial'
+			when cem.COOP_ID ='EGM03' or cem.COOP_ID ='TYKW1' or cem.COOP_ID ='FNX04' or cem.COOP_ID ='NEC07' or cem.COOP_ID ='NIS04' or cem.COOP_ID ='41000' or cem.COOP_ID ='TSM03'
+			or cem.COOP_ID ='IBM01' or cem.COOP_ID ='SSI05' or cem.COOP_ID ='SCM02'  or cem.COOP_ID ='STD11' or cem.COOP_ID ='IMS06' or cem.COOP_ID ='CCS00' or cem.COOP_ID ='YYM02'
+			then 'ind_dial'
+			when cem.COOP_ID ='EGM04' or cem.COOP_ID ='FNX05' or cem.COOP_ID ='FCX01'   or cem.COOP_ID ='FSX01' or cem.COOP_ID ='STD03' or cem.COOP_ID ='NEC04'  or cem.COOP_ID ='NIS05' or cem.COOP_ID ='42000' or cem.COOP_ID ='SNY04'
+			or cem.COOP_ID ='TSM04'or cem.COOP_ID ='THC02' or cem.COOP_ID ='IBM02' or cem.COOP_ID ='SSI04' or cem.COOP_ID ='SCM03' or cem.COOP_ID ='ICY03' or cem.COOP_ID ='SSM01' or cem.COOP_ID ='IMS07' or cem.COOP_ID ='CCS01'
+			then 'rst_dial'
+			when cem.COOP_ID ='SNY03' or cem.COOP_ID ='SSI03' or cem.COOP_ID ='SCM08'  then 'karte_ord'
+			when cem.COOP_ID ='EGM05' or cem.COOP_ID ='PDF00' or cem.COOP_ID ='45000' or cem.COOP_ID ='NEC06' or cem.COOP_ID ='NIS06' or cem.COOP_ID ='FXR01' or cem.COOP_ID ='SCM09' or cem.COOP_ID ='KIC03' or cem.COOP_ID ='GHJ01' or cem.COOP_ID ='YKG01'
+			then 'rep_dial'
+			when cem.COOP_ID ='EGM07' or cem.COOP_ID ='FNX06' or cem.COOP_ID ='FCX02' or cem.COOP_ID ='46000' or cem.COOP_ID ='STD07' or cem.COOP_ID ='SCM05' or cem.COOP_ID ='ICY01'
+			or cem.COOP_ID ='SNY08'  or cem.COOP_ID ='STD09'
+			then 'exam_ord'
+			when   cem.COOP_ID ='EGM06' or cem.COOP_ID ='FNX07' or cem.COOP_ID ='00008' or cem.COOP_ID ='NIS02' or cem.COOP_ID ='54000' or cem.COOP_ID ='SNY06' or cem.COOP_ID ='TSM05' or cem.COOP_ID ='TSM06'
+			or cem.COOP_ID ='54100' or cem.COOP_ID ='STD02' or cem.COOP_ID ='STD10' or cem.COOP_ID ='IMS04' or cem.COOP_ID ='IMS03'
+			then 'exam_rst'
+			when cem.COOP_ID ='EGM08' or cem.COOP_ID ='SCM06' then 'rad_ord'
+			when cem.COOP_ID ='EGM09' then 'phy_ord'
+			when  cem.COOP_ID ='EGM12' or cem.COOP_ID ='NEC15' or cem.COOP_ID ='53000' or cem.COOP_ID ='53100' or cem.COOP_ID ='IMS05'
+			then 'staff_mst'
+			when cem.COOP_ID ='EGM10' or cem.COOP_ID ='NEC12' or cem.COOP_ID ='NEC13' or cem.COOP_ID ='NEC17'  or cem.COOP_ID ='ICY06' then 'shot_ord'
+			when cem.COOP_ID ='PLP01' or cem.COOP_ID ='FKD01' or cem.COOP_ID ='NEC16' then 'vit_cop'
+			when cem.COOP_ID ='NEC14' or cem.COOP_ID ='ICY02' or cem.COOP_ID ='STD08'  or cem.COOP_ID ='EGM11' then 'pre_ord'
+			end
+			as coop_cd,
+			case
+			when cem.COOP_ID ='EGM03' or cem.COOP_ID ='TYKW1' or cem.COOP_ID ='FNX04' or cem.COOP_ID ='NEC07' or cem.COOP_ID ='NIS04' or cem.COOP_ID ='41000' or cem.COOP_ID ='TSM03'
+			or cem.COOP_ID ='IBM01' or cem.COOP_ID ='SSI05' or cem.COOP_ID ='SCM02'  or cem.COOP_ID ='STD11' or cem.COOP_ID ='IMS06' or cem.COOP_ID ='CCS00' or cem.COOP_ID ='YYM02'
+			then substr(cem.SPECIFIC_KEY,-13,12)
+			when cem.COOP_ID ='EGM02' or cem.COOP_ID ='FNX02'  or cem.COOP_ID ='STD01' or cem.COOP_ID ='40000' or cem.COOP_ID ='NEC01'  or cem.COOP_ID ='NIS01'  or cem.COOP_ID ='NIS03'  or cem.COOP_ID ='SNY01'  or cem.COOP_ID ='TSM02'
+			or   cem.COOP_ID ='THC01' or cem.COOP_ID ='50000'  or cem.COOP_ID ='KOB01' or cem.COOP_ID ='BML01' or cem.COOP_ID ='SSI02'  or cem.COOP_ID ='SCM01'  or cem.COOP_ID ='SCM10'  or cem.COOP_ID ='KIC01'  or cem.COOP_ID ='STD12'
+			or   cem.COOP_ID ='STD14' or cem.COOP_ID ='IMS01'  or cem.COOP_ID ='EGM00' or cem.COOP_ID ='FNX03' or cem.COOP_ID ='60000'  or cem.COOP_ID ='NIS00'  or cem.COOP_ID ='SNY05'  or cem.COOP_ID ='THC00'  or cem.COOP_ID ='50100'
+			or   cem.COOP_ID ='KOB02' or cem.COOP_ID ='KOB03'  or cem.COOP_ID ='KIC02' or cem.COOP_ID ='STD13' or cem.COOP_ID ='STD15'  or cem.COOP_ID ='STD16'  or cem.COOP_ID ='IMS00'  or cem.COOP_ID ='IMS02'  or cem.COOP_ID ='FF001'
+			then P.PATID
+			else (select PATID from RST_DIALYSIS where DIALYSIS_NO = substr(cem.SPECIFIC_KEY,1,12))
+			end
+			as PATID,
+			cem.SPECIFIC_KEY,
+			case when ccsh.SEND_STATE is not null then ccsh.SEND_STATE
+			else '1' end as SEND_STATE,
+			case
+			when cem.COOP_ID ='EGM05' or cem.COOP_ID ='PDF00' or cem.COOP_ID ='45000' or cem.COOP_ID ='NEC06' or cem.COOP_ID ='NIS06' or cem.COOP_ID ='FXR01' or cem.COOP_ID ='SCM09' or cem.COOP_ID ='KIC03' or cem.COOP_ID ='GHJ01' or cem.COOP_ID ='YKG01'
+			then (select em.ORDER_NUMBER from COP_EVENT_MANAGE em where em.SPECIFIC_KEY = cem.SPECIFIC_KEY and em.ORDER_NUMBER is not null and rownum = 1 and em.COOP_FUNCTION_NAME = '透析実績' )
+			else cem.ORDER_NUMBER end as ORDER_NUMBER,
+			cem.SERIES_CD,
+			case when cem.EVENT_CLASS = 2 then '1' else '0' end as is_del,
+			case when cem.EVENT_CLASS = 2 then '0' else '1' end as is_disp,
+			case
+			when cem.COOP_ID ='EGM03' or cem.COOP_ID ='TYKW1' or cem.COOP_ID ='FNX04' or cem.COOP_ID ='NEC07' or cem.COOP_ID ='NIS04' or cem.COOP_ID ='41000' or cem.COOP_ID ='TSM03'
+			or cem.COOP_ID ='IBM01' or cem.COOP_ID ='SSI05' or cem.COOP_ID ='SCM02'  or cem.COOP_ID ='STD11' or cem.COOP_ID ='IMS06' or cem.COOP_ID ='CCS00' or cem.COOP_ID ='YYM02'
+			then substr(cem.SPECIFIC_KEY,0,8)
+			when cem.COOP_FUNCTION_NAME = '透析条件送信' or cem.COOP_FUNCTION_NAME = '透析実績' or cem.COOP_FUNCTION_NAME = 'バイタル送信' or cem.COOP_FUNCTION_NAME = '透析レポート' or cem.COOP_FUNCTION_NAME = 'レポートストア'
+			then (select TO_CHAR(START_DATE,'yyyyMMdd') from RST_DIALYSIS where DIALYSIS_NO = substr(cem.SPECIFIC_KEY,1,12))
+			else TO_CHAR(cem.EVENT_OCCUR_DATE,'yyyyMMdd')
+			end
+			as START_DATE,
+			case
+			when cem.COOP_ID ='EGM03' or cem.COOP_ID ='TYKW1' or cem.COOP_ID ='FNX04' or cem.COOP_ID ='NEC07' or cem.COOP_ID ='NIS04' or cem.COOP_ID ='41000' or cem.COOP_ID ='TSM03'
+			or cem.COOP_ID ='IBM01' or cem.COOP_ID ='SSI05' or cem.COOP_ID ='SCM02'  or cem.COOP_ID ='STD11' or cem.COOP_ID ='IMS06' or cem.COOP_ID ='CCS00' or cem.COOP_ID ='YYM02'
+			then substr(cem.SPECIFIC_KEY,0,8)
+			when cem.COOP_FUNCTION_NAME = '透析条件送信' or cem.COOP_FUNCTION_NAME = '透析実績' or cem.COOP_FUNCTION_NAME = 'バイタル送信' or cem.COOP_FUNCTION_NAME = '透析レポート' or cem.COOP_FUNCTION_NAME = 'レポートストア'
+			then (select TO_CHAR(END_DATE,'yyyyMMdd') from RST_DIALYSIS where DIALYSIS_NO = substr(cem.SPECIFIC_KEY,1,12))
+			else TO_CHAR(cem.EVENT_OCCUR_DATE,'yyyyMMdd')
+			end
+			as END_DATE,
+			cem.EVENT_OCCUR_DATE,ccsh.UP_DATE
+			from
+			COP_EVENT_MANAGE  cem
+			left join COP_COOP_SEND_HST ccsh on cem.EVENT_GROUP_NO = ccsh.EVENT_GROUP_NO
+			AND cem.COOP_ID = ccsh.COOP_ID
+			AND cem.EVENT_SEQ_NUMBER = ccsh.EVENT_SEQ_NUMBER
+			LEFT JOIN SYNC_COOP_CONVERT_SET_NORMAL sccsn ON	cem.COOP_ID = sccsn.COOP_ID
+			LEFT JOIN PAT_BASIC_INFO_NORMAL P ON P.DISP_PATID =(LPAD( SUBSTR (KEY_INFO, INSTR(KEY_INFO,'&lt;DISP_PATID>') + 12, INSTR(KEY_INFO,'&lt;/DISP_PATID>')-INSTR(KEY_INFO,'&lt;DISP_PATID>')-12),12,0))
+			where PROC_FLG = '1'
+			) a
+			where
+			COOP_CD is not null and SEND_STATE = 1
+			{sqlForSync}
+			{sqlForExclusiveOutputted}
+			order by COOP_CD
+		</sqlForTool>
+		<sqlForSync>
+			and {0}
+			and ( COOP_CD = 'profile' or ( START_DATE >= :START_DATE and END_DATE &lt;:END_DATE ))
+			and SERIES_CD = '{SERIES_CD}'
+		</sqlForSync>
+		<sqlForSpecifyPeriod>
+			and a.START_DATE >= :START_DATE and a.END_DATE &lt;:END_DATE
+		</sqlForSpecifyPeriod>
+		<sqlForExclusiveOutputted>
+			and not exists(
+			select * from CONVERT_HISTORY ch
+			where ch.facility_cd=:facility_cd
+			{sqlForSync}
+			and a.patid=ch.CONVERTTS
+			and to_date(a.START_DATE) >= ch.start_date
+			and to_date(a.END_DATE) &lt; ch.end_date + 1)
+		</sqlForExclusiveOutputted>
+	</tableInfo>
+</rootNode>

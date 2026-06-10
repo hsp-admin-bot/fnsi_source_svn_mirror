@@ -1,0 +1,167 @@
+insert into mst_pat_memo (
+  facility_cd,
+  pat_memo_no,
+  title,
+  content,
+  reg_date,
+  up_date
+) values (
+  /*facilityCdList*/null,
+  '1',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '2',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '3',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '4',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '5',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '6',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '7',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '8',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '9',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '10',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '11',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '12',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '13',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '14',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '15',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '16',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '17',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '18',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '19',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCdList*/null,
+  '20',
+  null,
+  null,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+);

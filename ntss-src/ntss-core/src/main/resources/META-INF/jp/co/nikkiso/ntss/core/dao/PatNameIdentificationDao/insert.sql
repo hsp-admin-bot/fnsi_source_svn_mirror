@@ -1,0 +1,30 @@
+INSERT INTO pat_name_identification
+(
+   pat_id_src,
+   facility_cd_src,
+   pat_id_dst,
+   facility_cd_dst,
+   approve,
+   receive,
+   is_open,
+   doctor_in_charge,
+   approve_date,
+   sign_up,
+   reg_date,
+   up_date
+)
+VALUES
+(
+   /*patNameIdentification.patIdSrc*/null,
+   /*patNameIdentification.facilityCdSrc*/null,
+   /*patNameIdentification.patIdDst*/null,
+   /*patNameIdentification.facilityCdDst*/null,
+   /*patNameIdentification.approve*/null,
+   /*patNameIdentification.receive*/null,
+   /*patNameIdentification.isOpen*/null,
+   /*patNameIdentification.doctorInCharge*/null,
+   /*patNameIdentification.approveDate*/null,
+   /*patNameIdentification.signUp*/null,
+   /*patNameIdentification.regDate*/null,
+   /*patNameIdentification.upDate*/null
+);

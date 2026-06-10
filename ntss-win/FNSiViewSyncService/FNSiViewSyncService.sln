@@ -1,0 +1,59 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.34320.172
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FNSiViewSyncService", "FNSiViewSyncService\FNSiViewSyncService.csproj", "{1ABCFD25-1AFA-4C85-9BD1-D42E4DDF841F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FNSiViewSyncLogic", "FNSiViewSyncLogic\FNSiViewSyncLogic.csproj", "{E8FB03FD-A120-4D9B-A369-7C4F9224766D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKCommon", "..\NKKWeight\Source\NKKCommon\NKKCommon.csproj", "{9E38647A-227C-4570-8E08-6BD25D0E3154}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "FNSiViewSyncServiceSetup", "FNSiViewSyncServiceSetup\FNSiViewSyncServiceSetup.vdproj", "{3FE8C740-D659-4C92-95F8-422549032DC5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FNSiViewSyncTool", "FNSiViewSyncTool\FNSiViewSyncTool.csproj", "{9D67EF6E-E469-498C-A294-742ACB88371A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FNSiViewUpdateApp", "FNSiViewUpdateApp\FNSiViewUpdateApp.csproj", "{E053B5AF-DCBF-4946-A562-40C078E84FC1}"
+EndProject
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "FNSiViewSyncServiceSetupWix", "FNSiViewSyncServiceSetupWix\FNSiViewSyncServiceSetupWix.wixproj", "{FA37E210-8C94-4D05-B6E3-123456789019}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1ABCFD25-1AFA-4C85-9BD1-D42E4DDF841F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1ABCFD25-1AFA-4C85-9BD1-D42E4DDF841F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1ABCFD25-1AFA-4C85-9BD1-D42E4DDF841F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1ABCFD25-1AFA-4C85-9BD1-D42E4DDF841F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8FB03FD-A120-4D9B-A369-7C4F9224766D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8FB03FD-A120-4D9B-A369-7C4F9224766D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8FB03FD-A120-4D9B-A369-7C4F9224766D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8FB03FD-A120-4D9B-A369-7C4F9224766D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3FE8C740-D659-4C92-95F8-422549032DC5}.Debug|Any CPU.ActiveCfg = Debug
+		{3FE8C740-D659-4C92-95F8-422549032DC5}.Debug|Any CPU.Build.0 = Debug
+		{3FE8C740-D659-4C92-95F8-422549032DC5}.Release|Any CPU.ActiveCfg = Release
+		{3FE8C740-D659-4C92-95F8-422549032DC5}.Release|Any CPU.Build.0 = Release
+		{9D67EF6E-E469-498C-A294-742ACB88371A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D67EF6E-E469-498C-A294-742ACB88371A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D67EF6E-E469-498C-A294-742ACB88371A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D67EF6E-E469-498C-A294-742ACB88371A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E053B5AF-DCBF-4946-A562-40C078E84FC1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E053B5AF-DCBF-4946-A562-40C078E84FC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E053B5AF-DCBF-4946-A562-40C078E84FC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E053B5AF-DCBF-4946-A562-40C078E84FC1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA37E210-8C94-4D05-B6E3-123456789019}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{FA37E210-8C94-4D05-B6E3-123456789019}.Release|Any CPU.ActiveCfg = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {ECE2C458-C58D-489D-BF4B-4DCEB48B4957}
+	EndGlobalSection
+EndGlobal

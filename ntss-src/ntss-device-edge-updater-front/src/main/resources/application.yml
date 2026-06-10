@@ -1,0 +1,59 @@
+spring:
+  datasource:
+    # url: jdbc:postgresql://ntss-platform-rds.clizq2mnnwjp.ap-northeast-1.rds.amazonaws.com:5432/ntss?currentSchema=ntss_provisional&stringtype=unspecified
+    # NKK aws
+    # url: jdbc:postgresql://ntss-platform-rds.chzddp07crsf.ap-northeast-1.rds.amazonaws.com:5432/ntss
+    # TDC aws
+    # url: jdbc:postgresql://testdbinstance.cc0dnsfhoqgq.ap-northeast-1.rds.amazonaws.com:5432/ntss
+    # TDC local
+    url: jdbc:postgresql://192.168.102.184:5432/ntss?stringtype=unspecified
+    # local
+    # url: jdbc:postgresql://localhost:5432/ntss
+    driver-class-name: org.postgresql.Driver
+    username: nkk
+    password: nkk
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+  application:
+    name: ntss-device-edge-updater-front
+  jmx:
+    default-domain: ntss-device-edge-updater-front
+
+doma:
+  dialect: postgres
+
+logging:
+  level:
+    org.springframework.transaction.interceptor: TRACE
+
+cloud:
+    aws:
+        region:
+#            auto: true
+            auto: false
+            static: ap-northeast-1
+#        stack:
+#            auto: false
+
+securityporicy:
+  accesskeycheck: true
+
+ntss:
+  device-edge-updater-front:
+    websocket:
+      senduri: /ntss-client-comm/api/sendmessage
+      port: 8080
+    rest:
+      upload: http://ntss-platform-public-app-alb-2041513679.ap-northeast-1.elb.amazonaws.com/ntss-web-api/upload
+    s3:
+      # main application bucket
+      app: s3://ntss-test4/update/app
+      # updater application bucket
+      updater: s3://ntss-test4/update/app
+      # conf upload bucket
+      confUp: s3://ntss-s3-root/CONF
+      # conf update bucket
+      confdown: s3://ntss-test4/update/conf
+      # log bucket
+      log: s3://ntss-s3-root/LOG

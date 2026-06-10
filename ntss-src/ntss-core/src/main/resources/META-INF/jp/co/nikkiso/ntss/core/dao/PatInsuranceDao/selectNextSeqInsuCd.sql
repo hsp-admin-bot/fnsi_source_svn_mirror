@@ -1,0 +1,1 @@
+select nextval('pat_insurance_insurance_cd_seq')

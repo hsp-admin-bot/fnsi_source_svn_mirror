@@ -1,0 +1,9 @@
+select
+build_machine_record_message(
+  /*machineRecordMessage*/'message',
+  /*machineRecordCd*/'0',
+  ARRAY[/*auxDataArray0*/'0',
+        /*auxDataArray1*/'1',
+        /*auxDataArray2*/'2',
+        /*auxDataArray3*/'3'])
+;

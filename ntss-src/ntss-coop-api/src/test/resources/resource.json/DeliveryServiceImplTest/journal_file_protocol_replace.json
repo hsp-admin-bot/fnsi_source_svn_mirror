@@ -1,0 +1,22 @@
+{
+  "result": [
+    {
+      "journalInfo": {
+        "ctl_no": 6,
+        "coop_cd": "6",
+        "coop_cd_index": ""
+      },
+      "protocolInfo": {
+        "protocol": "file",
+        "address": "C:\\work\\distination\\000000000006",
+        "renameWhenCopying": "",
+        "dummy": "",
+        "delete": ""
+      },
+      "data": {
+        "filename": "TEST.txt",
+        "dump": "544553545f4d4f434b"
+      }
+    }
+  ]
+}

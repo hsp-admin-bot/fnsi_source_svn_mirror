@@ -1,0 +1,335 @@
+insert into mst_relationship (
+  facility_cd,
+  relationship_name,
+  is_disp,
+  is_del,
+  reg_date,
+  up_date
+) values (
+  /*facilityCd*/null,
+  '夫',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '妻',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '兄',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '姉',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '弟',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '妹',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義兄',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義姉',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義弟',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義妹',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '長男',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '二男',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '三男',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '四男',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '五男',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '長女',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '二女',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '三女',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '四女',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '五女',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '子の夫',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '子の妻',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '甥',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '姪',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '孫',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '父',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '母',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義父',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義母',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '伯父',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '叔父',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '伯母',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '叔母',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義伯父',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義叔父',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義伯母',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義叔母',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '祖父',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '祖母',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義祖父',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+),
+(
+  /*facilityCd*/null,
+  '義祖母',
+  '1',
+  '0',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+);

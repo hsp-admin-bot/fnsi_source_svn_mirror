@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<!--
+患者情報MONGOコンバート
+-->
+<rootNode>
+	<tableInfo>
+		<name>患者個人情報</name>
+		<convertKind>PATMONGO</convertKind>
+		<fnwTableName>PAT_PERSONAL_MAIN</fnwTableName>
+		<ntssTableName>pat_personal_main_history</ntssTableName>
+		<convertKind>PAT_PERSONAL_MAIN_HISTORY</convertKind>
+	</tableInfo>
+	<tableInfo>
+		<name>保険情報</name>
+		<convertKind>PATMONGO</convertKind>
+		<fnwTableName>PAT_INSURANCE</fnwTableName>
+		<ntssTableName>pat_insurance_history</ntssTableName>
+		<convertKind>PAT_INSURANCE_HISTORY</convertKind>
+	</tableInfo>
+	<tableInfo>
+		<name>患者基本情報</name>
+		<convertKind>PATMONGO</convertKind>
+		<fnwTableName>PAT_MAIN</fnwTableName>
+		<ntssTableName>pat_main_history</ntssTableName>
+		<convertKind>PAT_MAIN_HISTORY</convertKind>
+	</tableInfo>
+	 <tableInfo>
+		<name>患者固有情報</name>
+		<convertKind>PATMONGO</convertKind>
+		<fnwTableName>PAT_UNIQUE</fnwTableName>
+		<ntssTableName>pat_unique_history</ntssTableName>
+		<convertKind>PAT_UNIQUE_HISTORY</convertKind>
+	</tableInfo>
+	<tableInfo>
+		<name>患者グループ詳細</name>
+		<convertKind>PATMONGO</convertKind>
+		<fnwTableName>PAT_GROUP_DETAIL</fnwTableName>
+		<ntssTableName>pat_group_detail_history</ntssTableName>
+		<convertKind>PAT_GROUP_DETAIL_HISTORY</convertKind>
+	</tableInfo>
+</rootNode>
+
+

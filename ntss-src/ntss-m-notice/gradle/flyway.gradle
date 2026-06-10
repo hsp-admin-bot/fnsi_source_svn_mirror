@@ -1,0 +1,4 @@
+apply from:"gradle/flyway_${profile}/flyway_${profile}.gradle"
+apply from:"gradle/flyway_${profile}/flyway_${profile}db4.gradle"
+apply from:"gradle/flyway_${profile}/flyway_${profile}db5.gradle"
+apply from:"gradle/flyway_${profile}/flyway_${profile}db6.gradle"

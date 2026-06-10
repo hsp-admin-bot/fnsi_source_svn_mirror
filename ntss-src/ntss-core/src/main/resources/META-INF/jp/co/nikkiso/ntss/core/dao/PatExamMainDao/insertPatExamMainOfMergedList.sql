@@ -1,0 +1,64 @@
+insert into pat_exam_main
+(exam_main_cd,
+ pat_id,
+ facility_cd,
+ ord_no,
+ fn_pat_id,
+ reg_exam_date,
+ reg_order_class,
+ exam_status,
+ order_comment,
+ order_exam_set_info,
+ exam_order_info,
+ order_label_info,
+ data_gen_class,
+ result_exam_date,
+ result_comment,
+ exam_result_info,
+ cop_order_no1,
+ cop_order_no2,
+ is_lock,
+ ind_user_id,
+ is_del,
+ reg_date,
+ reg_staff,
+ up_date,
+ up_staff,
+ is_order,
+ phy_ord_class
+)
+values
+/*%for pem : patExamMainOfMergedList */
+(
+    /*pem.examMainCd*/null,
+    /*pem.patId*/null,
+    /*pem.facilityCd*/null,
+    /*pem.ordNo*/null,
+    /*pem.fnPatId*/null,
+    /*pem.regExamDate*/null,
+    /*pem.regOrderClass*/null,
+    /*pem.examStatus*/null,
+    /*pem.orderComment*/null,
+    /*pem.orderExamSetInfo*/null,
+    /*pem.examOrderInfo*/null,
+    /*pem.orderLabelInfo*/null,
+    /*pem.dataGenClass*/null,
+    /*pem.resultExamDate*/null,
+    /*pem.resultComment*/null,
+    /*pem.examResultInfo*/null,
+    /*pem.copOrderNo1*/null,
+    /*pem.copOrderNo2*/null,
+    /*pem.isLock*/null,
+    /*pem.indUserId*/null,
+    /*pem.isDel*/null,
+    /*pem.regDate*/null,
+    /*pem.regStaff*/null,
+    /*pem.upDate*/null,
+    /*pem.upStaff*/'0',
+    /*pem.isOrder*/null,
+    /*pem.phyOrdClass*/null
+)
+/*%if pem_has_next */
+/*# "," */
+/*%end */
+/*%end*/

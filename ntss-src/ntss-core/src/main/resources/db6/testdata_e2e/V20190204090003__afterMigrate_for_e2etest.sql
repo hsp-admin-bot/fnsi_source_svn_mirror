@@ -1,0 +1,4 @@
+-- e2eテスト用ユーザー
+INSERT INTO mst_personal_user (user_id, facility_cd, user_type, user_last_name, user_first_name, user_last_name_kana, user_first_name_kana, user_last_name_alpha, user_first_name_alpha, user_email_address_1, user_email_address_2, extension_no, home_no, mobile_phone_no, fax_no, zipcd_3, zipcd_4, address, address_kana, job_cd, reg_date, up_date) VALUES 
+	(21,'009997',1,personal_info_encrypt('E2E'),personal_info_encrypt('テスト'),personal_info_encrypt('E2E'),personal_info_encrypt('テスト'),personal_info_encrypt('E2E'),personal_info_encrypt('TEST'),personal_info_encrypt('nkk@esm.co.jp'),personal_info_encrypt(''),personal_info_encrypt('123'),personal_info_encrypt('1234-56-7891'),personal_info_encrypt('090-1234-5678'),personal_info_encrypt(''),personal_info_encrypt('123'),personal_info_encrypt('4567'),personal_info_encrypt('福井県福井市問屋長１－１－１'),personal_info_encrypt('ふくいけんふくいしとんやちょ'),personal_info_encrypt('01'),'2018-05-25 17:16:55','2018-12-26 10:02:29.153')
+;

@@ -1,0 +1,50 @@
+ファイル構成
+（ルート）
+├makeConvertEnv.sh
+│（全てのシェルを実行するシェル）
+│
+├01_db_migration_then0630DB
+│├db5from0630_create_table.sql
+││
+│├db5from0630_alter_column.sql
+│├db6from0630_alter_column.sql
+││（2021/07/01時点のDBに対して不足しているfn系カラムを追加）
+││
+│└db_migration_from0630.sh
+│　（上記SQLを走行させるシェル）
+└02_create_convert_db
+　├create_convert_db_1.sql
+　│（コンバート用DBの作成）
+　│
+　├create_convert_db_2.sql
+　│（コンバート進捗管理テーブルの作成）
+　│
+　├create_convert_db_3.sql
+　│（暗号化拡張関数の導入）
+　│
+　└create_convert_db.sh
+　　（ntss_db4,5,6よりコンバート用の作業用DB、convert_dbを作成するシェル）
+　　
+起動方法：
+Linux環境の任意のディレクトリにルートフォルダ毎配置して、makeConvertEnv.shを実行する。
+
+補足：
+①各シェルの実行ユーザーはpostgresになっているため、環境に合わせて書き換えてください。
+②ユーザpostgresがsudoが使えること
+
+③実行前に、実の環境により、下記の情報を修正ください。
+#コンバートDBのhost
+convert_db_host=localhost
+#FNSI DBのhost
+fnsi_db_host=localhost
+#DB管理ユーザ
+#db_manage_user=dbuser
+db_manage_user=postgres
+
+④FNSI DBサーバーにパスワード不要でアクセスしたい場合、下記のファイルを実施ユーザのは作る要
+.pgpass
+パス：/home/実施ユーザ/.pgpass
+権限：600 -rw-------
+内容 host:port:db名:ユーザ:パスワード
+例：
+ies-nkk-fnsi.cluster-cnr7cvlcb4ym.ap-northeast-1.rds.amazonaws.com:5432:ntss_db4:nkk4:nkk4

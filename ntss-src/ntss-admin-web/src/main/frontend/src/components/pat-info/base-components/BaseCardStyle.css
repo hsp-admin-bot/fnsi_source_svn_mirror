@@ -1,0 +1,63 @@
+/* カード内のtableタグ */
+.card-table {
+  width: 98%;
+  /* border: 1px solid; */
+  border-top: 2px solid;
+  border-color: #555555;
+  border-top-width: thin;
+  margin: 0px 1% 0px 1%;
+
+  box-sizing: border-box;
+  position: relative;
+
+  margin-top: -2px;
+}
+
+/* 項目名 */
+.item-title {
+  width: 30%;
+}
+
+/* 項目内容 */
+.item-data {
+  padding: 2px;
+}
+
+/* 共通タグ */
+.custom-input,
+.custom-input-number,
+.custom-textarea,
+.custom-select {
+  font-size: inherit;
+  display: inline-block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 削除ボタン */
+.button-delete {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  z-index: 1;
+}
+
+/* 削除項目 */
+.deleted-item {
+  background-color: rgba(255, 0, 0, 0.5);
+}
+
+/* 選択ボタン項目 */
+.choice-button-area {
+  width: 20%;
+}
+.button-delete-color {
+  color: #ffffff !important;
+  background-color: var(--btn2-cancel-color);
+  background-image: linear-gradient(var(--btn2-cancel-color), var(--btn2-cancel-color)) !important;
+  border-bottom: solid 3px var(--btn-common-border-color) !important;
+  box-shadow: none !important;
+  border-right: none !important;
+  height: 99% !important;
+}

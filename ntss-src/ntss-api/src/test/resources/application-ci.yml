@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    default:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntssci_db5?currentSchema=ntss&stringtype=unspecified
+      username: nkkci5
+      password: nkkci5
+    personal:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntssci_db6?currentSchema=ntss&stringtype=unspecified
+      username: nkkci6
+      password: nkkci6
+    auth:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntssci_db4?currentSchema=ntss&stringtype=unspecified
+      username: nkkci4
+      password: nkkci4

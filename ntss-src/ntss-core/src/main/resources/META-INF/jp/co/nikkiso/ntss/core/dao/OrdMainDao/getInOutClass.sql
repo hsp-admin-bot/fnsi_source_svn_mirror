@@ -1,0 +1,10 @@
+SELECT
+	rst_in_out_class
+FROM
+	ord_main
+	WHERE
+	facility_cd=/*facilityCd*/''
+	AND
+	ord_no=/*ordNo*/''
+	AND
+	pat_id=/*patId*/''

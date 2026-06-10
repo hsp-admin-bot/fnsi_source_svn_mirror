@@ -1,0 +1,46 @@
+spring:
+  datasource:
+    default:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntssci_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkkci5
+      password: nkkci5
+      type: com.zaxxer.hikari.HikariDataSource
+      maximumPoolSize: 1
+    personal:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntssci_db6?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkkci6
+      password: nkkci6
+      type: com.zaxxer.hikari.HikariDataSource
+      maximumPoolSize: 1
+    auth:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntssci_db4?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkkci4
+      password: nkkci4
+      type: com.zaxxer.hikari.HikariDataSource
+      maximumPoolSize: 1
+
+doma:
+  dialect: postgres
+
+logging:
+  level:
+    org.springframework.transaction.interceptor: TRACE
+
+cloud:
+  aws:
+    region:
+      auto: false
+      static: ap-northeast-1 # 東京リージョン
+    stack:
+       auto: false
+
+ntss:
+  logging:
+    appender:
+      file-name: /tmp/ntss-admin-web/log/{0}/{0}.log
+    rolling:
+      file-name-pattern:  /tmp/ntss-admin-web/log/{0}/{0}_%d'{'yyyyMMdd'}'.log
+      max-history: 14

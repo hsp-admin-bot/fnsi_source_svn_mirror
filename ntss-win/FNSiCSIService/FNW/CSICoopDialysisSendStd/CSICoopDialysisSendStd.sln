@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSICoopDialysisSendStd", "CSICoopDialysisSendStd.csproj", "{DB45957F-5D3E-4D8A-BA56-A668E1CF9E8A}"
+EndProject
+Global
+	GlobalSection(SourceCodeControl) = preSolution
+		SccNumberOfProjects = 2
+		SccProjectName0 = \u0022$/連携/CSI連携/src/CSICoopDialysisSendStd\u0022,\u0020NSXBAAAA
+		SccLocalPath0 = .
+		SccProvider0 = MSSCCI:Microsoft\u0020Visual\u0020SourceSafe
+		SccProjectUniqueName1 = CSICoopDialysisSendStd.csproj
+		SccLocalPath1 = .
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DB45957F-5D3E-4D8A-BA56-A668E1CF9E8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB45957F-5D3E-4D8A-BA56-A668E1CF9E8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB45957F-5D3E-4D8A-BA56-A668E1CF9E8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB45957F-5D3E-4D8A-BA56-A668E1CF9E8A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

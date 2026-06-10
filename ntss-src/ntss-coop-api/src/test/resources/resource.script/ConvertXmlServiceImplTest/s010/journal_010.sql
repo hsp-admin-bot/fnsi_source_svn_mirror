@@ -1,0 +1,99 @@
+DELETE FROM sys_coop_journal
+WHERE ctl_no = 10000100;
+
+INSERT INTO sys_coop_journal (
+ctl_no
+, facility_cd
+, coop_cd
+, coop_cd_index
+, crud
+, direction
+, ord_no
+, coop_ord_no
+, hosp_pat_id
+, pat_id
+, accept_no
+, ana_result
+, in_ana_date
+, out_ana_date
+, coop_result
+, in_reg_date
+, out_reg_date
+, dump_path
+, dump
+, is_editable
+, is_del
+, user_id
+, reg_date
+, up_date
+) VALUES (
+10000100, 'XML010', 'ini_dial', '1','C','R',1,1,1,1,0,
+'0','20191119','20191119',
+'9','20191119','20191119',
+'',
+--<SsiData Type="DIALYSISRST">
+--  <RSTData>
+--    <PatientID>12345678</PatientID>
+--    <DIALYSIS_DATE>20200417</DIALYSIS_DATE>
+--    <DIALYSIS_NO>112233</DIALYSIS_NO>
+--    <WEIGHT_BEFORE>72.3</WEIGHT_BEFORE>
+--    <WEIGHT_AFTER>71.0</WEIGHT_AFTER>
+--
+--    <DIALYSIS_MEDI>
+--      <MEDI_INFO CTL_NO="001">
+--        <MEDICINE_CD>1001</MEDICINE_CD>
+--        <MEDICINE_NAME>エリスロポエチン製剤</MEDICINE_NAME>
+--        <MEDI_CLASS_NAME>KIDF</MEDI_CLASS_NAME>
+--      </MEDI_INFO>
+--    </DIALYSIS_MEDI>
+--
+--    <DIALYSIS_MEDI>
+--      <MEDI_INFO CTL_NO="002">
+--        <MEDICINE_CD>2001</MEDICINE_CD>
+--        <MEDICINE_NAME>抗ヒスタミン製剤</MEDICINE_NAME>
+--        <MEDI_CLASS_NAME>ITCH</MEDI_CLASS_NAME>
+--      </MEDI_INFO>
+--    </DIALYSIS_MEDI>
+--
+--    <DIALYSIS_MEDI>
+--      <MEDI_INFO CTL_NO="003">
+--        <MEDICINE_CD>3001</MEDICINE_CD>
+--        <MEDICINE_NAME>ファモチジン製剤</MEDICINE_NAME>
+--        <MEDI_CLASS_NAME>GAST</MEDI_CLASS_NAME>
+--      </MEDI_INFO>
+--    </DIALYSIS_MEDI>
+--  </RSTData>
+--</SsiData>
+decode('3c5373694461746120547970653d224449414c59534953525354223e', 'hex') ||
+decode('3c525354446174613e', 'hex') ||
+decode('3c50617469656e7449443e31323334353637383c2f50617469656e7449443e', 'hex') ||
+decode('3c4449414c595349535f444154453e32303230303431373c2f4449414c595349535f444154453e', 'hex') ||
+decode('3c4449414c595349535f4e4f3e3131323233333c2f4449414c595349535f4e4f3e', 'hex') ||
+decode('3c5745494748545f4245464f52453e37322e333c2f5745494748545f4245464f52453e', 'hex') ||
+decode('3c5745494748545f41465445523e37312e303c2f5745494748545f41465445523e', 'hex') ||
+decode('3c4449414c595349535f4d4544493e', 'hex') ||
+decode('3c4d4544495f494e464f2043544c5f4e4f3d22303031223e', 'hex') ||
+decode('3c4d45444943494e455f43443e313030313c2f4d45444943494e455f43443e', 'hex') ||
+decode('3c4d45444943494e455f4e414d453e8347838a8358838d837c83478360839390bb8ddc3c2f4d45444943494e455f4e414d453e', 'hex') ||
+decode('3c4d4544495f434c4153535f4e414d453e4b4944463c2f4d4544495f434c4153535f4e414d453e', 'hex') ||
+decode('3c2f4d4544495f494e464f3e', 'hex') ||
+decode('3c2f4449414c595349535f4d4544493e', 'hex') ||
+decode('3c4449414c595349535f4d4544493e', 'hex') ||
+decode('3c4d4544495f494e464f2043544c5f4e4f3d22303032223e', 'hex') ||
+decode('3c4d45444943494e455f43443e323030313c2f4d45444943494e455f43443e', 'hex') ||
+decode('3c4d45444943494e455f4e414d453e8d5283718358835e837e839390bb8ddc3c2f4d45444943494e455f4e414d453e', 'hex') ||
+decode('3c4d4544495f434c4153535f4e414d453e495443483c2f4d4544495f434c4153535f4e414d453e', 'hex') ||
+decode('3c2f4d4544495f494e464f3e', 'hex') ||
+decode('3c2f4449414c595349535f4d4544493e', 'hex') ||
+decode('3c4449414c595349535f4d4544493e', 'hex') ||
+decode('3c4d4544495f494e464f2043544c5f4e4f3d22303033223e', 'hex') ||
+decode('3c4d45444943494e455f43443e333030313c2f4d45444943494e455f43443e', 'hex') ||
+decode('3c4d45444943494e455f4e414d453e83748340838283608357839390bb8ddc3c2f4d45444943494e455f4e414d453e', 'hex') ||
+decode('3c4d4544495f434c4153535f4e414d453e474153543c2f4d4544495f434c4153535f4e414d453e', 'hex') ||
+decode('3c2f4d4544495f494e464f3e', 'hex') ||
+decode('3c2f4449414c595349535f4d4544493e', 'hex') ||
+decode('3c2f525354446174613e', 'hex') ||
+decode('3c2f537369446174613e', 'hex')
+,
+'0', '0', 12345,'20191119','20191119'
+);

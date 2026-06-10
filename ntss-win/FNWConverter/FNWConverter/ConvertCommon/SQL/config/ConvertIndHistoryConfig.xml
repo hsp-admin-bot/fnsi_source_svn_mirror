@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<!--
+指示履歴コンバート
+-->
+<rootNode>
+  <tableInfo>
+    <name>指示履歴</name>
+    <convertKind>IND</convertKind>
+    <fnwTableName>IND_DIALYSIS_CONFIRM</fnwTableName>
+    <ntssTableName>ind_history</ntssTableName>
+    <convertKind>IND_HISTORY</convertKind>
+  </tableInfo>
+  <tableInfo>
+		<name>指示履歴</name>
+		<convertKind>RST</convertKind>
+		<fnwTableName>LOG_CHANGE_LOG</fnwTableName>
+		<ntssTableName>rst_history</ntssTableName>
+		<convertKind>RST_HISTORY</convertKind>
+	</tableInfo>
+</rootNode>

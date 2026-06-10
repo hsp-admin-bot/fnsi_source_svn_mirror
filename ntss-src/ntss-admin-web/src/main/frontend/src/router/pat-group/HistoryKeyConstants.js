@@ -1,0 +1,3 @@
+export const HISTORY_KEY_PAT_GROUP_LIST = "LIST";
+export const HISTORY_KEY_PAT_GROUP_EDIT = "EDIT";
+export const HISTORY_KEY_PAT_GROUP_NEW = "NEW";

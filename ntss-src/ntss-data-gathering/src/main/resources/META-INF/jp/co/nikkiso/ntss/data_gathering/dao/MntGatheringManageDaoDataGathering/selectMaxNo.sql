@@ -1,0 +1,2 @@
+SELECT
+	nextval('mnt_gathering_manage_gathering_manage_no_seq') as gathering_manage_no

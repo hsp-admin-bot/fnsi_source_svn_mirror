@@ -1,0 +1,1 @@
+select nextval('sys_coop_journal_ctl_no_seq');

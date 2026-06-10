@@ -1,0 +1,34 @@
+DELETE FROM sys_coop_journal
+WHERE ctl_no = 3300001;
+
+INSERT INTO sys_coop_journal
+(ctl_no,facility_cd,coop_cd,coop_cd_index,crud,direction,ord_no,coop_ord_no,hosp_pat_id,pat_id,accept_no
+,ana_result,in_ana_date,out_ana_date
+,coop_result,in_reg_date,out_reg_date
+,dump_path
+,dump
+,is_editable,is_del,user_id,reg_date,up_date) VALUES(
+3300001,'F_hQ03','user_test','','C','R',1,1,1,1,0,
+'0', null, null,
+'9','20200601','20200601',
+'',
+--02,0,あああ１,いいい１,アアア１,イイイ１,AAA1,III1,mail11@example.com,mail22@example.com,
+decode('30322c302c82a082a082a082502c82a282a282a282502c83418341834182502c83438343834382502c414141312c494949312c6d61696c3131406578616d706c652e636f6d2c6d61696c3232406578616d706c652e636f6d2c', 'hex') ||
+--1021,033-AAAA-AAA1,090-XXXX-XXX1,033-YYYY-YYY1,101,1011,東京都千代田区霞が関１,トウキョウトチヨダクカスミガセキ１,
+decode('313032312c3033332d414141412d414141312c3039302d585858582d585858312c3033332d595959592d595959312c3130312c313031312c938c8b9e937390e791e393638be689e082aa8ad682502c83678345834c83878345836783608388835f834e834a8358837e834b835a834c82502c', 'hex') ||
+--K1,0,0,0,TEX-ENG_001,0123,0,311-46-2200,
+decode('4b312c302c302c302c5445582d454e475f3030312c303132332c302c3331312d34362d323230302c', 'hex') ||
+--TEX-ENG_001,ppaasssswwoorrd01,0,
+decode('5445582d454e475f3030312c707061617373737377776f6f72726430312c302c', 'hex') ||
+--4,12,68,0,
+decode('342c31322c36382c302c', 'hex') ||
+--0,1,0,
+decode('302c312c302c', 'hex') ||
+--987654,
+decode('3938373635342c', 'hex') ||
+--103,検索条件2,"{"userId":[{"cd":123,"name":"NNNN1","cdType":730}]}",
+decode('3130332c8c9f8df58ff08c8f322c227b222275736572496422223a5b7b2222636422223a3132332c22226e616d6522223a22224e4e4e4e3122222c222263645479706522223a3733307d5d7d222c', 'hex') ||
+--T1ERC3E0S8,0,TE31249D1,0,,
+decode('543145524333453053382c302c5445333132343944312c302c2c', 'hex'),
+'0','0',12345,'20200601','20200601'
+);

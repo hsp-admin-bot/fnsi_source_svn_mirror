@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<!--
+患者ID,期間指定対象テーブル設定
+こちらに設定を追加すると
+患者毎期間指定対象テーブル選択時の処理対象として
+選択可能になります。
+テーブル単位で個別処理を入れていないテーブルは
+fnwTableNameとntssTableNameで紐付けテーブルに問い合わせを行い
+取得した設定でコンバート処理が走行します。
+convertKindは仮で設定中です。
+患者指定なし、期間指定のみの処理単位で実行する対象に設定します。。
+fnwTableNameを設定していないテーブルは固定処理になります
+-->
+<rootNode>
+	<tableInfo>
+		<name>患者検査結果（結果）</name>
+		<fnwTableName>PAT_EXAMIN_HST</fnwTableName>
+		<ntssTableName>pat_exam_main</ntssTableName>
+		<convertKind>PERIOD</convertKind>
+	</tableInfo>
+	<tableInfo>
+		<name>患者検査結果（予定）</name>
+		<fnwTableName>PAT_EXAMIN_SCHEDULE</fnwTableName>
+		<ntssTableName>pat_exam_main</ntssTableName>
+		<convertKind>PERIOD</convertKind>
+	</tableInfo>
+	<tableInfo>
+		<name>患者放射線検査結果</name>
+		<fnwTableName>PAT_EXAMIN_SCHEDULE</fnwTableName>
+		<ntssTableName>pat_rad_main</ntssTableName>
+		<convertKind>PERIOD</convertKind>
+	</tableInfo>
+</rootNode>

@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ntss
+    driver-class-name: org.postgresql.Driver
+    username: nkk
+    password: nkk
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+      
+doma:
+  dialect: postgres
+  
+logging:
+  level:
+    org.springframework.transaction.interceptor: TRACE

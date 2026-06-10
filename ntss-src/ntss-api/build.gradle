@@ -1,0 +1,194 @@
+import org.gradle.internal.os.OperatingSystem
+
+buildscript {
+  repositories {
+//    jcenter()
+    mavenLocal()
+    mavenCentral()
+    maven { url "https://start.spring.io/plugins-release" }
+    maven { url "https://start.spring.io/milestone" }
+    maven { url "https://plugins.gradle.org/m2/" }
+  }
+  dependencies {
+    classpath "org.springframework.boot:spring-boot-gradle-plugin:${spring_boot_version}"
+//    classpath 'io.spring.gradle:propdeps-plugin:0.0.10.RELEASE'
+    classpath "io.spring.gradle:dependency-management-plugin:1.0.7.RELEASE"
+    classpath "org.flywaydb:flyway-gradle-plugin:6.0.4"
+  }
+}
+
+apply plugin: 'maven-publish'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'war'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'idea'
+defaultTasks 'bootRun'
+
+bootJar {
+  enabled = false
+  archiveBaseName = 'ntss-api'
+  mainClass = 'jp.co.nikkiso.ntss.api.NtssApiApplication'
+  manifest {
+    attributes 'Start-Class': 'jp.co.nikkiso.ntss.api.NtssApiApplication'
+  }
+  launchScript()
+}
+
+bootWar {
+  mainClass = 'jp.co.nikkiso.ntss.api.NtssApiApplication'
+}
+
+war {
+  enabled = true
+  archiveBaseName = 'ntss-api'
+}
+
+jar {
+  enabled = true // Jarを作成する(依存元に組み込む)
+}
+
+springBoot {
+  mainClass = 'jp.co.nikkiso.ntss.api.NtssApiApplication'
+  buildInfo()
+}
+
+if (OperatingSystem.current().isWindows()) {
+  task pathingJar(type: Jar) {
+    dependsOn configurations.runtimeClasspath
+    archiveAppendix = 'pathing'
+
+    doFirst {
+      manifest {
+        attributes 'Class-Path': configurations.runtimeClasspath.getFiles().collect {
+          it.toURI().toString().replaceFirst(/file:\/+/, '/').replaceAll(' ', '%20')
+        }.join(' ')
+      }
+    }
+  }
+
+  bootRun {
+    dependsOn pathingJar
+    doFirst {
+      classpath = files("$buildDir/classes/java/main", "$buildDir/resources/main", pathingJar.archiveFile)
+    }
+  }
+} else {
+  bootRun {
+    jvmArgs = ["-Dspring.output.ansi.enabled=ALWAYS"]
+  }
+}
+
+ext {
+  snippetsDir = file('build/generated-snippets')
+  apiDocDir = file('build/api-docs')
+}
+
+apply from: 'gradle/eclipse.gradle'
+apply from: 'gradle/docker.gradle'
+//jhipster-needle-gradle-apply-from - JHipster will add additional gradle scripts to be applied here
+
+if (project.hasProperty('prod')) {
+  apply from: 'gradle/profile_prod.gradle'
+} else {
+  apply from: 'gradle/profile_dev.gradle'
+}
+
+test {
+  outputs.dir snippetsDir
+  // CI用にテスト時のprofileを設定
+  if (project.hasProperty('ci')) {
+    jvmArgs = ["-Dspring.profiles.active=ci"]
+  }
+  maxHeapSize = "1024m"
+}
+
+description = ''
+
+repositories {
+  mavenLocal()
+  mavenCentral()
+//  jcenter()
+  maven { url 'https://start.spring.io/milestone' }
+  maven { url 'https://start.spring.io/snapshot' }
+  maven { url 'https://repository.jboss.org/nexus/content/repositories/releases' }
+  maven { url 'https://oss.sonatype.org/content/repositories/releases' }
+  maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+  maven { url 'https://repo.maven.apache.org/maven2' }
+  maven { url 'https://releases.aspose.com/java/repo/' }
+}
+
+dependencies {
+  implementation "org.springframework.boot:spring-boot-autoconfigure"
+  implementation "org.springframework.boot:spring-boot-starter-web"
+  providedRuntime "org.springframework.boot:spring-boot-starter-tomcat"
+  implementation "org.springframework.boot:spring-boot-starter-jdbc"
+  implementation "org.springframework.boot:spring-boot-starter-actuator"
+  implementation "org.springframework.boot:spring-boot-starter-aop"
+  implementation "org.seasar.doma.boot:doma-spring-boot-starter:${doma_spring_version}"
+  implementation 'org.springframework.cloud:spring-cloud-aws-context:2.1.1.RELEASE'
+  implementation 'org.projectlombok:lombok:1.18.28'
+  annotationProcessor 'org.projectlombok:lombok:1.18.28'
+  implementation 'org.modelmapper:modelmapper:2.3.4'
+  implementation group: 'com.google.guava', name: 'guava', version: '27.1-jre'
+  testImplementation ("org.springframework.boot:spring-boot-starter-test") {
+    exclude group: 'com.vaadin.external.google', module: 'android-json'
+  }
+  testImplementation "org.springframework.boot:spring-boot-test"
+  testImplementation "junit:junit"
+  testImplementation "org.mockito:mockito-core"
+  implementation "org.json:json:20180813"
+  implementation "com.amazonaws:aws-java-sdk-dynamodb:${aws_sdk_v1_version}"
+  implementation "com.amazonaws:aws-java-sdk-s3:${aws_sdk_v1_version}"
+  implementation 'org.jsoup:jsoup:1.12.1'
+  implementation group: 'commons-beanutils', name: 'commons-beanutils', version: "${commons_beanutils_version}"
+  implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.9'
+  implementation group: 'org.apache.poi', name : 'poi', version: '4.1.0'
+  implementation group: 'org.apache.poi', name : 'poi-ooxml', version: '4.1.0'
+//  compile group: 'com.aspose', name: 'aspose-cells', version: '22.9'
+  // mod 10499 紹介状画面でセルの縦配置設定が反映しない 吉 start
+  // implementation files('lib/aspose-cells-23.10.jar')
+  // mod 10957 紹介状画面で罫線の一部が切れる 吉 start
+  // implementation files('lib/aspose-cells-24.4.jar')
+  implementation files('lib/aspose-cells-24.9.jar')
+  // mod 10957 紹介状画面で罫線の一部が切れる 吉 end
+  // mod 10499 紹介状画面でセルの縦配置設定が反映しない 吉 end
+
+  //implementation files('lib/Aspose.Cells.Java.lic')
+  implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+  // add 9661 複数患者帳票で2人目以降の「増加重量」と「DWとの差」が表示されない。 高 start
+  implementation group: 'org.openjdk.nashorn', name: 'nashorn-core', version: '15.4'
+  // add 9661 複数患者帳票で2人目以降の「増加重量」と「DWとの差」が表示されない。 高 end
+  // add #10245 帳票用患者情報履歴mongoDBのマスタ変更影響問題 sunsy start
+  implementation 'com.google.code.gson:gson:2.8.9'
+  // add #10245 帳票用患者情報履歴mongoDBのマスタ変更影響問題 sunsy end
+
+  // add #10988 データ項目「処方.処方箋情報.QRコード」を追加　V1.1A 吉 start
+  // https://mvnrepository.com/artifact/com.google.zxing/core
+  implementation group: 'com.google.zxing', name: 'core', version: '3.5.0'
+  // https://mvnrepository.com/artifact/com.google.zxing/javase
+  implementation group: 'com.google.zxing', name: 'javase', version: '3.2.1'
+  // add #10988 データ項目「処方.処方箋情報.QRコード」を追加　V1.1A 吉 end
+
+  // add highchart-export-serve change to Playwright  吉 start
+  implementation 'com.microsoft.playwright:playwright:1.56.0'
+  // add highchart-export-serve change to Playwright  吉 end
+}
+
+clean { delete "target" }
+
+task cleanResources(type: Delete) { delete 'build/resources' }
+
+task wrapper(type: Wrapper) { gradleVersion = '7.2' }
+
+task stage(dependsOn: [bootWar, bootJar]) {
+}
+
+assemble.dependsOn bootJar
+
+// Doma2のSQLファイルをJavaのコンパイル前にコピーしておく
+// SQLファイルが存在するかしないとJavaのコンパイル時にSQLファイルが存在するかのチェックでエラーになるため。
+processResources.destinationDir = compileJava.destinationDir
+compileJava.dependsOn processResources
+
+processResources.dependsOn cleanResources, bootBuildInfo
+bootBuildInfo.mustRunAfter cleanResources

@@ -1,0 +1,574 @@
+{
+  "routing_defs": {
+    "description": "ルーティング定義",
+    "routing_items": [
+      {
+        "description": "稼働ビューア(管理ユーザ用)",
+        "function_cd": "001",
+        "user_type": "1",
+        "function_icon": "img/operation-viewer/operation-viewer.png",
+        "active_icon": "img/operation-viewer/operation-viewer_on.png",
+        "router_name": "operation-viewer-admin-facilities",
+        "routes": [
+          "operation-viewer-admin-facilities", "operation-viewer-admin-machines", "operation-viewer-admin-motion-record", "operation-viewer-admin-motion-record-detail"
+        ],
+        "function_detail_cd": [
+          "01","02","03","04"
+        ]
+      },
+      {
+        "description": "稼働ビューア(一般ユーザ用)",
+        "function_cd": "001",
+        "user_type": "0",
+        "function_icon": "img/operation-viewer/operation-viewer.png",
+        "active_icon": "img/operation-viewer/operation-viewer_on.png",
+        "router_name": "operation-viewer-general-machines",
+        "routes": [
+          "operation-viewer-general-machines", "operation-viewer-general-motion-record", "operation-viewer-general-motion-record-detail"
+        ],
+        "function_detail_cd": [
+          "02","03","04"
+        ]
+      },
+      {
+        "description": "稼働ビューア(施設コード、型式コード、製造番号指定用)",
+        "function_cd": "001",
+        "function_icon": "img/operation-viewer/operation-viewer.png",
+        "active_icon": "img/operation-viewer/operation-viewer_on.png",
+        "router_name": "operation-viewer-specified-motion-record",
+        "routes": [
+          "operation-viewer-specified-motion-record", "operation-viewer-specified-motion-record-detail"
+        ]
+      },
+      {
+        "description": "生体モニタリング",
+        "function_cd": "002",
+        "function_icon": "img/monitoring/152-152.png",
+        "active_icon": "img/monitoring/152-152_on.png",
+        "router_name": "bio-monitoring",
+        "routes": [
+          "bio-monitoring"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "デバイスエッジ稼働監視",
+        "function_cd": "003",
+        "function_icon": "img/device-edge/device-edge.png",
+        "active_icon": "img/device-edge/device-edge_on.png",
+        "router_name": "device-edge-operation",
+        "routes": [
+          "device-edge-operation", "device-edge-manage"
+        ],
+        "function_detail_cd": [
+          "01", "02"
+        ]
+      },
+      {
+        "description": "患者経過総合ビューア",
+        "function_cd": "004",
+        "function_icon": "img/pat-viewer/pat-viewer.png",
+        "active_icon": "img/pat-viewer/pat-viewer_on.png",
+        "router_name": "pat-viewer",
+        "routes": [
+          "pat-viewer"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "マスタメンテナンス",
+        "function_cd": "005",
+        "function_icon": "img/master-maintenance/master-maintenance.png",
+        "active_icon": "img/master-maintenance/master-maintenance_on.png",
+        "router_name": "master-maintenance",
+        "routes": [
+          "master-maintenance", "master-record"
+        ],
+        "function_detail_cd": [
+          "01","02"
+        ]
+      },
+      {
+        "description": "治療記録",
+        "function_cd": "006",
+        "function_icon": "img/treatment-record/treatment-record.png",
+        "active_icon": "img/treatment-record/treatment-record_on.png",
+        "router_name": "treatment-record",
+        "routes": [
+          "treatment-record", "treatment-record-result", "treatment-record-vital", "treatment-record-monitor", "treatment-record-complaint",
+          "treatment-record-weight", "treatment-record-condition", "treatment-record-medicine", "treatment-record-equipment", "treatment-record-addition",
+          "treatment-record-setting", "treatment-record-round", "treatment-record-observation", "Bvms","treatment-record-addition-info"
+        ],
+        "function_detail_cd": [
+          "01","02","03","04","05","06","07","08","09","10","11","12","13","14","15"
+        ]
+      },
+      {
+        "description": "患者情報",
+        "function_cd": "007",
+        "function_icon": "img/pat-info/pat-info.png",
+        "active_icon": "img/pat-info/pat-info_on.png",
+        "router_name": "pat-info",
+        "routes": [
+          "pat-info"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "データリスト",
+        "function_cd": "008",
+        "function_icon": "img/multi-pat-list/multi-pat-list.png",
+        "active_icon": "img/multi-pat-list/multi-pat-list_on.png",
+        "router_name": "multi-pat-list",
+        "routes": [
+          "multi-pat-list"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "スケジュール表",
+        "function_cd": "009",
+        "function_icon": "img/schedule-list/schedule-list.png",
+        "active_icon": "img/schedule-list/schedule-list_on.png",
+        "router_name": "schedule-list",
+        "routes": [
+          "schedule-list"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "装置設定",
+        "function_cd": "010",
+        "function_icon": "img/deviceset-info/deviceset-info.png",
+        "active_icon": "img/deviceset-info/deviceset-info_on.png",
+        "router_name": "deviceset-info",
+        "routes": [
+          "deviceset-info"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "治療状況リスト",
+        "function_cd": "011",
+        "function_icon": "img/status-list/status-list.png",
+        "active_icon": "img/status-list/status-list_on.png",
+        "router_name": "status-list",
+        "routes": [
+          "status-list", "status-list-alarm", "status-list-largedisp", "trend-graph"
+        ],
+        "function_detail_cd": [
+          "01","02","03","04"
+        ]
+      },
+      {
+        "description": "治療状況マップ",
+        "function_cd": "012",
+        "function_icon": "img/status-map/status-map.png",
+        "active_icon": "img/status-map/status-map_on.png",
+        "router_name": "status-map",
+        "routes": [
+          "status-map",
+          "status-map-bed-layout"
+        ],
+        "function_detail_cd": [
+          "01","02"
+        ]
+      },
+      {
+        "description": "体重計",
+        "function_cd": "013",
+        "function_icon": "img/weight/weight.png",
+        "active_icon": "img/weight/weight_on.png",
+        "router_name": "weight-mode",
+        "routes": [
+          "weight-mode", "send-condition", "weight-send-condition", "wheelchair"
+        ],
+        "function_detail_cd": [
+          "01","02","03","04"
+        ]
+      },
+      {
+        "description": "体重計測定記録",
+        "function_cd": "014",
+        "function_icon": "img/measure-history/measure-history.png",
+        "active_icon": "img/measure-history/measure-history_on.png",
+        "router_name": "measure-history",
+        "routes": [
+          "measure-history"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "チェックリスト",
+        "function_cd": "015",
+        "function_icon": "img/check-list/check-list.png",
+        "active_icon": "img/check-list/check-list_on.png",
+        "router_name": "check-list",
+        "routes": [
+          "check-list"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "観察記録",
+        "function_cd": "016",
+        "function_icon": "img/observe-record/observe-record.png",
+        "active_icon": "img/observe-record/observe-record_on.png",
+        "router_name": "observe-record",
+        "routes": [
+          "observe-record", "observe-record-detail"
+        ],
+        "function_detail_cd": [
+          "01","02"
+        ]
+      },
+      {
+        "description": "患者新規登録",
+        "function_cd": "017",
+        "function_icon": "img/pat-info-create/pat-info-create.png",
+        "active_icon": "img/pat-info-create/pat-info-create_on.png",
+        "router_name": "pat-info-create",
+        "routes": [
+          "pat-info-create"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "検査結果一覧",
+        "function_cd": "018",
+        "function_icon": "img/exam-record/exam-record.png",
+        "active_icon": "img/exam-record/exam-record_on.png",
+        "router_name": "exam-record",
+        "routes": [
+          "exam-record", "exam-record-detail"
+        ],
+        "function_detail_cd": [
+          "01", "02"
+        ]
+      },
+      {
+        "description": "検査結果",
+        "function_cd": "0181",
+        "function_icon": "img/exam-record/exam-record.png",
+        "active_icon": "img/exam-record/exam-record_on.png",
+        "router_name": "exam-record-detail",
+        "routes": [
+          "exam-record-detail"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "掲示板登録情報",
+        "function_cd": "020",
+        "function_icon": "img/bbs-info/bbs-info.png",
+        "active_icon": "img/bbs-info/bbs-info_on.png",
+        "router_name": "bbs-info",
+        "routes": [
+          "bbs-info", "bbs-detailed-info"
+        ],
+        "function_detail_cd": [
+          "01","02"
+        ]
+      },
+      {
+        "description": "検査依頼",
+        "function_cd": "021",
+        "function_icon": "img/exam-request/exam-request.png",
+        "active_icon": "img/exam-request/exam-request_on.png",
+        "router_name": "exam-request",
+        "routes": [
+          "exam-request", "exam-request-detail"
+        ],
+        "function_detail_cd": [
+          "01","02"
+        ]
+      },
+      {
+        "description": "放射線検査依頼",
+        "function_cd": "022",
+        "function_icon": "img/rad-request/rad-request.png",
+        "active_icon": "img/rad-request/rad-request_on.png",
+        "router_name": "rad-request",
+        "routes": [
+          "rad-request", "rad-request-detail"
+        ],
+        "function_detail_cd": [
+          "01","02"
+        ]
+      },
+      {
+        "description": "患者グループ",
+        "function_cd": "023",
+        "function_icon": "img/pat-group/pat-group.png",
+        "active_icon": "img/pat-group/pat-group_on.png",
+        "router_name": "pat-group",
+        "routes": [
+          "pat-group", "pat-group-new", "pat-group-edit"
+        ],
+        "function_detail_cd": [
+          "01","02","03"
+        ]
+      },
+      {
+        "description": "患者カレンダ",
+        "function_cd": "024",
+        "function_icon": "img/pat-calendar/pat-calendar.png",
+        "active_icon": "img/pat-calendar/pat-calendar_on.png",
+        "router_name": "pat-calendar",
+        "routes": [
+          "pat-calendar"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "帳票",
+        "function_cd": "019",
+        "function_icon": "img/report-menu/report-menu.png",
+        "active_icon": "img/report-menu/report-menu_on.png",
+        "router_name": "report-menu",
+        "routes": [
+          "report-menu"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "患者イベント",
+        "function_cd": "027",
+        "function_icon": "img/pat-event/pat-event.png",
+        "active_icon": "img/pat-event/pat-event_on.png",
+        "router_name": "pat-event",
+        "routes": [
+          "pat-event", "pat-event-info"
+        ],
+        "function_detail_cd": [
+          "01","02"
+        ]
+      },
+      {
+        "description": "指示受け・指示承認",
+        "function_cd": "028",
+        "function_icon": "img/indication/indication.png",
+        "active_icon": "img/indication/indication_on.png",
+        "router_name": "indication",
+        "routes": [
+          "indication", "indication-receive", "indication-approve","indication-receive-detail","indication-receive-details"
+        ],
+        "function_detail_cd": [
+          "01","02","03","04","05"
+        ]
+      },
+      {
+        "description": "在宅透析",
+        "function_cd": "025",
+        "function_icon": "img/hhd/hhd.png",
+        "active_icon": "img/hhd/hhd_on.png",
+        "router_name": "facility-home-dialysis",
+        "routes": [
+          "facility-home-dialysis"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "在宅透析患者用",
+        "function_cd": "026",
+        "function_icon": "img/hhd/hhd-pat.png",
+        "active_icon": "img/hhd/hhd-pat_on.png",
+        "router_name": "pat-home-dialysis",
+        "routes": [
+          "pat-home-dialysis",
+          "pat-home-dialysis-weight-before",
+          "pat-home-dialysis-status",
+          "pat-home-dialysis-weight-after"
+        ],
+        "function_detail_cd": [
+          "01","02","03","04"
+        ]
+      },
+      {
+        "description": "処方",
+        "function_cd": "029",
+        "function_icon": "img/prescription/prescription.png",
+        "active_icon": "img/prescription/prescription_on.png",
+        "router_name": "prescription",
+        "routes": [
+          "pat-prescription", "prescription"
+        ],
+        "function_detail_cd": [
+          "01","02"
+        ]
+      },
+      {
+        "description": "紹介状",
+        "function_cd": "030",
+        "function_icon": "img/introduction/introduction.png",
+        "active_icon": "img/introduction/introduction_on.png",
+        "router_name": "pat-intro-letter",
+        "routes": [
+          "pat-event", "pat-event-info"
+        ],
+        "function_detail_cd": [
+          "01","02"
+        ]
+      },
+      {
+        "description": "外部連携稼働ビューア",
+        "function_cd": "031",
+        "function_icon": "img/external-coop/external-coop.png",
+        "active_icon": "img/external-coop/external-coop_on.png",
+        "router_name": "external-coop",
+        "routes": [
+          "external-coop"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "水質管理",
+        "function_cd": "032",
+        "function_icon": "img/water-quality-survey/water-quality-survey.png",
+        "active_icon": "img/water-quality-survey/water-quality-survey_on.png",
+        "router_name": "water-quality-survey",
+        "routes": [
+          "water-quality-survey"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "定期点検",
+        "function_cd": "033",
+        "function_icon": "img/maintenance-regular/maintenance-regular.png",
+        "active_icon": "img/maintenance-regular/maintenance-regular_on.png",
+        "router_name": "periodic-inspection",
+        "routes": [
+          "periodic-inspection"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "日常点検",
+        "function_cd": "034",
+        "function_icon": "img/maintenance-daily/maintenance-daily.png",
+        "active_icon": "img/maintenance-daily/maintenance-daily_on.png",
+        "router_name": "daily-check",
+        "routes": [
+          "daily-check"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "ログ参照",
+        "function_cd": "035",
+        "function_icon": "img/log/log.png",
+        "active_icon": "img/log/log_on.png",
+        "router_name": "view-log",
+        "routes": [
+          "view-log"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "患者情報共有",
+        "function_cd": "036",
+        "function_icon": "img/patdata-share/patdata-share.png",
+        "active_icon": "img/patdata-share/patdata-share_on.png",
+        "router_name": "pat-info-sharing",
+        "routes": [
+          "pat-info-sharing", "pat-info-sharing-detail"
+        ],
+        "function_detail_cd": [
+          "02","03"
+        ]
+      },
+      {
+        "description": "施設カレンダー",
+        "function_cd": "037",
+        "function_icon": "img/facility-calendar/facility-calendar.png",
+        "active_icon": "img/facility-calendar/facility-calendar_on.png",
+        "router_name": "facility-calendar",
+        "routes": [
+          "facility-calendar",
+          "facility-calendar-detail"
+        ],
+        "function_detail_cd": [
+          "01",
+          "02"
+        ]
+      },
+      {
+        "description": "申込一覧",
+        "function_cd": "038",
+        "function_icon": "img/subscription/subscription.png",
+        "active_icon": "img/subscription/subscription_on.png",
+        "router_name": "application-list",
+        "routes": [
+          "application-list"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "P-Ca9分割グラフ",
+        "function_cd": "039",
+        "function_icon": "img/split-graph/split-graph.png",
+        "active_icon": "img/split-graph/split-graph_on.png",
+        "router_name": "split-graph",
+        "routes": [
+          "split-graph"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      },
+      {
+        "description": "スケールベッド",
+        "function_cd": "040",
+        "function_icon": "img/scalebed/scalebed.png",
+        "active_icon": "img/scalebed/scalebed_on.png",
+        "router_name": "scale-bed",
+        "routes": [
+          "scale-bed"
+        ],
+        "function_detail_cd": [
+          "01"
+        ]
+      }
+    ]
+  }
+}
+

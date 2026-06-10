@@ -1,0 +1,20 @@
+INSERT INTO mst_pat_search_detail
+(
+   search_cd,
+   search_name,
+   user_id,
+   facility_cd,
+   search_condition,
+   reg_date,
+   up_date
+)
+VALUES
+(
+   /*mstPatSearchDetail.searchCd*/null,
+   /*mstPatSearchDetail.searchName*/null,
+   /*mstPatSearchDetail.userId*/null,
+   /*mstPatSearchDetail.facilityCd*/null,
+   /*mstPatSearchDetail.searchCondition*/null,
+   /*mstPatSearchDetail.regDate*/null,
+   /*mstPatSearchDetail.upDate*/null
+);

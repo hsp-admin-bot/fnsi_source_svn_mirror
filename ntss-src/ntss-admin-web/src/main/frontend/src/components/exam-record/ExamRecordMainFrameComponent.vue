@@ -1,0 +1,30 @@
+
+<template>
+  <router-view></router-view>
+</template>
+
+<script>
+/**
+ * 検査結果メインフレーム
+ */
+//import { mapGetters, mapActions } from "vuex";
+import NextTransitionMixin from "@/components/NextTransitionMixin";
+
+export default {
+  mixins: [NextTransitionMixin],
+  data() {
+    return {
+    };
+  },
+  computed: {
+  },
+  methods: {
+  },
+  mounted() {
+  },
+  destroyed() {
+  },
+  watch: {
+  }
+};
+</script>

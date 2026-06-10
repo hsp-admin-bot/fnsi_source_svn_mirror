@@ -1,0 +1,1 @@
+export const HISTORY_KEY_REPORT_MENU_LIST = "LIST";

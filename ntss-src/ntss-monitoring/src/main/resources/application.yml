@@ -1,0 +1,35 @@
+spring:
+  datasource:
+    # NKK aws
+    # url: jdbc:postgresql://ntss-platform-rds.chzddp07crsf.ap-northeast-1.rds.amazonaws.com:5432/ntss
+    # TDC aws
+    # url: jdbc:postgresql://testdbinstance.cc0dnsfhoqgq.ap-northeast-1.rds.amazonaws.com:5432/ntss
+    # TDC kataguchi local
+    url: jdbc:postgresql://192.168.102.184:5432/ntss
+    # url: jdbc:postgresql://localhost:5432/ntss
+    driver-class-name: org.postgresql.Driver
+    username: nkk
+    password: nkk
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+  application:
+    name: ntss-monitoring
+  jmx:
+    default-domain: ntss-monitoring
+      
+doma:
+  dialect: postgres
+  
+logging:
+  level:
+    org.springframework.transaction.interceptor: TRACE
+    
+cloud:
+    aws:
+        region:
+            # auto: true
+            auto: false
+            static: ap-northeast-1
+        # stack:
+            # auto: false

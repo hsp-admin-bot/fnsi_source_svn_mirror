@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoopEventCreateTool", "CoopEventCreateTool\CoopEventCreateTool.csproj", "{75916395-4E80-4D6A-825D-6CD17072DEBD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{9E38647A-227C-4570-8E08-6BD25D0E3154} = {9E38647A-227C-4570-8E08-6BD25D0E3154}
+		{C141AEBA-CFCE-4149-ABED-E58BDFDA67D4} = {C141AEBA-CFCE-4149-ABED-E58BDFDA67D4}
+		{2751AAD6-21F5-4AE5-ACC7-2C4767980A30} = {2751AAD6-21F5-4AE5-ACC7-2C4767980A30}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKCommon", "..\NKKWeight\Source\NKKCommon\NKKCommon.csproj", "{9E38647A-227C-4570-8E08-6BD25D0E3154}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SignInLib", "..\P2045ReportApp\SignInLib\SignInLib.csproj", "{2751AAD6-21F5-4AE5-ACC7-2C4767980A30}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LayoutDesignerUtilityLib", "..\P2045ReportApp\LayoutDesignerUtility\LayoutDesignerUtilityLib.csproj", "{C141AEBA-CFCE-4149-ABED-E58BDFDA67D4}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "CoopEventCreateToolSetup", "CoopEventCreateToolSetup\CoopEventCreateToolSetup.vdproj", "{DE9D7D75-2451-41B4-8AD0-B9D7E46BCF66}"
+EndProject
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "CoopEventCreateToolSetupWix", "CoopEventCreateToolSetupWix\CoopEventCreateToolSetupWix.wixproj", "{FA37E210-8C94-4D05-B6E3-123456789015}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{75916395-4E80-4D6A-825D-6CD17072DEBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{75916395-4E80-4D6A-825D-6CD17072DEBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{75916395-4E80-4D6A-825D-6CD17072DEBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{75916395-4E80-4D6A-825D-6CD17072DEBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2751AAD6-21F5-4AE5-ACC7-2C4767980A30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2751AAD6-21F5-4AE5-ACC7-2C4767980A30}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2751AAD6-21F5-4AE5-ACC7-2C4767980A30}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2751AAD6-21F5-4AE5-ACC7-2C4767980A30}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C141AEBA-CFCE-4149-ABED-E58BDFDA67D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C141AEBA-CFCE-4149-ABED-E58BDFDA67D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C141AEBA-CFCE-4149-ABED-E58BDFDA67D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C141AEBA-CFCE-4149-ABED-E58BDFDA67D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE9D7D75-2451-41B4-8AD0-B9D7E46BCF66}.Debug|Any CPU.ActiveCfg = Debug
+		{DE9D7D75-2451-41B4-8AD0-B9D7E46BCF66}.Release|Any CPU.ActiveCfg = Release
+		{FA37E210-8C94-4D05-B6E3-123456789015}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{FA37E210-8C94-4D05-B6E3-123456789015}.Release|Any CPU.ActiveCfg = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3C123E09-4112-45D6-8D1E-3DDA1947EF21}
+	EndGlobalSection
+EndGlobal

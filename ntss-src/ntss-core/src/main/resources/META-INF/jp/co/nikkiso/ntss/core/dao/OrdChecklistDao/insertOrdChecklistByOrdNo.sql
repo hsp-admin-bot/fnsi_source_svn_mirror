@@ -1,0 +1,36 @@
+INSERT INTO
+  ord_checklist
+	(
+	  ord_no,
+	  is_check,
+	  rst_class,
+	  list_cd,
+	  func_class,
+	  rst_checklist_info,
+	  reg_staff_info,
+	  is_disp,
+	  is_del,
+	  occur_date,
+	  reg_date,
+	  up_date,
+	  facility_cd
+	)
+SELECT
+      /*latestOrdNo*/0,
+      is_check,
+      rst_class,
+      list_cd,
+      func_class,
+      rst_checklist_info,
+      reg_staff_info,
+      is_disp,
+      is_del,
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP,
+      facility_cd
+FROM
+      ord_checklist
+WHERE
+      ord_no = /*oldOrdNo*/0
+;

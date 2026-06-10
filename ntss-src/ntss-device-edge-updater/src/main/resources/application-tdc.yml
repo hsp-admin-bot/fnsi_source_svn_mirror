@@ -1,0 +1,47 @@
+spring:
+  data:
+    mongodb:
+      host: 192.168.102.88
+      port: 27017
+      database: ntss
+      username: nkk
+      password: nkk
+  datasource:
+    default:
+      jdbc-url: jdbc:postgresql://192.168.102.162:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk5
+      password: nkk5
+    personal:
+      jdbc-url: jdbc:postgresql://192.168.102.162:5432/ntss_db6?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk6
+      password: nkk6
+    auth:
+      jdbc-url: jdbc:postgresql://192.168.102.162:5432/ntss_db4?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk4
+      password: nkk4
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+
+doma:
+  dialect: postgres
+
+logging:
+  level:
+    org.springframework.transaction.interceptor: TRACE
+
+cloud:
+  aws:
+    endpoint: http://192.168.102.88:4568
+    credentials:
+      accessKey: S3RVER
+      secretKey: S3RVER
+    region:
+      #      auto: true
+      auto: false
+      static: ap-northeast-1 # 東京リージョン
+    stack:
+      auto: false

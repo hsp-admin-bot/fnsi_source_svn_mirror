@@ -1,0 +1,60 @@
+/**
+ * 治療記録バイタルグラフマスタの項目定義
+ * @summary
+ */
+export const mstVitalGraphDefine =
+  [{
+    sortRank: 1,
+    vvitalGraphName: "最高血圧",
+    vitalLineColor: "#99d9ea",
+    vitalLineSize: 2,
+    vitalLineTypeValue: "solid",
+    vitalPointColor: "#99d9ea",
+    vitalPointSize: 4,
+    vitalPointTypeValue: "circle"
+  }, {
+    sortRank: 2,
+    vvitalGraphName: "最低血圧",
+    vitalLineColor: "#ffc90e",
+    vitalLineSize: 2,
+    vitalLineTypeValue: "solid",
+    vitalPointColor: "#ffc90e",
+    vitalPointSize: 4,
+    vitalPointTypeValue: "diamond"
+  }, {
+    sortRank: 3,
+    vvitalGraphName: "平均血圧",
+    vitalLineColor: "#ed1c24",
+    vitalLineSize: 2,
+    vitalLineTypeValue: "solid",
+    vitalPointColor: "#ed1c24",
+    vitalPointSize: 4,
+    vitalPointTypeValue: "square"
+  }, {
+    sortRank: 4,
+    vvitalGraphName: "脈拍",
+    vitalLineColor: "#b5e61d",
+    vitalLineSize: 2,
+    vitalLineTypeValue: "solid",
+    vitalPointColor: "#b5e61d",
+    vitalPointSize: 4,
+    vitalPointTypeValue: "triangle"
+  }, {
+    sortRank: 5,
+    vvitalGraphName: "体温",
+    vitalLineColor: "#3f48cc",
+    vitalLineSize: 2,
+    vitalLineTypeValue: "solid",
+    vitalPointColor: "#3f48cc",
+    vitalPointSize: 4,
+    vitalPointTypeValue: "triangle-down"
+  }, {
+    sortRank: 6,
+    vvitalGraphName: "血糖値",
+    vitalLineColor: "#00a2e8",
+    vitalLineSize: 2,
+    vitalLineTypeValue: "dot",
+    vitalPointColor: "#00a2e8",
+    vitalPointSize: 4,
+    vitalPointTypeValue: "circle"
+  }];

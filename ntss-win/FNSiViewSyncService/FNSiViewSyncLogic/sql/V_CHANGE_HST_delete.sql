@@ -1,0 +1,1 @@
+DELETE V_CHANGE_HST WHERE UP_DATE > TO_DATE( '@update', 'yyyy-mm-dd hh24:mi:ss' );

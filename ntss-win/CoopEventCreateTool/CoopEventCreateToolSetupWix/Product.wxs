@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CoopEventCreateTool WiX v4 インストーラー
+  製品名   : CoopEventCreateTool
+  バージョン: 2.0.1
+  メーカー : Nikkiso
+  インストール先: C:\FNWSiTools\CoopEventCreateTool
+
+  画面フロー:
+    ようこそ → インストール先選択 → 確認 → 進捗 → [設定ダイアログ(CA)] → 完了
+
+  機能:
+    - 日本語 UI
+    - サイレントインストール(/quiet): 設定ダイアログをスキップ
+    - バージョンダウングレード検知・ブロック
+    - 実行中プロセスを自動終了（アップグレード/アンインストール時）
+    - アンインストール時に CoopEvent.config を保持
+-->
+<?include GeneratedProductCode.wxi?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package
+    Name="CoopEventCreateTool"
+    Manufacturer="Nikkiso"
+    Version="$(var.ProductVersion)"
+    ProductCode="$(var.ProductCode)"
+    UpgradeCode="{AD986BFB-BB5D-40BC-9A7D-5174C86E6862}"
+    Language="1041"
+    Codepage="932"
+    InstallerVersion="500"
+    Compressed="yes"
+    Scope="perMachine">
+
+    <SummaryInformation Description="CoopEventCreateTool インストーラー" Keywords="インストーラー" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- ============================== アイコン ============================== -->
+    <Icon Id="CoopEventCreateToolIcon" SourceFile="$(var.SrcSetup)CoopEventCreateTool.ico" />
+
+    <Property Id="ARPPRODUCTICON" Value="CoopEventCreateToolIcon" />
+    <Property Id="ARPCONTACT"     Value="Nikkiso" />
+    <Property Id="ARPCOMMENTS"    Value="CoopEventCreateTool" />
+    <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
+
+    <Property Id="REBOOT" Value="ReallySuppress" />
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <Property Id="RUNNING_PROCESSES" Secure="yes" />
+    <Property Id="ROOTDRIVE" Value="C:\" />
+
+    <!-- ============================== .NET Framework 4.5 チェック ============================== -->
+    <Property Id="NETFRAMEWORK45" Secure="yes">
+      <RegistrySearch Id="NetFx45Search"
+                      Root="HKLM"
+                      Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"
+                      Name="Release"
+                      Type="raw" />
+    </Property>
+    <Launch Condition="NETFRAMEWORK45"
+            Message=".NET Framework 4.5 以上が必要です。インストールしてから再度実行してください。" />
+
+    <!-- ============================== バージョン管理 ============================== -->
+    <Upgrade Id="{AD986BFB-BB5D-40BC-9A7D-5174C86E6862}">
+      <UpgradeVersion
+        Minimum="0.0.0"
+        Maximum="$(var.ProductVersion)"
+        IncludeMinimum="yes"
+        IncludeMaximum="no"
+        Property="OLDERVERSIONBEINGUPGRADED"
+        MigrateFeatures="yes" />
+      <UpgradeVersion
+        Minimum="$(var.ProductVersion)"
+        IncludeMinimum="no"
+        Property="NEWERVERSIONALREADYINSTALLED" />
+    </Upgrade>
+
+    <Launch Condition="NOT NEWERVERSIONALREADYINSTALLED"
+            Message="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
+
+    <!-- ============================== ディレクトリ構成 ============================== -->
+    <!--
+      デフォルト: C:\FNWSiTools\CoopEventCreateTool
+      TARGETDIR(C:\) > FNWSITOOLS(FNWSiTools) > INSTALLFOLDER(CoopEventCreateTool) > DIR_IMG(Img)
+    -->
+    <StandardDirectory Id="TARGETDIR">
+      <Directory Id="FNWSITOOLS" Name="FNWSiTools">
+        <Directory Id="INSTALLFOLDER" Name="CoopEventCreateTool">
+          <Directory Id="DIR_IMG" Name="Img" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="WindowsFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+
+    <!-- ============================== コンポーネント ============================== -->
+
+    <!-- (1) メインアプリケーション（AssemblyName: FNWSiCoopEventManagementTool） -->
+    <Component Id="C_MainExe"
+               Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0001}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_MainExe"
+            Source="$(var.SrcBin)FNWSiCoopEventManagementTool.exe"
+            KeyPath="yes" />
+      <RemoveFile Id="RF_InstallState"
+                  Name="FNWSiCoopEventManagementTool.InstallState"
+                  On="uninstall" />
+    </Component>
+
+    <!-- (2) FNWSiCoopEventManagementTool.exe.config -->
+    <Component Id="C_ExeConfig"
+               Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0002}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_ExeConfig"
+            Source="$(var.SrcBin)FNWSiCoopEventManagementTool.exe.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (3) CoopEvent.config（ユーザー設定を保持） -->
+    <Component Id="C_CoopEventConfig"
+               Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0003}"
+               Directory="INSTALLFOLDER"
+               Permanent="yes"
+               NeverOverwrite="yes">
+      <File Id="F_CoopEventConfig"
+            Source="$(var.SrcBin)CoopEvent.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (4) ComboxXML.xml -->
+    <Component Id="C_ComboxXml"
+               Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0004}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_ComboxXml"
+            Source="$(var.SrcBin)ComboxXML.xml"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (5) Img\name.png -->
+    <Component Id="C_ImgName"
+               Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0005}"
+               Directory="DIR_IMG">
+      <File Id="F_ImgName"
+            Source="$(var.SrcBin)Img\name.png"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (6) デスクトップショートカット -->
+    <Component Id="C_DesktopShortcut"
+               Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0020}"
+               Directory="INSTALLFOLDER">
+      <Shortcut Id="SC_CoopEventCreateTool"
+                Directory="DesktopFolder"
+                Name="連携イベント作成削除ツール"
+                Target="[INSTALLFOLDER]CoopEventCreateOrStopTool.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="CoopEventCreateToolIcon" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\Nikkiso\CoopEventCreateTool"
+                     Name="ShortcutsInstalled"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+      <RemoveRegistryKey Root="HKCU"
+                         Key="Software\Nikkiso\CoopEventCreateTool"
+                         Action="removeOnUninstall" />
+    </Component>
+
+    <!-- (7) 共有 DLL 群 -->
+    <ComponentGroup Id="CG_SharedDlls" Directory="INSTALLFOLDER">
+      <Component Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0011}"><File Source="$(var.SrcBin)NKKCommon.dll" /></Component>
+      <Component Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0015}"><File Source="$(var.SrcBin)Ionic.Zip.dll" /></Component>
+      <Component Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0012}"><File Source="$(var.SrcBin)LayoutDesignerUtilityLib.dll" /></Component>
+      <Component Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0013}"><File Source="$(var.SrcBin)SignInLib.dll" /></Component>
+      <Component Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0014}"><File Source="$(var.SrcBin)System.ValueTuple.dll" /></Component>
+    </ComponentGroup>
+
+    <!-- ============================== フィーチャー ============================== -->
+    <Feature Id="ProductFeature"
+             Title="CoopEventCreateTool"
+             Level="1"
+             ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentRef Id="C_MainExe" />
+      <ComponentRef Id="C_ExeConfig" />
+      <ComponentRef Id="C_CoopEventConfig" />
+      <ComponentRef Id="C_ComboxXml" />
+      <ComponentRef Id="C_ImgName" />
+      <ComponentRef Id="C_DesktopShortcut" />
+      <ComponentGroupRef Id="CG_SharedDlls" />
+    </Feature>
+
+    <!-- ============================== カスタムアクション ============================== -->
+
+    <!-- 実行中プロセスを強制終了 -->
+    <CustomAction Id="KillRunningInstances"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c taskkill /F /IM FNWSiCoopEventManagementTool.exe &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- インストール先を deferred CA に渡すためのデータセット -->
+    <CustomAction Id="SetInstallProperty"
+                  Property="RunInstallUtil"
+                  Value="&quot;[INSTALLFOLDER]FNWSiCoopEventManagementTool.exe&quot;" />
+
+    <!-- サイレントインストール時: /silent=1 をアセンブリパスの前に配置 -->
+    <CustomAction Id="SetInstallPropertySilent"
+                  Property="RunInstallUtil"
+                  Value="/silent=1 &quot;[INSTALLFOLDER]FNWSiCoopEventManagementTool.exe&quot;" />
+
+    <!-- InstallUtil.exe で ProjectInstaller を実行（設定ダイアログ表示） -->
+    <CustomAction Id="RunInstallUtil"
+                  Directory="WindowsFolder"
+                  ExeCommand="Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /LogToConsole=false /LogFile= [RunInstallUtil]"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check" />
+
+    <CustomAction Id="CA_DetectRunningProcesses"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_DetectRunningProcesses.vbs" />
+    <CustomAction Id="CA_KillGUIApps"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_KillGUIApps.vbs" />
+
+    <!-- ============================== シーケンス ============================== -->
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallInitialize" />
+
+      <Custom Action="KillRunningInstances" Before="RemoveFiles" Condition="1" />
+
+      <Custom Action="SetInstallProperty" Before="RunInstallUtil"
+              Condition="NOT REMOVE AND UILevel &gt;= 5" />
+      <Custom Action="SetInstallPropertySilent" Before="RunInstallUtil"
+              Condition="NOT REMOVE AND UILevel &lt; 5" />
+      <Custom Action="RunInstallUtil" After="InstallFiles"
+              Condition="NOT REMOVE" />
+    </InstallExecuteSequence>
+
+    <!-- ============================== UI ============================== -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <UI>
+      <Dialog Id="RunningProcessesDlg" Width="370" Height="270" Title="CoopEventCreateTool インストーラー">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}実行中アプリケーションの検出" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="15" Text="インストール前にアプリケーションを終了してください。" />
+        <Control Id="RunningAppsLabel" Type="Text" X="20" Y="58" Width="330" Height="30" Text="以下のアプリケーションが実行中のため、インストールを継続できません。" />
+        <Control Id="RunningAppsList" Type="Text" X="30" Y="92" Width="310" Height="90" Text="[RUNNING_PROCESSES]" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton" X="155" Y="243" Width="56" Height="17" Text="&lt; 戻る">
+          <Publish Event="NewDialog" Value="WelcomeDlg" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="MaintenanceTypeDlg" Condition="Installed" />
+        </Control>
+        <Control Id="CloseAndContinue" Type="PushButton" X="215" Y="243" Width="84" Height="17" Default="yes" Text="終了して続行">
+          <Publish Event="DoAction" Value="CA_KillGUIApps" Order="1" Condition="1" />
+          <Publish Event="NewDialog" Value="InstallDirDlg" Order="2" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="2" Condition="Installed" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="307" Y="243" Width="56" Height="17" Cancel="yes" Text="キャンセル">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="DoAction" Value="CA_DetectRunningProcesses" Order="1" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="RunningProcessesDlg" Order="2" Condition="NOT Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="WelcomeDlg"    Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="3" Condition="NOT Installed AND NOT RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="DoAction" Value="CA_DetectRunningProcesses" Order="1" Condition="Installed" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="RunningProcessesDlg" Order="2" Condition="Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" Order="3" Condition="Installed AND NOT RUNNING_PROCESSES" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"    Order="2" Condition="1" />
+    </UI>
+
+  </Package>
+
+</Wix>

@@ -1,0 +1,14 @@
+version: '2'
+services:
+    ntss-app:
+        image: ntss
+        environment:
+            - SPRING_PROFILES_ACTIVE=prod
+            - SPRING_DATASOURCE_URL=jdbc:postgresql://ntss-postgresql:5432/ntss
+            - SLEEP=10 # gives time for the database to boot before the application
+        ports:
+            - 8080:8080
+    ntss-postgresql:
+        extends:
+            file: postgresql.yml
+            service: ntss-postgresql

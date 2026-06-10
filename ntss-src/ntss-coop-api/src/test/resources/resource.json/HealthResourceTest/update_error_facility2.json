@@ -1,0 +1,10 @@
+{
+  "facility_cd":"000011",
+  "if_edge_no":"3",
+  "healthmon_facility_conn":{
+    "ini_dial": null
+  },
+  "healthmon_server_conn":{
+    "status" : "01"
+  }
+}

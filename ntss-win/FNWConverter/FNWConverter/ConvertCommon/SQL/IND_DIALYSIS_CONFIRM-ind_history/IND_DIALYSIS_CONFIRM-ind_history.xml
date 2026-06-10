@@ -1,0 +1,555 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<rootNode>
+  <tableInfo>
+    <name>指示履歴</name>
+    <convertKind>IND</convertKind>
+    <xmlConfigName>ind_history-IND_DIALYSIS_CONFIRM_DETAIL</xmlConfigName>
+    <fnwTableName>IND_DIALYSIS_CONFIRM_DETAIL</fnwTableName>
+    <ntssTableName>ind_history</ntssTableName>
+    <fnwPk>CodeID</fnwPk>
+    <mstSelectorCode></mstSelectorCode>
+    <mstSelectorName></mstSelectorName>
+    <sqlForTool>
+		WITH PAT_BASIC_INFO_NORMAL AS (SELECT w1.*,
+		regexp_replace(replace(ltrim(rtrim(name,' 　'),' 　'),'　',' '),'\s{2,}',' ') as trim_name,
+		regexp_replace(replace(ltrim(rtrim(name_kana,' 　'),' 　'),'　',' '),'\s{2,}',' ') as trim_name_kana
+		FROM PAT_BASIC_INFO w1 INNER JOIN PAT_INDEX_INFO w2 ON(w2.PAT_STATUS='0' AND w1.PATID=w2.PATID AND w1.REG_DATE=w2.PAT_REG_DATE))
+		, REC_CLASS AS (
+		select
+		PATID, CATEGORY_CD, CATEGORY_SUB_NO, min(UP_DATE) as UP_DATE, IND_NO
+		from
+		IND_DIALYSIS_CONFIRM_DETAIL
+		group by PATID,CATEGORY_CD, CATEGORY_SUB_NO, IND_NO
+		)
+		, TIMES AS (
+		SELECT
+		CASE
+		WHEN instr(DETAIL.DAY_OF_WEEK, '月') > 0
+		THEN 1
+		END AS TIMES1
+		, CASE
+		WHEN instr(DETAIL.DAY_OF_WEEK, '火') > 0
+		THEN decode(PLAN.VALUE_1W1N, NULL, 0, 1) + 1
+		END AS TIMES2
+		, CASE
+		WHEN instr(DETAIL.DAY_OF_WEEK, '水') > 0
+		THEN decode(PLAN.VALUE_1W1N, NULL, 0, 1) + decode(PLAN.VALUE_1W2N, NULL, 0, 1) + 1
+		END AS TIMES3
+		, CASE
+		WHEN instr(DETAIL.DAY_OF_WEEK, '木') > 0
+		THEN decode(PLAN.VALUE_1W1N, NULL, 0, 1) + decode(PLAN.VALUE_1W2N, NULL, 0, 1) + decode(PLAN.VALUE_1W3N, NULL, 0, 1)
+		+ 1
+		END AS TIMES4
+		, CASE
+		WHEN instr(DETAIL.DAY_OF_WEEK, '金') > 0
+		THEN decode(PLAN.VALUE_1W1N, NULL, 0, 1) + decode(PLAN.VALUE_1W2N, NULL, 0, 1) + decode(PLAN.VALUE_1W3N, NULL, 0, 1)
+		+ decode(PLAN.VALUE_1W4N, NULL, 0, 1) + 1
+		END AS TIMES5
+		, CASE
+		WHEN instr(DETAIL.DAY_OF_WEEK, '土') > 0
+		THEN decode(PLAN.VALUE_1W1N, NULL, 0, 1) + decode(PLAN.VALUE_1W2N, NULL, 0, 1) + decode(PLAN.VALUE_1W3N, NULL, 0, 1)
+		+ decode(PLAN.VALUE_1W4N, NULL, 0, 1) + decode(PLAN.VALUE_1W5N, NULL, 0, 1) + 1
+		END AS TIMES6
+		, CASE
+		WHEN instr(DETAIL.DAY_OF_WEEK, '日') > 0
+		THEN decode(PLAN.VALUE_1W1N, NULL, 0, 1) + decode(PLAN.VALUE_1W2N, NULL, 0, 1) + decode(PLAN.VALUE_1W3N, NULL, 0, 1)
+		+ decode(PLAN.VALUE_1W4N, NULL, 0, 1) + decode(PLAN.VALUE_1W5N, NULL, 0, 1) + decode(PLAN.VALUE_1W6N, NULL, 0, 1)
+		+ 1
+		END AS TIMES7
+		, DETAIL.DAY_OF_WEEK
+		, DETAIL.PATID
+		, DETAIL.UP_DATE
+		, DETAIL.IND_START_DATE
+		, DETAIL.IND_END_DATE
+		, DETAIL.CATEGORY_SUB_NO
+		FROM
+		IND_DIALYSIS_CONFIRM_DETAIL DETAIL
+		INNER JOIN IND_DIALYSIS_PLAN PLAN
+		ON DETAIL.PATID = PLAN.PATID
+		AND DETAIL.UP_DATE = PLAN.UP_DATE
+		AND DETAIL.IND_START_DATE = PLAN.IND_START_DATE
+		AND DETAIL.IND_END_DATE = PLAN.IND_END_DATE
+		WHERE
+		DETAIL.DAY_OF_WEEK IS NOT NULL
+		)
+		, TREAT_ITEM_NAME_TABLE AS (
+		SELECT
+		CASE
+		WHEN TIMES.TIMES1 = 1
+		OR TIMES.TIMES2 = 1
+		OR TIMES.TIMES3 = 1
+		OR TIMES.TIMES4 = 1
+		OR TIMES.TIMES5 = 1
+		OR TIMES.TIMES6 = 1
+		OR TIMES.TIMES7 = 1
+		THEN (
+		SELECT
+		ITEMS.TREAT_ITEM_NAME
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W1N
+		AND ITEMS.REG_DATE = (
+		SELECT
+		MAX(ITEMS.REG_DATE) AS MAX_REG_DATE
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W1N
+		AND ITEMS.REG_DATE &lt;= COND.UP_DATE
+		)
+		)
+		END AS TREAT_ITEM_NAME_1
+		, CASE
+		WHEN TIMES.TIMES2 = 2
+		OR TIMES.TIMES3 = 2
+		OR TIMES.TIMES4 = 2
+		OR TIMES.TIMES5 = 2
+		OR TIMES.TIMES6 = 2
+		OR TIMES.TIMES7 = 2
+		THEN (
+		SELECT
+		ITEMS.TREAT_ITEM_NAME
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W2N
+		AND ITEMS.REG_DATE = (
+		SELECT
+		MAX(ITEMS.REG_DATE) AS MAX_REG_DATE
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W2N
+		AND ITEMS.REG_DATE &lt;= COND.UP_DATE
+		)
+		)
+		END AS TREAT_ITEM_NAME_2
+		, CASE
+		WHEN TIMES.TIMES3 = 3
+		OR TIMES.TIMES4 = 3
+		OR TIMES.TIMES5 = 3
+		OR TIMES.TIMES6 = 3
+		OR TIMES.TIMES7 = 3
+		THEN (
+		SELECT
+		ITEMS.TREAT_ITEM_NAME
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W3N
+		AND ITEMS.REG_DATE = (
+		SELECT
+		MAX(ITEMS.REG_DATE) AS MAX_REG_DATE
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W3N
+		AND ITEMS.REG_DATE &lt;= COND.UP_DATE
+		)
+		)
+		END AS TREAT_ITEM_NAME_3
+		, CASE
+		WHEN TIMES.TIMES4 = 4
+		OR TIMES.TIMES5 = 4
+		OR TIMES.TIMES6 = 4
+		OR TIMES.TIMES7 = 4
+		THEN (
+		SELECT
+		ITEMS.TREAT_ITEM_NAME
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W4N
+		AND ITEMS.REG_DATE = (
+		SELECT
+		MAX(ITEMS.REG_DATE) AS MAX_REG_DATE
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W4N
+		AND ITEMS.REG_DATE &lt;= COND.UP_DATE
+		)
+		)
+		END AS TREAT_ITEM_NAME_4
+		, CASE
+		WHEN TIMES.TIMES5 = 5
+		OR TIMES.TIMES6 = 5
+		OR TIMES.TIMES7 = 5
+		THEN (
+		SELECT
+		ITEMS.TREAT_ITEM_NAME
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W5N
+		AND ITEMS.REG_DATE = (
+		SELECT
+		MAX(ITEMS.REG_DATE) AS MAX_REG_DATE
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W5N
+		AND ITEMS.REG_DATE &lt;= COND.UP_DATE
+		)
+		)
+		END AS TREAT_ITEM_NAME_5
+		, CASE
+		WHEN TIMES.TIMES6 = 6
+		OR TIMES.TIMES7 = 6
+		THEN (
+		SELECT
+		ITEMS.TREAT_ITEM_NAME
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W6N
+		AND ITEMS.REG_DATE = (
+		SELECT
+		MAX(ITEMS.REG_DATE) AS MAX_REG_DATE
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W6N
+		AND ITEMS.REG_DATE &lt;= COND.UP_DATE
+		)
+		)
+		END AS TREAT_ITEM_NAME_6
+		, CASE
+		WHEN TIMES.TIMES7 = 7
+		THEN (
+		SELECT
+		ITEMS.TREAT_ITEM_NAME
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W7N
+		AND ITEMS.REG_DATE = (
+		SELECT
+		MAX(ITEMS.REG_DATE) AS MAX_REG_DATE
+		FROM
+		MST_TREAT_ITEM ITEMS
+		WHERE
+		ITEMS.TREAT_ITEM_CD = COND.VALUE_1W7N
+		AND ITEMS.REG_DATE &lt;= COND.UP_DATE
+		)
+		)
+		END AS TREAT_ITEM_NAME_7
+		, COND.UP_DATE
+		, COND.PATID
+		, COND.IND_START_DATE
+		, COND.IND_END_DATE
+		, TIMES.CATEGORY_SUB_NO
+		FROM
+		IND_DIALYSIS_COND COND
+		INNER JOIN TIMES
+		ON COND.PATID = TIMES.PATID
+		AND COND.UP_DATE = TIMES.UP_DATE
+		AND COND.IND_START_DATE = TIMES.IND_START_DATE
+		AND COND.IND_END_DATE = TIMES.IND_END_DATE
+		AND COND.CTL_NO = '006'
+		)
+		, TREAT_ITEM_NAME AS (
+		SELECT
+		TRIM(
+		leading ','
+		from
+		DECODE(
+		TABLES.TREAT_ITEM_NAME_1
+		, NULL
+		, NULL
+		, TREAT_ITEM_NAME_1
+		) || DECODE(
+		TABLES.TREAT_ITEM_NAME_2
+		, NULL
+		, NULL
+		, ',' || TREAT_ITEM_NAME_2
+		) || DECODE(
+		TABLES.TREAT_ITEM_NAME_3
+		, NULL
+		, NULL
+		, ',' || TREAT_ITEM_NAME_3
+		) || DECODE(
+		TABLES.TREAT_ITEM_NAME_4
+		, NULL
+		, NULL
+		, ',' || TREAT_ITEM_NAME_4
+		) || DECODE(
+		TABLES.TREAT_ITEM_NAME_5
+		, NULL
+		, NULL
+		, ',' || TREAT_ITEM_NAME_5
+		) || DECODE(
+		TABLES.TREAT_ITEM_NAME_6
+		, NULL
+		, NULL
+		, ',' || TREAT_ITEM_NAME_6
+		) || DECODE(
+		TABLES.TREAT_ITEM_NAME_7
+		, NULL
+		, NULL
+		, ',' || TREAT_ITEM_NAME_7
+		)
+		) AS TREAT_ITEM_NAME
+		, TABLES.UP_DATE
+		, TABLES.PATID
+		, TABLES.IND_START_DATE
+		, TABLES.IND_END_DATE
+		, TABLES.CATEGORY_SUB_NO
+		FROM
+		TREAT_ITEM_NAME_TABLE TABLES
+		),extracted_values AS (
+		SELECT
+		TRIM(REGEXP_SUBSTR(t.Boold, '[^,]+', 1, lv.lvl)) AS extracted_value,
+		'血液回路' AS log_target,
+		'200' AS sort_no
+		FROM SYNC_CONDSET t
+		CROSS JOIN (
+		SELECT LEVEL AS lvl
+		FROM dual
+		CONNECT BY LEVEL &lt;= (
+		SELECT MAX(REGEXP_COUNT(Boold, ',') + 1)
+		FROM SYNC_CONDSET
+		WHERE SERIES_CD = '{SERIES_CD}'
+		)
+		) lv
+		WHERE t.SERIES_CD = '{SERIES_CD}'
+		AND lv.lvl &lt;= REGEXP_COUNT(t.Boold, ',') + 1
+		UNION ALL
+		SELECT
+		TRIM(REGEXP_SUBSTR(t.p_A, '[^,]+', 1, lv.lvl)) AS extracted_value,
+		'穿刺針(A針)' AS log_target,
+		'160' AS sort_no
+		FROM SYNC_CONDSET t
+		CROSS JOIN (
+		SELECT LEVEL AS lvl
+		FROM dual
+		CONNECT BY LEVEL  &lt;= (
+		SELECT MAX(REGEXP_COUNT(p_A, ',') + 1)
+		FROM SYNC_CONDSET
+		WHERE SERIES_CD = '{SERIES_CD}'
+		)
+		) lv
+		WHERE t.SERIES_CD = '{SERIES_CD}'
+		AND lv.lvl  &lt;= REGEXP_COUNT(t.p_A, ',') + 1
+		UNION ALL
+		SELECT
+		TRIM(REGEXP_SUBSTR(t.p_V, '[^,]+', 1, lv.lvl)) AS extracted_value,
+		'穿刺針(V針)' AS log_target,
+		'170' AS sort_no
+		FROM SYNC_CONDSET t
+		CROSS JOIN (
+		SELECT LEVEL AS lvl
+		FROM dual
+		CONNECT BY LEVEL  &lt;= (
+		SELECT MAX(REGEXP_COUNT(p_V, ',') + 1)
+		FROM SYNC_CONDSET
+		WHERE SERIES_CD = '{SERIES_CD}'
+		)
+		) lv
+		WHERE t.SERIES_CD = '{SERIES_CD}'
+		AND lv.lvl  &lt;= REGEXP_COUNT(t.p_V, ',') + 1
+		UNION ALL
+		SELECT
+		TRIM(REGEXP_SUBSTR(t.p_SN, '[^,]+', 1, lv.lvl)) AS extracted_value,
+		'穿刺針(SN)' AS log_target,
+		'180' AS sort_no
+		FROM SYNC_CONDSET t
+		CROSS JOIN (
+		SELECT LEVEL AS lvl
+		FROM dual
+		CONNECT BY LEVEL  &lt;= (
+		SELECT MAX(REGEXP_COUNT(p_SN, ',') + 1)
+		FROM SYNC_CONDSET
+		WHERE SERIES_CD = '{SERIES_CD}'
+		)
+		) lv
+		WHERE t.SERIES_CD = '{SERIES_CD}'
+		AND lv.lvl  &lt;= REGEXP_COUNT(t.p_SN, ',') + 1
+		){NoWITHIndTimePeriod}
+		select  a.*,case a.REC_CLASS when '変更' then  a.BEFORE_DATA||'→'||a.AFTER_DATA else a.BEFORE_DATA||a.AFTER_DATA end as LOG_CONTENT from (
+		select
+		a.PATID||a.CONFIRM_ID||a.MNG_NO||to_char(a.UP_DATE,'yyyymmddhh24miss')||a.CATEGORY_SUB_NO as CodeID,
+		a.CATEGORY_CD as CATEGORY_CD,
+		a.CONFIRM_ID as CONFIRM_ID,
+		a.MNG_NO as MNG_NO,
+		a.UP_DATE as UP_DATE,
+		a.CATEGORY_SUB_NO as CATEGORY_SUB_NO,
+		case when p.sort_no  is not null then  p.sort_no else
+		case nvl(a.CATEGORY_CD,'')
+		WHEN '110' THEN '460'
+		WHEN '120' THEN '470'
+		WHEN '130' THEN '480'
+		WHEN '140' THEN
+		case nvl(a.CATEGORY_SUB_NO,'')
+		WHEN '006    ' THEN '20'
+		WHEN '004    ' THEN '80'
+		WHEN '003    ' THEN '90'
+		WHEN '005    ' THEN '100'
+		WHEN '007    ' THEN '110'
+		WHEN '008    ' THEN '120'
+		WHEN '009    ' THEN '130'
+		WHEN '010    ' THEN '210'
+		WHEN '029    ' THEN '190'
+		WHEN '039    ' THEN '140'
+		WHEN '040    ' THEN '150'
+		END
+		WHEN '150' THEN
+		case nvl(a.CATEGORY_SUB_NO,'')
+		WHEN '011    ' THEN '320'
+		WHEN '012    ' THEN '330'
+		WHEN '013    ' THEN '340'
+		WHEN '014    ' THEN '350'
+		WHEN '015    ' THEN '360'
+		WHEN '031    ' THEN '370'
+		WHEN '016    ' THEN '380'
+		WHEN '017    ' THEN '390'
+		WHEN '037    ' THEN '400'
+		WHEN '032    ' THEN '410'
+		WHEN '033    ' THEN '420'
+		WHEN '034    ' THEN '430'
+		WHEN '035    ' THEN '440'
+		WHEN '036    ' THEN '450'
+		END
+		WHEN '160' THEN
+		case nvl(a.CATEGORY_SUB_NO,'')
+		WHEN '018    ' THEN '220'
+		WHEN '019    ' THEN '230'
+		WHEN '020    ' THEN '240'
+		WHEN '021    ' THEN '250'
+		END
+		WHEN '170' THEN
+		case nvl(a.CATEGORY_SUB_NO,'')
+		WHEN '022    ' THEN '260'
+		WHEN '023    ' THEN '270'
+		WHEN '024    ' THEN '280'
+		WHEN '030    ' THEN '290'
+		WHEN '025    ' THEN '300'
+		WHEN '038    ' THEN '310'
+		END
+		WHEN '100' THEN
+		case nvl(a.CATEGORY_SUB_NO,'')
+		WHEN '001    ' THEN '30'
+		WHEN '002    ' THEN '40'
+		WHEN '005    ' THEN '50'
+		WHEN '003    ' THEN '60'
+		WHEN '004    ' THEN '70'
+		END
+		ELSE '' END  END sort_no,
+		a.PATID,
+		to_char(a.UP_DATE,'yyyymmddhh24miss') as DISP_DATE,
+		c.KUR_NAME as KUR_CD,
+		case when p.log_target is not null then   p.log_target else
+		case a.CATEGORY_CD
+		WHEN '110' THEN '投与薬剤(薬剤名＋数量＋単位)'
+		WHEN '120' THEN '医療材料'
+		WHEN '130' THEN '指示コメント'
+		ELSE
+		case CATEGORY_SUB_NAME
+		WHEN '透析日' THEN '治療日'
+		WHEN '透析開始時刻' THEN '治療開始時刻'
+		WHEN '透析時間' THEN '治療時間'
+		ELSE CATEGORY_SUB_NAME END
+		END  END CATEGORY_SUB_NAME,
+		a.IND_START_DATE,
+		CASE
+		a.IND_END_DATE
+		WHEN '99991231' THEN ''
+		ELSE a.IND_END_DATE
+		END IND_END_DATE,
+		case when a.CATEGORY_CD='140' and a.CATEGORY_SUB_NO = '005' and (a.BEFORE_DATA=dw_AFTER_DATA or a.BEFORE_DATA=dw_BEFORE_DATA) then 'DWと同じ' else a.BEFORE_DATA end  as BEFORE_DATA,
+		case when a.CATEGORY_CD='140' and a.CATEGORY_SUB_NO = '005' and (a.AFTER_DATA= dw_AFTER_DATA or a.AFTER_DATA=dw_AFTER_DATA) then 'DWと同じ' else a.AFTER_DATA end  as AFTER_DATA,
+		DAY_OF_WEEK,
+		case  when REC_CLASS = '3' then '中止'
+		　　　when REC_CLASS = '1' then '新規'
+		when REC_CLASS = '2' then '変更'
+		end as REC_CLASS,
+		trim(INDICATOR_CD) as INDICATOR_CD,
+		INDICATOR_NAME,
+		trim(INPUTER_CD) as INPUTER_CD,
+		INPUTER_NAME,
+		trim(TAKER_CD) as TAKER_CD,
+		TAKER_NAME,
+		s.staff_name AS NAME_KANA,
+		null AS DIALYSIS_NO,
+		NAMES.TREAT_ITEM_NAME AS TREATMENT_METHOD
+		from IND_DIALYSIS_CONFIRM_DETAIL a
+		LEFT JOIN (
+		SELECT
+		PATID, CONFIRM_ID, MNG_NO, CATEGORY_CD, BEFORE_DATA as dw_BEFORE_DATA, AFTER_DATA as dw_AFTER_DATA,UP_DATE as dw_UP_DATE,
+		ROW_NUMBER() OVER (
+		PARTITION BY PATID, MNG_NO, CATEGORY_CD
+		ORDER BY UP_DATE DESC
+		) AS rn
+		FROM
+		IND_DIALYSIS_CONFIRM_DETAIL
+		WHERE
+		CATEGORY_SUB_NO = '004' and DISP_FLG=1 and  CATEGORY_CD='140'
+		) dw ON a.PATID = dw.PATID
+		AND a.MNG_NO = dw.MNG_NO
+		AND a.CATEGORY_CD = dw.CATEGORY_CD  and  a.CATEGORY_SUB_NO='005' and a.UP_DATE>=dw.dw_UP_DATE and   a.CATEGORY_CD='140'
+		AND dw.rn = 1
+		LEFT JOIN TREAT_ITEM_NAME NAMES
+		ON a.UP_DATE = NAMES.UP_DATE
+		AND a.PATID = NAMES.PATID
+		AND a.IND_START_DATE = NAMES.IND_START_DATE
+		AND a.IND_END_DATE = NAMES.IND_END_DATE
+		AND a.CATEGORY_SUB_NO = NAMES.CATEGORY_SUB_NO
+		left join  PAT_BASIC_INFO_NORMAL on PAT_BASIC_INFO_NORMAL.patid= a.PATID
+		left join IND_DIALYSIS_CONFIRM b
+		on a.PATID=b.Patid
+		and a.CONFIRM_ID=b.CONFIRM_ID
+		and a.MNG_NO=b.Mng_No
+		and a.UP_DATE=b.UP_DATE
+		left join (SELECT a.KUR_CD,a.KUR_NAME FROM MST_KUR a WHERE NOT EXISTS(SELECT * FROM MST_KUR b WHERE a.KUR_CD=b.KUR_CD AND a.UP_DATE&lt;b.UP_DATE)) c
+		on c.KUR_CD = b.KUR_CD
+		left join  (select a.STAFF_CD,a.staff_name from v_mst_staff a left outer join (select STAFF_CD,DISP_ORDER from SYS_STAFF_DISP where SERIES_CD ='{SERIES_CD}') b on (a.STAFF_CD = b.STAFF_CD)) s  on s .STAFF_CD=a.INDICATOR_CD
+		left join REC_CLASS r on a.PATID = r.PATID and  a.CATEGORY_CD = r.CATEGORY_CD and  a.CATEGORY_SUB_NO = r.CATEGORY_SUB_NO and a.IND_NO = r.IND_NO
+		LEFT JOIN (SELECT DISTINCT
+		e.EQUIP_NAME,
+		CASE
+		WHEN COUNT(*) OVER (PARTITION BY e.EQUIP_NAME) > 1 THEN '穿刺針'
+		ELSE MAX(log_target) OVER (PARTITION BY e.EQUIP_NAME)
+		END AS log_target,
+		CASE
+		WHEN COUNT(*) OVER (PARTITION BY e.EQUIP_NAME) > 1 THEN '160'
+		ELSE MAX(sort_no) OVER (PARTITION BY e.EQUIP_NAME)
+		END AS sort_no
+		FROM
+		extracted_values a
+		INNER JOIN
+		V_MST_EQUIPMENT_ALL e ON a.extracted_value = LPAD(TRIM(e.EQUIP_CD), 10, '0') 　where SERIES_CD ='{SERIES_CD}'  )   p ON a.AFTER_DATA LIKE p.EQUIP_NAME ||' [数量]'|| '%'   and  a.CATEGORY_CD = 120
+		where
+		a.DISP_FLG = '1'
+		{sqlForSync}
+		{sqlForExclusiveOutputted}
+		) a
+		{IndTimePeriodWhere}
+		order by a.PATID,a.CONFIRM_ID,a.MNG_NO,a.UP_DATE,a.CATEGORY_SUB_NO
+	</sqlForTool>
+	  <sqlForSync>
+		  and  exists(select * from PAT_BASIC_INFO_NORMAL pat where pat.patid = a.PATID)
+	  </sqlForSync>
+	  <sqlForExclusiveOutputted>
+		  AND (
+		  a.up_date &gt;(select max(CONVERT_DATETIME) from sync_convert_history ch where facility_cd=:facility_cd AND table_kind = 'HIS')
+		  OR
+		  EXISTS (
+		  SELECT 1
+		  FROM SYNC_IND_HISTORY_DETAIL c
+		  WHERE
+		  a.CONFIRM_ID = c.CONFIRM_ID
+		  AND
+		  c.MNG_NO= a.MNG_NO
+		  AND
+		  c.UP_DATE = a.UP_DATE
+		  AND
+		  a.CATEGORY_SUB_NO = c.CATEGORY_SUB_NO
+		  AND a.CATEGORY_CD = c.CATEGORY_CD
+		  AND (nvl(A.TAKER_CD, 'null')  &lt;&gt; nvl(c.TAKER_CD, 'null') OR nvl(A.TAKER_NAME, 'null') &lt;&gt; nvl(c.TAKER_NAME, 'null'))
+		  )
+		  )
+	  </sqlForExclusiveOutputted>
+    
+	</tableInfo>
+</rootNode>

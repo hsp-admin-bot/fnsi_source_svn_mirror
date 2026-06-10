@@ -1,0 +1,75 @@
+update ord_main
+set
+  treat_date = /*ordMain.treatDate*/'20180220',
+  treat_week = EXTRACT(ISODOW FROM to_date(/*ordMain.treatDate*/'error', 'yyyyMMdd')),
+  ind_treatment_name = null,
+  -- add 10196 by kangjie 20240122 start
+--   ind_kur_cd = /*ordMain.indKurCd*/0,
+--   ind_kur_name = /*ordMain.indKurName*/null,
+--   ind_treat_start_time = /*ordMain.indTreatStartTime*/null,
+  -- add 10196 by kangjie 20240122 start
+  ind_bed_cd = /*ordMain.indBedCd*/0,
+  ind_bed_name = /*ordMain.indBedName*/null,
+  ind_schedule_user_info = jsonb_merge_recursive(ind_schedule_user_info::jsonb, /*indScheduleUserInfo*/'{}'::jsonb),
+  ind_cond_info = /*ordMain.indCondInfo*/'{}',
+  ind_medi_info = /*ordMain.indMediInfo*/'[]',
+  ind_equip_info = /*ordMain.indEquipInfo*/'[]',
+  ind_ind_comment_info = /*ordMain.indIndCommentInfo*/'[]',
+  rst_is_update_edition = null,
+  rst_input_class = null,
+  -- add 10196 by kangjie 20240122 start
+  rst_dialysis_state = 0,
+  rst_dw = null,
+  addition_info = null,
+  -- add 10196 by kangjie 20240122 end
+  rst_treatment_cd = null,
+  rst_treatment_name = null,
+  rst_kur_cd = null,
+  rst_kur_name = null,
+  rst_bed_cd = null,
+  rst_bed_name = null,
+  rst_machine_no = null,
+  rst_machine_name = null,
+  rst_cond_send_date = null,
+  rst_accept_date = null,
+  rst_start_date = null,
+  rst_end_date = null,
+  rst_return_home_date = null,
+  rst_in_out_class = null,
+  rst_dialysis_cnt = null,
+  rst_ward_cd = null,
+  rst_ward_name = null,
+  rst_course_cd = null,
+  rst_course_name = null,
+  rst_puncture_user_info = null,
+  rst_return_user_info = null,
+  rst_charge_user_info = null,
+  rst_blood_circulate_total = null,
+  rst_running_time = null,
+  rst_kt_v = null,
+  rec_set_date = null,
+  send_ctl_no = null,
+  blood_purifier_name = null,
+  pull_leave_amount = null,
+  rst_cond_info = null,
+  rst_medi_info = null,
+  rst_equip_info = null,
+  rst_ind_comment_info = null,
+  rst_tare_info = null,
+  rst_off_water_info = null,
+--   add 10196 by kangjie 20240130 start del
+--   rst_device_set_info = null,
+--   add 10196 by kangjie 20240130 end del
+  rst_weight_info = null,
+--   add 10196 by kangjie 20240130 start del
+--   rst_vital_info = null,
+--   add 10196 by kangjie 20240130 end del
+  rst_complaint_info = null,
+  rst_treatment_info = null,
+  rst_treat_staff_info = null,
+  rst_rounds_info = null,
+  up_date = CURRENT_TIMESTAMP,
+  rst_purification_cnt = null
+where
+  ord_no = /*ordMain.ordNo*/0
+

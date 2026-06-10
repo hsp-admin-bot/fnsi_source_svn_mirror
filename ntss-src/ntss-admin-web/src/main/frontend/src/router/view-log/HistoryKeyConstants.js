@@ -1,0 +1,1 @@
+export const HISTORY_KEY_VIEW_LOG = "VIEW_LOG_REFERENCE";

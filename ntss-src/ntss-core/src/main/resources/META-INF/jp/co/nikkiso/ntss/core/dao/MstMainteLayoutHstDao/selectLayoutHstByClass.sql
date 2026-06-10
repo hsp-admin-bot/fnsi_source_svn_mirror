@@ -1,0 +1,28 @@
+select
+        A.mainte_layout_cd,
+        A.edition_no,
+        A.facility_cd,
+        A.layout_class,
+        A.layout_name,
+        A.type_info,
+        A.detail_info_1,
+        A.detail_info_2,
+        A.is_disp,
+        A.is_del,
+        A.up_date,
+        A.reg_date,
+        --add FNSI-No.694 レイアウトヘッダーを追加する 趙 start
+        A.layout_header
+        --add FNSI-No.694 レイアウトヘッダーを追加する 趙 end
+from
+        mst_mainte_layout_hst A  --テーブル名
+
+where
+        A.facility_cd = /* facilityCd*/'000000'
+and
+        A.layout_class = /* layoutClass*/'1'
+and
+        A.is_del = '0'
+and
+        A.is_disp = '1'
+;

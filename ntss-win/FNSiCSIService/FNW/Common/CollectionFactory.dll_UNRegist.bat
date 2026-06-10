@@ -1,0 +1,1 @@
+regsvr32.exe /u /s CollectionFactory.dll

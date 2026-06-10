@@ -1,0 +1,1 @@
+select nextval('mst_kur_kur_cd_seq');

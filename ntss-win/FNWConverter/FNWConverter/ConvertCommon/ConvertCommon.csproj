@@ -1,0 +1,292 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{F9D0302F-FC02-4C37-9275-0A891D788D01}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ConvertCommon</RootNamespace>
+    <AssemblyName>ConvertCommon</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>
+    </SccProjectName>
+    <SccLocalPath>
+    </SccLocalPath>
+    <SccAuxPath>
+    </SccAuxPath>
+    <SccProvider>
+    </SccProvider>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
+    <Prefer32Bit>false</Prefer32Bit>
+    <CodeAnalysisRuleSet>BasicDesignGuidelineRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Common">
+      <HintPath>..\DLL\Common.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib, Version=1.3.3.11, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
+      <HintPath>..\packages\SharpZipLib.1.3.3\lib\net45\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
+    <Reference Include="IOControl">
+      <HintPath>..\DLL\IOControl.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel.Web" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BuildConvertStatus.cs" />
+    <Compile Include="CheckPatIndApprove.cs" />
+    <Compile Include="Common\CacheInformation.cs" />
+    <Compile Include="Common\CommonLock.cs" />
+    <Compile Include="Common\CommonConfig.cs" />
+    <Compile Include="Common\CommonFunc.cs" />
+    <Compile Include="Common\ConvertSQL.cs" />
+    <Compile Include="Common\ConvertTss.cs" />
+    <Compile Include="Common\ExclusiveSqlDispatcher.cs" />
+    <Compile Include="Common\FileControl.cs" />
+    <Compile Include="Common\FileUploadControl.cs" />
+    <Compile Include="Common\JsonSqlBuilder.cs" />
+    <Compile Include="Common\RelationCacheBase.cs" />
+    <Compile Include="Common\RelationCacheBaseXml.cs" />
+    <Compile Include="Common\SqlBatchFileWriter.cs" />
+    <Compile Include="Common\SqlReplace.cs" />
+    <Compile Include="Common\TdcLib.cs" />
+    <Compile Include="Common\TdcLib_zip.cs" />
+    <Compile Include="Common\TreatCondSettingCacheExtensions.cs" />
+    <Compile Include="Common\TreatItemCacheExtensions.cs" />
+    <Compile Include="Common\XmlControl.cs" />
+    <Compile Include="Const\CommonConstants.cs" />
+    <Compile Include="ConvertBase.cs" />
+    <Compile Include="ConvertControl.cs" />
+    <Compile Include="ConvertMotion.cs" />
+    <Compile Include="ConvertOrdTreatCondition.cs" />
+    <Compile Include="ConvertOrdWeightScale.cs" />
+    <Compile Include="ConvertOrdChecklist.cs" />
+    <Compile Include="ConvertPatTreatmentPattern.cs" />
+    <Compile Include="ConvertMniMonitor.cs" />
+    <Compile Include="ConvertMst.cs" />
+    <Compile Include="ConvertSpecifyPeriod.cs" />
+    <Compile Include="dao\SyncConvertHistoryDao.cs" />
+    <Compile Include="dto\BatchConvertStatusDto.cs" />
+    <Compile Include="dto\BatchConvertTableLogDto.cs" />
+    <Compile Include="dto\BatchConvertTableStatusDto.cs" />
+    <Compile Include="dto\AuthoritySettingsDtoUtil.cs" />
+    <Compile Include="dto\ConfigInfoDtoUtil.cs" />
+    <Compile Include="dto\ConfigInfoDto.cs" />
+    <Compile Include="dto\ConfigMotionInfoDtoUtil.cs" />
+    <Compile Include="dto\FileCustomDto.cs" />
+    <Compile Include="dto\FilePropertyDto.cs" />
+    <Compile Include="dto\MakeSqlDto.cs" />
+    <Compile Include="dto\DgvPatRowDto.cs" />
+    <Compile Include="dto\MstFacilityDto.cs" />
+    <Compile Include="dto\MstSelectorDto.cs" />
+    <Compile Include="dto\SyncConvertHistoryDto.cs" />
+    <Compile Include="dto\AuthoritySettingsDto.cs" />
+    <Compile Include="parts\AesEncryption.cs" />
+    <Compile Include="parts\ConvertValueInfoBase.cs" />
+    <Compile Include="parts\HttpControl.cs" />
+    <Compile Include="parts\HttpTool.cs" />
+    <Compile Include="parts\JsonUtility.cs" />
+    <Compile Include="parts\SimpleConvertValueCaseSqlInfo.cs" />
+    <Compile Include="parts\SimpleConvertValueDirectInfo.cs" />
+    <Compile Include="parts\SimpleConvertValueHasDecisionItem.cs" />
+    <Compile Include="parts\SqlCreator.cs" />
+    <Compile Include="parts\ZipControl.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ConvertOrdMain.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="SQL\config\AuthoritySettingsSqlTemplete.sql" />
+    <Content Include="SQL\config\ConvertIndHistoryConfig.xml" />
+    <Content Include="SQL\config\ConvertInfo.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="SQL\config\ConvertMotionConfig.xml" />
+    <Content Include="SQL\config\ConvertPatExamRadConfig.xml" />
+    <Content Include="SQL\config\ConvertPatMongoConfig.xml" />
+    <Content Include="SQL\config\ConvertPatTreatmentPatternConfig.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="SQL\config\mst_pat_list_layout.sql" />
+    <Content Include="SQL\COP_EVENT_MANAGE-ord_coop_no\COP_EVENT_MANAGE-ord_coop_no.xml" />
+    <Content Include="SQL\IND_DIALYSIS_CONFIRM-ind_history\IND_DIALYSIS_CONFIRM-ind_history.xml" />
+    <Content Include="SQL\IND_RECEIVE-pat_ind_approve\IND_RECEIVE-pat_ind_approve.xml" />
+    <Content Include="SQL\IND_RECEIVE-pat_ind_approve_history\IND_RECEIVE-pat_ind_approve_history.xml" />
+    <Content Include="SQL\LOG_CHANGE_LOG-rst_history\LOG_CHANGE_LOG-rst_history.xml" />
+    <Content Include="SQL\ord_checklist\RST_CHECKLIST_PLAN.sql" />
+    <Content Include="SQL\ord_checklist\SYNC_CHECKLIST_HIST.sql" />
+    <Content Include="SQL\ord_checklist\SYNC_SYS_CHECKLIST.sql" />
+    <Content Include="SQL\ord_main\IND_DEVELOP_ADD_MANUAL.sql" />
+    <Content Include="SQL\ord_main\IND_DEVELOP_COND_MANUAL.sql" />
+    <Content Include="SQL\ord_main\IND_DEVELOP_EQUIP_MANUAL.sql" />
+    <Content Include="SQL\ord_main\IND_DEVELOP_MEDI_MANUAL.sql" />
+    <Content Include="SQL\ord_main\IND_DEVELOP_PLAN_MANUAL.sql" />
+    <Content Include="SQL\ord_main\IND_DIALYSIS_COND.sql" />
+    <Content Include="SQL\ord_main\RST_DIALYSIS_PLAN.sql" />
+    <Content Include="SQL\ord_main\RST_DIALYSIS_UPD_INFO.sql" />
+    <Content Include="SQL\ord_main\IND_DIALYSIS_UPD_INFO.sql" />
+    <Content Include="SQL\ord_main\SYNC_ORD_MAIN_SCH_PLAN.sql" />
+    <Content Include="SQL\ord_main\PAT_LIFE_LIST.sql" />
+    <Content Include="SQL\ord_main\IND_DIALYSIS_MEDI.sql" />
+    <Content Include="SQL\ord_main\IND_DIALYSIS_EQUIP.sql" />
+    <Content Include="SQL\ord_main\IND_DIALYSIS_ADD.sql" />
+    <Content Include="SQL\ord_main_diff\ORD_MAIN_DIFF_LAST.sql" />
+    <Content Include="SQL\SYNC_WATER_SURVEY_TYPE_TEXT\FNSI_INSERT_BY_SURVEY.sql" />
+    <Content Include="SQL\SYNC_WATER_SURVEY_TYPE_TEXT\INSERT_BY_SURVEY.sql" />
+    <Content Include="SQL\SYNC_WATER_SURVEY_TYPE_TEXT\INSERT_BY_SURVEY_TYPE.sql" />
+    <None Include="SQL\pat_treatment_pattern\PAT_REVISE_OFFWATER.sql" />
+    <None Include="SQL\pat_treatment_pattern\PAT_REVISE_TARE.sql" />
+    <Content Include="SQL\ord_weight_scale\RST_WEIGHT_HST_NO_PAT.sql" />
+    <Content Include="SQL\pat_treatment_pattern_diff\ORD_MAIN_IND.sql" />
+    <Content Include="SQL\pat_treatment_pattern_diff\PAT_DEVICE_SET.sql" />
+    <Content Include="SQL\pat_treatment_pattern\IND_DIALYSIS_ADD.sql" />
+    <Content Include="SQL\pat_treatment_pattern\IND_DIALYSIS_COND.sql" />
+    <Content Include="SQL\pat_treatment_pattern\IND_DIALYSIS_EQUIP.sql" />
+    <Content Include="SQL\pat_treatment_pattern\IND_DIALYSIS_MEDI.sql" />
+    <Content Include="SQL\pat_treatment_pattern\IND_DIALYSIS_PLAN.sql" />
+    <None Include="SQL\ord_main\PAT_REVISE_TARE.sql" />
+    <None Include="SQL\ord_main\PAT_REVISE_OFFWATER.sql" />
+    <Content Include="SQL\ord_main\RST_DIALYSIS_TARE_AFTER.sql" />
+    <Content Include="SQL\ord_main\RST_DIALYSIS_TARE_BEFORE.sql" />
+    <Content Include="SQL\ord_main_diff\IND_DEVELOP_ADD.sql" />
+    <Content Include="SQL\ord_main_diff\IND_DEVELOP_COND.sql" />
+    <Content Include="SQL\ord_main_diff\IND_DEVELOP_EQUIP.sql" />
+    <Content Include="SQL\ord_main_diff\IND_DEVELOP_MEDI.sql" />
+    <Content Include="SQL\ord_main_diff\IND_DEVELOP_PLAN.sql" />
+    <Content Include="SQL\ord_main_diff\IND_DIALYSIS_ADD.sql" />
+    <Content Include="SQL\ord_main_diff\IND_DIALYSIS_COND.sql" />
+    <Content Include="SQL\ord_main_diff\IND_DIALYSIS_EQUIP.sql" />
+    <Content Include="SQL\ord_main_diff\IND_DIALYSIS_MEDI.sql" />
+    <Content Include="SQL\ord_main_diff\IND_DIALYSIS_PLAN.sql" />
+    <Content Include="SQL\ord_main_diff\PAT_DEVICE_SET.sql" />
+    <Content Include="SQL\ord_main_diff\PAT_LIFE_LIST.sql" />
+    <None Include="SQL\ord_main_diff\PAT_REVISE_OFFWATER.sql" />
+    <None Include="SQL\ord_main_diff\PAT_REVISE_TARE.sql" />
+    <Content Include="SQL\ord_main_diff\RST_DIALYSIS.sql" />
+    <Content Include="SQL\ord_main_diff\RST_DIALYSIS_ADDITION.sql" />
+    <Content Include="SQL\ord_main_diff\RST_DIALYSIS_COMPLAINT.sql" />
+    <Content Include="SQL\ord_main_diff\RST_DIALYSIS_COND.sql" />
+    <Content Include="SQL\ord_main_diff\RST_DIALYSIS_EQUIP.sql" />
+    <Content Include="SQL\ord_main_diff\RST_DIALYSIS_MEDICATION.sql" />
+    <Content Include="SQL\ord_main_diff\RST_DIALYSIS_TARE_AFTER.sql" />
+    <Content Include="SQL\ord_main_diff\RST_DIALYSIS_TARE_BEFORE.sql" />
+    <Content Include="SQL\ord_main_diff\RST_DIALYSIS_TREATMENT.sql" />
+    <Content Include="SQL\ord_main_diff\RST_DIALYSIS_TREAT_PERSON.sql" />
+    <Content Include="SQL\ord_main_diff\RST_DIALYSIS_WATER_REMOVE.sql" />
+    <Content Include="SQL\ord_main_diff\RST_DIALYSIS_WEIGHT.sql" />
+    <Content Include="SQL\ord_main_diff\RST_RECEIPT_MEMO.sql" />
+    <Content Include="SQL\ord_main_list_diff\IND_DIFF_MST_SYS_TREAT_COND.sql" />
+    <Content Include="SQL\ord_main_list_diff\IND_RECEIVE.sql" />
+    <Content Include="SQL\ord_main_list_diff\COP_EVENT_MANAGE.sql" />
+    <Content Include="SQL\ord_main_list_diff\ORD_CHECKLIST_IND.sql" />
+    <Content Include="SQL\ord_main_list_diff\ORD_MAIN_RST.sql" />
+    <Content Include="SQL\ord_main_list_diff\ORD_MAIN_IND.sql" />
+    <Content Include="SQL\ord_main_list_diff\ORD_MST_SYS_TREAT_COND.sql" />
+    <Content Include="SQL\ord_main_list_diff\PAT_DEVICE_SET.sql" />
+    <Content Include="SQL\ord_main_list_diff\PAT_LIFE_LIST.sql" />
+    <Content Include="SQL\ord_main_list_diff\RST_DIALYSIS.sql" />
+    <Content Include="SQL\ord_main_list_diff\RST_DIALYSIS_WEIGHT.sql" />
+    <Content Include="SQL\ord_monitor\RST_DIALYSIS_DETAIL.sql" />
+    <Content Include="SQL\ord_treat_condition\RST_SEND_CONDITION.sql" />
+    <Content Include="SQL\ord_weight_scale\RST_WEIGHT_HST.sql" />
+    <Content Include="SQL\pat_treatment_pattern\PAT_DEVICE_SET.sql" />
+    <None Include="SQL\ord_main\RST_DIALYSIS_TARE.sql" />
+    <Content Include="SQL\config\ConvertPatSpecifyPeriodConfig.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="SQL\config\AuthoritySettings.xml">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="SQL\ord_main\RST_DIALYSIS_COMPLAINT.sql" />
+    <Content Include="SQL\ord_main\RST_DIALYSIS_TREATMENT.sql" />
+    <Content Include="SQL\ord_main\RST_DIALYSIS_TREAT_PERSON.sql" />
+    <Content Include="SQL\ord_main\RST_RECEIPT_MEMO.sql" />
+    <Content Include="SQL\PAT_EXAMIN_SCHEDULE-pat_exam_main\PAT_EXAMIN_SCHEDULE-pat_exam_main.xml" />
+    <Content Include="SQL\PAT_EXAMIN_HST-pat_exam_main\PAT_EXAMIN_HST-pat_exam_main.xml" />
+    <Content Include="SQL\PAT_EXAMIN_SCHEDULE-pat_rad_main\PAT_EXAMIN_SCHEDULE-pat_rad_main.xml" />
+    <Content Include="SQL\ord_checklist\RST_CHECKLIST_RST.sql" />
+    <Content Include="SQL\mni_monitor\RST_DIALYSIS_DETAIL.sql" />
+    <Content Include="SQL\ord_main\IND_DEVELOP_ADD.sql" />
+    <Content Include="SQL\ord_main\IND_DEVELOP_COND.sql" />
+    <Content Include="SQL\ord_main\IND_DEVELOP_EQUIP.sql" />
+    <Content Include="SQL\ord_main\IND_DEVELOP_MEDI.sql" />
+    <Content Include="SQL\ord_main\IND_DEVELOP_PLAN.sql" />
+    <Content Include="SQL\ord_main\PAT_DEVICE_SET.sql" />
+    <Content Include="SQL\ord_main\RST_DIALYSIS.sql" />
+    <Content Include="SQL\ord_main\RST_DIALYSIS_ADDITION.sql" />
+    <Content Include="SQL\ord_main\RST_DIALYSIS_COND.sql" />
+    <Content Include="SQL\ord_main\RST_DIALYSIS_EQUIP.sql" />
+    <Content Include="SQL\ord_main\RST_DIALYSIS_MEDICATION.sql" />
+    <Content Include="SQL\ord_main\RST_DIALYSIS_WEIGHT.sql" />
+    <Content Include="SQL\ord_main\IND_DIALYSIS_PLAN.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="SQL\ord_main\RST_DIALYSIS_WATER_REMOVE.sql" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+</Project>

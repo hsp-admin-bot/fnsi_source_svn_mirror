@@ -1,0 +1,53 @@
+spring:
+  datasource:
+    # NKK aws 
+    # url: jdbc:postgresql://ntss-platform-service-rds.c39h9ck7e4ad.ap-northeast-1.rds.amazonaws.com:5432/ntss_dbx?currentSchema=ntss&stringtype=unspecified
+    # NKK aws provisional
+    # url: jdbc:postgresql://ntss-platform-rds.clizq2mnnwjp.ap-northeast-1.rds.amazonaws.com:5432/ntss_dbx?currentSchema=ntss&stringtype=unspecified
+    # NKK aws develop
+    # url: jdbc:postgresql://ntss-platform-rds.chzddp07crsf.ap-northeast-1.rds.amazonaws.com:5432/ntss_dbx?currentSchema=ntss&stringtype=unspecified
+    # TDC aws
+    # url: jdbc:postgresql://testdbinstance.cc0dnsfhoqgq.ap-northeast-1.rds.amazonaws.com:5432/ntss_dbx?currentSchema=ntss&stringtype=unspecified
+    # TDC local
+    # url: jdbc:postgresql://192.168.102.184:5432/ntss_db?
+    # local
+    # url: jdbc:postgresql://localhost:5432/ntss
+    default:
+      jdbc-url: jdbc:postgresql://192.168.102.184:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk5
+      password: nkk5
+    personal:
+      jdbc-url: jdbc:postgresql://192.168.102.184:5432/ntss_db6?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk6
+      password: nkk6
+    auth:
+      jdbc-url: jdbc:postgresql://192.168.102.184:5432/ntss_db4?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk4
+      password: nkk4
+      
+cloud:
+    aws:
+        region:
+#            auto: true
+            auto: false
+            static: ap-northeast-1
+        stack:
+            auto: false
+
+#server:
+#  port: 8090
+
+ntss:
+  client-comm:
+    serverType: 0
+    url:
+      # spring local
+      # postMsgAPI_WebAppSrv: :8080/api/sendclient
+      # postMsgAPI_DeviceSrv: :8080/api/sendclient
+      # TDC local
+      postMsgAPI_WebAppSrv: :8090/ntss-client-comm/api/sendclient
+      postMsgAPI_DeviceSrv: :8080/ntss-client-comm/api/sendclient
+     

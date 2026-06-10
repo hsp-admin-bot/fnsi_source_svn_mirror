@@ -1,0 +1,426 @@
+{
+  "chart": {
+    "marginLeft": #chart.marginLeft#,
+    "marginRight": 10,
+    "marginTop": 40,
+    "width": #chart.width#,
+    "height": #chart.height#,
+    "style": {
+      "fontFamily": "#chart.fontFamily#"
+    },
+    "animation": false
+  },
+  "exporting": {
+    "enabled": false
+  },
+  "time": { "useUTC": false },
+  "credits": { "enabled": false },
+  "title": { "text": "" },
+  "lang": {
+    "noData": ""
+  },
+
+  "#":"------- 凡例の設定 -------",
+  "legend": {
+    "enabled": false,
+    "labelFormat": " ",
+    "rtl": false,
+    "verticalAlign": "top",
+    "align": "left",
+    "y": 20,
+    "x": #legend.x#,
+    "symbolPadding": 5,
+    "layout":"#legend.layout#",
+    "itemDistance": #legend.itemDistance#,
+    "reversed": true
+  },
+
+
+
+  "#":"------- x軸の設定 -------",
+  "xAxis": {
+    "type": "datetime",
+    "labels": {
+      "enabled": #xAxis.label.enabled#,
+      "style":{
+        "color":"#000000"
+      },
+      "formatter": function(){Highcharts.setOptions({'time': {'useUTC': false}}); return Highcharts.dateFormat("%H:%M", this.value + #xAxis.label.offsetValue#)}
+    },
+    "tickInterval": 1800000,
+    "showEmpty": true,
+    "opposite": true,
+    "gridLineWidth": 1,
+    "gridLineColor": "#000000",
+    "lineWidth": 0,
+    "tickColor": "#000000",
+    "minorGridLineDashStyle": "Dash",
+    "minorGridLineWidth": 1,
+    "minorTickInterval": 900000,
+    "minorGridLineColor": "#a5a5a5",
+    "min": #xAxis.min#,
+    "max": #xAxis.max#,
+    "showFirstLabel":false,
+    "showLastLabel":false
+  },
+
+  "#":"------- y軸の設定 -------",
+  "yAxis": [
+    {
+      "showEmpty": true,
+      "min": 0,
+      "max": 250,
+      "tickInterval": 50,
+      "tickWidth": 1,
+      "tickAmount": 6,
+      "gridLineWidth": 1,
+      "gridLineColor": "#000000",
+      "minorGridLineDashStyle": "Dash",
+      "minorGridLineColor": "#a5a5a5",
+      "minorTicks": true,
+      "tickColor": "#000000",
+      "showFirstLabel":false,
+      "showLastLabel": false,
+      "title": {
+        "enabled": false
+      },
+      "labels": {
+        "enabled": false
+      }
+    },
+    {
+      "#":"最高血圧",
+      "showEmpty": true,
+      "min": #bp.min#,
+      "max": #bp.max#,
+      "alignTicks": false,
+        "tickPositioner": function () {
+        return [#bp.tickPositioner#]
+        },
+      "gridLineWidth": 1,
+      "gridLineColor": "#000000",
+      "showFirstLabel":true,
+      "showLastLabel": false,
+      "title": {
+        "align": "high",
+        "rotation":0,
+        "text": "#bpMin.itemName#",
+        "y": -10,
+        "x": 60,
+        "margin": 0
+      },
+      "labels": {
+        "reserveSpace": false,
+        "align": "center",
+        "padding": 0,
+        "enabled": true,
+        "format": "#bp.labelsFormat#",
+        "style":{
+          "color":"#000000"
+        },
+        "x": -10
+      }
+    },
+    {
+      "#":"----- 選択項目1 -----",
+      "showEmpty": true,
+      "min": #item1.min#,
+      "max": #item1.max#,
+      "tickPositioner": function () {
+        return [#item1.tickPositioner#]
+      },
+      "showFirstLabel":true,
+      "showLastLabel": false,
+      "title": {
+        "align": "high",
+        "text" : "#item1.itemName#",
+        "rotation": 0,
+        "y": -10,
+        "x": 40,
+        "enabled": #item1.enabled#,
+        "margin": 0
+      },
+      "labels": {
+        "reserveSpace": false,
+        "align": "center",
+        "padding": 0,
+        "enabled": #item1.enabled#,
+        "format": "#item1.labelsFormat#",
+        "style":{
+          "color":"#000000"
+        },
+        "x": -10
+      }
+    },{
+      "#":"----- 選択項目2 -----",
+      "showEmpty": true,
+      "min": #item2.min#,
+      "max": #item2.max#,
+      "tickPositioner": function () {
+        return [#item2.tickPositioner#]
+      },
+      "showFirstLabel":true,
+      "showLastLabel": false,
+      "title": {
+        "align": "high",
+        "text" : "#item2.itemName#",
+        "rotation": 0,
+        "y": -10,
+        "x": 35,
+        "enabled": #item2.enabled#,
+        "margin": 0
+      },
+      "labels": {
+        "reserveSpace": false,
+        "align": "center",
+        "padding": 0,
+        "enabled": #item2.enabled#,
+        "format": "#item2.labelsFormat#",
+        "style":{
+          "color":"#000000"
+        },
+        "x": -10
+      }
+    },{
+      "#":"----- 選択項目3 -----",
+      "showEmpty": true,
+      "min": #item3.min#,
+      "max": #item3.max#,
+      "tickPositioner": function () {
+        return [#item3.tickPositioner#]
+      },
+      "showFirstLabel":true,
+      "showLastLabel": false,
+      "title": {
+        "align": "high",
+        "text" : "#item3.itemName#",
+        "rotation": 0,
+        "y": -10,
+        "x": 30,
+        "enabled": #item3.enabled#,
+        "margin":0
+      },
+      "labels": {
+        "reserveSpace": false,
+        "align": "center",
+        "padding": 0,
+        "enabled": #item3.enabled#,
+        "format": "#item3.labelsFormat#",
+        "style":{
+          "color":"#000000"
+        },
+        "x": -15
+      }
+    },{
+      "#":"----- 選択項目4-----",
+      "showEmpty": true,
+      "min": #item4.min#,
+      "max": #item4.max#,
+      "tickPositioner": function () {
+        return [#item4.tickPositioner#]
+      },
+      "gridLineColor": "#000000",
+      "showFirstLabel":true,
+      "showLastLabel": false,
+      "title": {
+        "align": "high",
+        "text" : "#item4.itemName#",
+        "rotation": 0,
+        "y": -10,
+        "x": 25,
+        "enabled": #item4.enabled#,
+        "margin": 0
+      },
+      "labels": {
+        "reserveSpace": false,
+        "align": "center",
+        "padding": 0,
+        "enabled": #item4.enabled#,
+        "format": "#item4.labelsFormat#",
+        "style":{
+          "color":"#000000"
+        },
+        "x": -20
+      }
+    },{
+      "#":"----- 選択項目5 -----",
+      "showEmpty": true,
+      "min": #item5.min#,
+      "max": #item5.max#,
+      "tickPositioner": function () {
+        return [#item5.tickPositioner#]
+      },
+      "gridLineColor": "#000000",
+      "showFirstLabel":true,
+      "showLastLabel": false,
+      "title": {
+        "align": "high",
+        "text" : "#item5.itemName#",
+        "rotation": 0,
+        "y": -10,
+        "x": 20,
+        "enabled": #item5.enabled#,
+        "margin": 0
+      },
+      "labels": {
+        "reserveSpace": false,
+        "align": "center",
+        "padding": 0,
+        "enabled": #item5.enabled#,
+        "format": "#item5.labelsFormat#",
+        "style":{
+          "color":"#000000"
+        },
+        "x": -25
+      }
+    }
+  ],
+
+  "#":"------- プロットの共通設定 -------",
+  "plotOptions": {
+    "series": {
+      "type": "spline",
+      "marker": {
+        "lineWidth": 1,
+        "lineColor": "#000000"
+      },
+      "label": {
+        "enabled": false
+      },
+      "animation": false
+    }
+  },
+
+  "#":"------- シリーズの設定 -------",
+  "series": [
+    {
+      "id":"1",
+      "type": "line",
+      "lineWidth": #bpMax.lineWidth#,
+      "lineColor": "#bpMax.lineColor#",
+      "color": "#FFFFFF",
+      "dashStyle": "#bpMax.lineType#",
+      "marker": {
+        "enabled": true,
+        "symbol": "#bpMax.plotType#",
+        "fillColor": "#bpMax.plotFillColor#",
+        "lineColor": "#bpMax.plotLineColor#",
+        "radius": #bpMax.plotSize#
+      },
+      "data": [#bpMax#],
+      "yAxis": 1
+    },
+    {
+      "type": "line",
+      "lineWidth": #bpAve.lineWidth#,
+      "lineColor": "#bpAve.lineColor#",
+      "color": "#FFFFFF",
+      "dashStyle": "#bpAve.lineType#",
+      "marker": {
+        "enabled": true,
+        "symbol": "#bpAve.plotType#",
+        "fillColor": "#bpAve.plotFillColor#",
+        "lineColor": "#bpAve.plotLineColor#",
+        "radius": #bpAve.plotSize#
+      },
+      "data": [#bpAve#],
+      "yAxis": 1
+    },
+    {
+      "type": "line",
+      "lineWidth": #bpMin.lineWidth#,
+      "lineColor": "#bpMin.lineColor#",
+      "color": "#FFFFFF",
+      "dashStyle": "#bpMin.lineType#",
+      "marker": {
+        "enabled": true,
+        "symbol": "#bpMin.plotType#",
+        "fillColor": "#bpMin.plotFillColor#",
+        "lineColor": "#bpMin.plotLineColor#",
+        "radius": #bpMin.plotSize#
+      },
+      "data": [#bpMin#],
+      "yAxis": 1
+    },
+    {
+      "type": "line",
+      "lineWidth": #item1.lineWidth#,
+      "lineColor": "#item1.lineColor#",
+      "color": "#FFFFFF",
+      "dashStyle": "#item1.lineType#",
+      "marker": {
+        "enabled": true,
+        "symbol": "#item1.plotType#",
+        "fillColor": "#item1.plotFillColor#",
+        "lineColor": "#item1.plotLineColor#",
+        "radius": #item1.plotSize#
+      },
+      "data": [#item1#],
+      "yAxis": 2
+    },
+    {
+      "type": "line",
+      "lineWidth": #item2.lineWidth#,
+      "lineColor": "#item2.lineColor#",
+      "color": "#FFFFFF",
+      "dashStyle": "#item2.lineType#",
+      "marker": {
+        "enabled": true,
+        "symbol": "#item2.plotType#",
+        "fillColor": "#item2.plotFillColor#",
+        "lineColor": "#item2.plotLineColor#",
+        "radius": #item2.plotSize#
+      },
+      "data": [#item2#],
+      "yAxis": 3
+    },
+    {
+      "type": "line",
+      "lineWidth": #item3.lineWidth#,
+      "lineColor": "#item3.lineColor#",
+      "color": "#FFFFFF",
+      "dashStyle": "#item3.lineType#",
+      "marker": {
+        "enabled": true,
+        "symbol": "#item3.plotType#",
+        "fillColor": "#item3.plotFillColor#",
+        "lineColor": "#item3.plotLineColor#",
+        "radius": #item3.plotSize#
+      },
+      "data": [#item3#],
+      "yAxis": 4
+    },
+    {
+      "type": "line",
+      "lineWidth": #item4.lineWidth#,
+      "lineColor": "#item4.lineColor#",
+      "color": "#FFFFFF",
+      "dashStyle": "#item4.lineType#",
+      "marker": {
+        "enabled": true,
+        "symbol": "#item4.plotType#",
+        "fillColor": "#item4.plotFillColor#",
+        "lineColor": "#item4.plotLineColor#",
+        "radius": #item4.plotSize#
+      },
+      "data": [#item4#],
+      "yAxis": 5
+    },
+    {
+      "type": "line",
+      "lineWidth": #item5.lineWidth#,
+      "lineColor": "#item5.lineColor#",
+      "color": "#FFFFFF",
+      "dashStyle": "#item5.lineType#",
+      "marker": {
+        "enabled": true,
+        "symbol": "#item5.plotType#",
+        "fillColor": "#item5.plotFillColor#",
+        "lineColor": "#item5.plotLineColor#",
+        "radius": #item5.plotSize#
+      },
+      "data": [#item5#],
+      "yAxis": 6
+    }
+  ]
+}

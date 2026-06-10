@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<rootNode>
+	<tableInfo>
+		<name>指示受け承認情報</name>
+		<convertKind>MST</convertKind>
+		<xmlConfigName>IND_RECEIVE-pat_ind_approve</xmlConfigName>
+		<fnwTableName>IND_RECEIVE</fnwTableName>
+		<ntssTableName>pat_ind_approve</ntssTableName>
+		<fnwPk>PATID</fnwPk>
+		<mstSelectorCode></mstSelectorCode>
+		<mstSelectorName></mstSelectorName>
+		<sqlForTool>
+			WITH CONVERT_HISTORY AS(
+			select * from sync_convert_history a
+			inner join sync_convert_history_dtl b
+			on (a.seq_no=b.seq_no) where table_kind = 'ORD'
+			)
+			,DEAL_DATE AS (
+			SELECT
+			PATID
+			,DIALYSIS_DATE
+			,PLURAL
+			,MAX(REG_DATE) UPD_DATE
+			,MIN(REG_DATE) REG_DATE
+			FROM
+			IND_RECEIVE IR
+			WHERE
+			DIALYSIS_DATE >= :START_DATE and DIALYSIS_DATE &lt; :END_DATE
+			{sqlForSync}
+            and DEL_FLG='0'
+				GROUP BY
+					PATID
+					,DIALYSIS_DATE
+					,PLURAL
+			)
+			SELECT
+				IR.PATID
+				,IR.DIALYSIS_DATE
+				,IR.PLURAL
+				,DD.UPD_DATE AS UPD_DATE
+				,DD.REG_DATE AS REG_DATE
+				,IR.CHECK_USER1_CD
+				,IR.CHECK_USER1_TIME
+				,IR.CHECK_USER2_CD
+				,IR.CHECK_USER2_TIME
+				,'{}' as CHECK_CONTENT
+				,'{}' as APPROVE_CONTENT
+			, 0 as is_content_changed
+			,(
+			case
+			when (check_user1_time is null) and (check_user2_time is null) then null
+			when (check_user1_time is null) and (check_user2_time is not null) then check_user2_time
+			when (check_user2_time is null) and (check_user1_time is not null) then check_user1_time
+			when (check_user1_time = check_user2_time) then check_user1_time
+			when (check_user1_time &lt; check_user2_time) then check_user2_time
+			when (check_user1_time > check_user2_time) then check_user1_time
+			else null
+			end
+			) as CHECK_DATE_BASE
+			,nvl(INPUT_STAFF_NAME1,INPUT_STAFF_NAME2)  as INPUT_STAFF_NAME,
+			rst.DIALYSIS_NO
+			FROM
+			(
+			SELECT
+			a.PATID,
+			a.DIALYSIS_DATE,
+			a.PLURAL,
+			MAX( DECODE( CHECK_CLASS, 1, trim( CHECK_STAFF_CD ) ) ) AS check_user1_cd,
+			MAX( DECODE( CHECK_CLASS, 1, CHECK_DATE ) ) AS check_user1_time,
+			MAX( DECODE( CHECK_CLASS, 2, trim( CHECK_STAFF_CD ) ) ) AS check_user2_cd,
+			MAX( DECODE( CHECK_CLASS, 2, CHECK_DATE ) ) AS check_user2_time,
+			MAX( DECODE( CHECK_CLASS, 1, trim( INPUT_STAFF_NAME ) ) ) AS INPUT_STAFF_NAME1,
+			MAX( DECODE( CHECK_CLASS, 2, trim( INPUT_STAFF_NAME ) ) ) AS INPUT_STAFF_NAME2
+			FROM
+				IND_RECEIVE a
+			WHERE
+				NOT EXISTS (
+					SELECT * FROM IND_RECEIVE c
+					WHERE
+						a.PATID = c.PATID
+						AND a.DIALYSIS_DATE = c.DIALYSIS_DATE
+						AND a.PLURAL = c.PLURAL
+						AND a.CHECK_CLASS =  c.CHECK_CLASS
+						AND a.REG_DATE &lt; c.REG_DATE 
+				) 
+				AND a.DIALYSIS_DATE >= :START_DATE and a.DIALYSIS_DATE &lt; :END_DATE
+			{sqlForSync}
+			and a.DEL_FLG='0'
+			GROUP BY
+			a.PATID,
+			a.DIALYSIS_DATE,
+			a.PLURAL
+			) IR
+			LEFT JOIN DEAL_DATE DD ON IR.PATID = DD.PATID
+			AND IR.DIALYSIS_DATE = DD.DIALYSIS_DATE
+			AND IR.PLURAL = DD.PLURAL
+			LEFT JOIN SCH_DIALYSIS_PLAN plan on IR.PATID||IR.DIALYSIS_DATE||IR.PLURAL = plan.IND_ID
+			LEFT JOIN RST_DIALYSIS rst ON rst.DIALYSIS_NO =  plan.RESULT_DIALYSISNO
+			WHERE (plan.RESULT_DIALYSISNO is null or (rst.DIALYSIS_NO = plan.RESULT_DIALYSISNO and plan.SERIES_CD='{SERIES_CD}'))
+			{sqlForExclusiveOutputted}
+		</sqlForTool>
+		<sqlForSync>
+			and {0}
+		</sqlForSync>
+		<sqlForSpecifyPeriod>
+		</sqlForSpecifyPeriod>
+		<sqlForExclusiveOutputted>
+			and not exists(
+			select * from CONVERT_HISTORY ch
+			where ch.facility_cd=:facility_cd
+			{sqlForSync}
+			and a.patid=ch.CONVERTTS
+			and to_date(a.DIALYSIS_DATE) >= ch.start_date
+			and to_date(a.DIALYSIS_DATE) &lt; ch.end_date + 1)
+		</sqlForExclusiveOutputted>
+	</tableInfo>
+</rootNode>

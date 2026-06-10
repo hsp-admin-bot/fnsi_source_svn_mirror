@@ -1,0 +1,1 @@
+select nextval('pat_group_pat_group_cd_seq');

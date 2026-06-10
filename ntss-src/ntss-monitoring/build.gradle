@@ -1,0 +1,174 @@
+import org.gradle.internal.os.OperatingSystem
+
+buildscript {
+  repositories {
+//    jcenter()
+    mavenLocal()
+    mavenCentral()
+    maven { url "https://start.spring.io/plugins-release" }
+    maven { url "https://start.spring.io/milestone" }
+    maven { url "https://plugins.gradle.org/m2/" }
+  }
+  dependencies {
+    classpath "org.springframework.boot:spring-boot-gradle-plugin:${spring_boot_version}"
+//    classpath 'io.spring.gradle:propdeps-plugin:0.0.10.RELEASE'
+    classpath "com.github.node-gradle:gradle-node-plugin:3.5.1"
+    classpath "io.spring.gradle:dependency-management-plugin:1.0.7.RELEASE"
+  }
+}
+
+plugins {
+  id "org.asciidoctor.convert" version "1.5.3"
+  id "com.github.node-gradle.node" version "3.5.1"
+}
+
+apply plugin: 'maven-publish'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'war'
+//apply plugin: 'propdeps'
+//apply plugin: 'propdeps-eclipse'
+apply plugin: 'com.github.node-gradle.node'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'idea'
+defaultTasks 'bootRun'
+
+bootWar {
+  mainClass = 'jp.co.nikkiso.ntss.monitoring.NtssMonitoringApplication'
+}
+
+war {
+  enabled = true
+  archiveBaseName = 'monitoring'
+}
+
+springBoot {
+  mainClass = 'jp.co.nikkiso.ntss.monitoring.NtssMonitoringApplication'
+  buildInfo()
+}
+
+if (OperatingSystem.current().isWindows()) {
+  task pathingJar(type: Jar) {
+    dependsOn configurations.runtimeClasspath
+    archiveAppendix = 'pathing'
+
+    doFirst {
+      manifest {
+        attributes 'Class-Path': configurations.runtimeClasspath.getFiles().collect {
+          it.toURI().toString().replaceFirst(/file:\/+/, '/').replaceAll(' ', '%20')
+        }.join(' ')
+      }
+    }
+  }
+
+  bootRun {
+    dependsOn pathingJar
+    doFirst {
+      classpath = files("$buildDir/classes/java/main", "$buildDir/resources/main", pathingJar.archiveFile)
+    }
+  }
+} else {
+  bootRun {
+    jvmArgs = ["-Dspring.output.ansi.enabled=ALWAYS"]
+  }
+}
+
+ext {
+  snippetsDir = file('build/generated-snippets')
+  apiDocDir = file('build/api-docs')
+}
+
+test {
+  outputs.dir snippetsDir
+}
+
+jacoco {
+  toolVersion = "0.8.8"
+}
+
+jacocoTestReport {
+  reports {
+      xml.enabled false
+      csv.enabled false
+  }
+}
+
+apply from: 'gradle/eclipse.gradle'
+apply from: 'gradle/docker.gradle'
+//jhipster-needle-gradle-apply-from - JHipster will add additional gradle scripts to be applied here
+
+if (project.hasProperty('prod')) {
+  apply from: 'gradle/profile_prod.gradle'
+} else {
+  apply from: 'gradle/profile_dev.gradle'
+}
+
+description = ''
+
+repositories {
+  mavenLocal()
+  mavenCentral()
+//  jcenter()
+  maven { url 'https://start.spring.io/milestone' }
+  maven { url 'https://start.spring.io/snapshot' }
+  maven { url 'https://repository.jboss.org/nexus/content/repositories/releases' }
+  maven { url 'https://oss.sonatype.org/content/repositories/releases' }
+  maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+  maven { url 'https://repo.maven.apache.org/maven2' }
+}
+
+dependencies {
+  implementation "org.springframework.boot:spring-boot-autoconfigure"
+  implementation "org.springframework.boot:spring-boot-starter-web"
+  providedRuntime "org.springframework.boot:spring-boot-starter-tomcat"
+  implementation "org.springframework.boot:spring-boot-starter-jdbc"
+  implementation "org.springframework.boot:spring-boot-starter-actuator"
+  implementation 'org.springframework.cloud:spring-cloud-starter-aws-messaging:1.2.1.RELEASE'
+  implementation 'org.springframework.cloud:spring-cloud-aws-context:1.2.1.RELEASE'
+  implementation 'org.projectlombok:lombok:1.18.28'
+  annotationProcessor 'org.projectlombok:lombok:1.18.28'
+  implementation 'org.modelmapper:modelmapper:2.3.0'
+  testImplementation ("org.springframework.boot:spring-boot-starter-test") {
+    exclude group: 'com.vaadin.external.google', module: 'android-json'
+  }
+  testImplementation "org.springframework.boot:spring-boot-test"
+  testImplementation "junit:junit"
+  testImplementation "org.mockito:mockito-core"
+  annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+  asciidoctor 'org.springframework.restdocs:spring-restdocs-asciidoctor:2.0.2.RELEASE'
+  testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc:2.0.2.RELEASE'
+}
+
+asciidoctor {
+  sourceDir = snippetsDir
+  outputDir = apiDocDir
+  dependsOn test
+}
+
+task apiDocCopy(type: Copy) {
+  from 'src/docs/asciidoc'
+  into snippetsDir
+}
+
+task apiDoc {
+  delete snippetsDir
+  delete apiDocDir
+  dependsOn apiDocCopy
+  dependsOn asciidoctor
+}
+
+clean { delete "target" }
+
+task cleanResources(type: Delete) { delete 'build/resources' }
+
+task wrapper(type: Wrapper) { gradleVersion = '7.2' }
+
+task stage(dependsOn: 'bootWar') {
+}
+
+// Doma2のSQLファイルをJavaのコンパイル前にコピーしておく
+// SQLファイルが存在するかしないとJavaのコンパイル時にSQLファイルが存在するかのチェックでエラーになるため。
+processResources.destinationDir = compileJava.destinationDir
+compileJava.dependsOn processResources
+
+processResources.dependsOn cleanResources, bootBuildInfo
+bootBuildInfo.mustRunAfter cleanResources

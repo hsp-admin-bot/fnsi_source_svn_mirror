@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<contextListener class="web.config.LoggerStartupListener" />
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<layout class="ch.qos.logback.classic.PatternLayout">
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) [%file:%line] %logger{50}.%M - %msg%n</pattern>
+		</layout>
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>info</level>
+		</filter>
+	</appender>
+
+	<appender name="TO_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<!-- logファイル名の指定を無効にする方法 -->
+<!--		<File>./logs/${LOG_FILE}/ntss-convert_${LOG_FILE}.log</File>-->
+		<!-- 複数のJVMが同時に1つのファイルを書き込むことをサポートし、厳格モードとも呼ばれます。このモードがオンの場合、スクロールポリシーはTimeBasedRollingPolicyとそのサブポリシーのみを使用できます -->
+		<!-- また、このモードはFileラベルの設定やファイル圧縮をサポートしていないので、この点は最終的に！！！！！ 安全な書き込みによるログ損失の防止 -->
+		<prudent>false</prudent>
+		<file>/efs/system/today/コンバータ/ntss-convert/convert-server-side/system_ntss-convert_convert-server-side.log</file>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
+			<charset>UTF-8</charset> <!-- 文字セットの設定 -->
+		</encoder>
+		<rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+			<!-- rollover daily -->
+			<!--翌日にログを出力すると、<file>${log.path}/log _debug.log</file>をクリックし、昨日のログを次のファイルにアーカイブします。-->
+			<!--以分钟切分  %d{yyyy-MM-dd_HH-mm}-->
+			<!--以日期切分  %d{yyyy-MM-dd}-->
+<!--			<fileNamePattern>./logs/${LOG_FILE}/ntss-convert-${LOG_FILE}-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>-->
+            <!-- mod #10756 9696未対応部分 limingzhe start -->
+            <!-- <fileNamePattern>/efs/system/%d{yyyyMMdd}/コンバータ/ntss-convert/convert-server-side/system_ntss-convert_convert-server-side_%d{yyyyMMdd}_%i.log.gz</fileNamePattern> -->
+            <fileNamePattern>/efs/system/%d{yyyyMMdd}/コンバータ/ntss-convert/convert-server-side/system_ntss-convert_convert-server-side_%d{yyyyMMdd}_%i.log.zip</fileNamePattern>
+            <!-- mod #10756 9696未対応部分 limingzhe end -->
+			<!-- each file should be at most 50MB, keep 30 days worth of history, but at most 20GB -->
+			<!--単一のログファイルは最大100 Mで、この値になると、ログファイルがもう1つ作成され、ログファイルの名前は最後に+1-->
+			<maxFileSize>50MB</maxFileSize>
+			<!--ログ・ファイル保存日数-->
+			<maxHistory>30</maxHistory>
+			<!--すべてのログファイルは最大40 Gで、超えると古いログが削除されます-->
+			<totalSizeCap>20GB</totalSizeCap>
+		</rollingPolicy>
+	</appender>
+	<logger name="batch.listener.StepStartEndListener" additivity="false" level="info">
+		<appender-ref ref="STDOUT" />
+	</logger>
+	<root level="INFO">
+		<appender-ref ref="STDOUT"/>
+		<appender-ref ref="TO_FILE" />
+	</root>
+</configuration>

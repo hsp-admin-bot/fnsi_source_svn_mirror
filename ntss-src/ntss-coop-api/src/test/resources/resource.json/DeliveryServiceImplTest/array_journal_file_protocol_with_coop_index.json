@@ -1,0 +1,39 @@
+{
+  "result": [
+    {
+      "journalInfo": {
+        "ctl_no": 1,
+        "coop_cd": "1",
+        "coop_cd_index": ""
+      },
+      "protocolInfo": {
+        "protocol": "file",
+        "address": "C:\\work\\distination\\",
+        "renameWhenCopying": "",
+        "dummy": "",
+        "delete": ""
+      },
+      "data": {
+        "filename": "TEST.txt",
+        "dump": "544553545f4d4f434b"
+      }
+    },
+    {
+      "journalInfo": {
+        "ctl_no": 2,
+        "coop_cd": "2",
+        "coop_cd_index": "1"
+      },
+      "protocolInfo": {
+        "protocol": "file",
+        "address": "C:\\work\\distination\\",
+        "renameWhenCopying": "",
+        "dummy": "",
+        "delete": ""
+      },
+      "data": {
+        "filename": "TEST_COOP_INDEX.txt",
+        "dump": "544553545f4d4f434b"
+      }
+  }]
+}

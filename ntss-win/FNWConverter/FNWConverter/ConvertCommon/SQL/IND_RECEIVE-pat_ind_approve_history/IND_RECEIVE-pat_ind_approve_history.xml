@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<rootNode>
+	<tableInfo>
+		<name>指示受け承認情報履歴</name>
+		<convertKind>MST</convertKind>
+		<xmlConfigName>IND_RECEIVE-pat_ind_approve_history</xmlConfigName>
+		<fnwTableName>IND_RECEIVE</fnwTableName>
+		<ntssTableName>pat_ind_approve_history</ntssTableName>
+		<fnwPk>PATID</fnwPk>
+		<mstSelectorCode></mstSelectorCode>
+		<mstSelectorName></mstSelectorName>
+		<sqlForTool>
+			select * from (
+			select
+			PATID
+			,DIALYSIS_DATE
+			,PLURAL
+			,CHECK_CLASS
+			,REG_DATE
+			,nvl(TRIM(CHECK_STAFF_CD) ,'0') as  CHECK_STAFF_CD
+			,nvl2( CHECK_STAFF_CD, '1', '0' )  as sign_type
+			,CHECK_STAFF_CD_UPDATE
+			,CHECK_STAFF_NAME
+			,CHECK_DATE
+			,TRIM(INPUT_STAFF_CD) AS INPUT_STAFF_CD
+			,INPUT_STAFF_NAME
+			,LEAD(TRIM(CHECK_STAFF_CD), 1, null ) OVER (PARTITION BY PATID,DIALYSIS_DATE,PLURAL,CHECK_CLASS ORDER BY REG_DATE desc ) AS BEF_CHECK_STAFF_CD
+			from  IND_RECEIVE
+			WHERE
+			DIALYSIS_DATE >= :START_DATE and DIALYSIS_DATE &lt; :END_DATE
+			{sqlForSync}
+			and  DEL_FLG='0'
+			ORDER BY PATID,DIALYSIS_DATE,PLURAL, REG_DATE ) a
+			LEFT JOIN SCH_DIALYSIS_PLAN plan on a.PATID||a.DIALYSIS_DATE||a.PLURAL = plan.IND_ID
+			LEFT JOIN RST_DIALYSIS rst ON rst.DIALYSIS_NO =  plan.RESULT_DIALYSISNO
+			WHERE (plan.RESULT_DIALYSISNO is null or (rst.DIALYSIS_NO = plan.RESULT_DIALYSISNO and plan.SERIES_CD='{SERIES_CD}'))
+			{sqlForExclusiveOutputted}
+		</sqlForTool>
+		<sqlForSync>
+			and {0}
+		</sqlForSync>
+		<sqlForSpecifyPeriod>
+		</sqlForSpecifyPeriod>
+		<sqlForExclusiveOutputted>
+			
+		</sqlForExclusiveOutputted>
+	</tableInfo>
+</rootNode>

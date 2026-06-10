@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<!--
+患者治療パターン対象テーブル設定
+こちらに設定を追加すると
+患者治療パターン選択時の処理対象として
+選択可能になります。
+テーブル単位で個別処理を入れていないテーブルは
+fnwTableNameとntssTableNameで紐付けテーブルに問い合わせを行い
+取得した設定でコンバート処理が走行します。
+convertKindは仮で設定中です。
+fnwTableNameを設定していないテーブルは固定処理になります
+-->
+<rootNode>
+  <tableInfo>
+    <name>患者治療パターン</name>
+    <fnwTableName></fnwTableName>
+    <ntssTableName>pat_treatment_pattern</ntssTableName>
+    <convertKind>TREATMENT_PATTERN</convertKind>
+  </tableInfo>
+</rootNode>

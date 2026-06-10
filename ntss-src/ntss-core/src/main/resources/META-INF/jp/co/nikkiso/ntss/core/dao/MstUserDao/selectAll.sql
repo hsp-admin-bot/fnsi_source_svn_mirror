@@ -1,0 +1,19 @@
+select
+  user_id,
+  user_settings,
+  is_provisional,
+  reg_date,
+  up_date,
+  is_disp,
+  is_del,
+  pat_id,
+  tmp_log_search_condition,
+  secret_key,
+  is_set_qr_code,
+  is_consent,
+  consent_date,
+  reg_password_date,
+  facility_cd
+from
+  mst_user
+;

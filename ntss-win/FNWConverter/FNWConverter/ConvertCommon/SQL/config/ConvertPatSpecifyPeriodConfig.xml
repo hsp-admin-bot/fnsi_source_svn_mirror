@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<!--
+患者ID,期間指定対象テーブル設定
+こちらに設定を追加すると
+患者毎期間指定対象テーブル選択時の処理対象として
+選択可能になります。
+テーブル単位で個別処理を入れていないテーブルは
+fnwTableNameとntssTableNameで紐付けテーブルに問い合わせを行い
+取得した設定でコンバート処理が走行します。
+convertKindは仮で設定中です。
+患者指定なし、期間指定のみの処理単位で実行する対象に設定します。。
+fnwTableNameを設定していないテーブルは固定処理になります
+-->
+<rootNode>
+
+  <tableInfo>
+    <name>治療情報</name>
+    <fnwTableName></fnwTableName>
+    <ntssTableName>ord_main</ntssTableName>
+  </tableInfo>
+  <tableInfo>
+    <name>装置モニタデータ</name>
+    <fnwTableName></fnwTableName>
+    <ntssTableName>mni_monitor</ntssTableName>
+  </tableInfo>
+  <tableInfo>
+    <name>チェックリスト実績</name>
+    <fnwTableName></fnwTableName>
+    <ntssTableName>ord_checklist</ntssTableName>
+  </tableInfo>
+  <!-- 8248 患者情報を移動 -->
+  <!--<tableInfo>
+    <name>患者イベント情報</name>
+    <fnwTableName>PAT_EVENT</fnwTableName>
+    <ntssTableName>pat_event</ntssTableName>
+    <convertKind>PERIOD</convertKind>
+  </tableInfo>
+  <tableInfo>
+  	<name>患者観察記録情報</name>
+  	<fnwTableName>PAT_LIFE_LIST</fnwTableName>
+  	<ntssTableName>pat_event</ntssTableName>
+  	<convertKind>PERIOD</convertKind>
+  </tableInfo> -->
+  <!--<tableInfo>
+    <name>患者検査結果（結果）</name>
+    <fnwTableName>PAT_EXAMIN_HST</fnwTableName>
+    <ntssTableName>pat_exam_main</ntssTableName>
+    <convertKind>PERIOD</convertKind>
+  </tableInfo>
+  <tableInfo>
+    <name>患者検査結果（予定）</name>
+    <fnwTableName>PAT_EXAMIN_SCHEDULE</fnwTableName>
+    <ntssTableName>pat_exam_main</ntssTableName>
+    <convertKind>PERIOD</convertKind>
+  </tableInfo>
+  <tableInfo>
+    <name>患者放射線検査結果</name>
+    <fnwTableName>PAT_EXAMIN_SCHEDULE</fnwTableName>
+    <ntssTableName>pat_rad_main</ntssTableName>
+    <convertKind>PERIOD</convertKind>
+  </tableInfo>-->
+  
+  <tableInfo>
+    <name>体重測定</name>
+    <fnwTableName></fnwTableName>
+    <ntssTableName>ord_weight_scale</ntssTableName>
+  </tableInfo>
+  <!--<tableInfo>
+  	<name>連携オーダ番号</name>
+  	<fnwTableName>COP_COOP_SEND_HST</fnwTableName>
+  	<ntssTableName>ord_coop_no</ntssTableName>
+  </tableInfo>-->
+	<tableInfo>
+  	<name>連携オーダ番号</name>
+  	<fnwTableName>COP_EVENT_MANAGE</fnwTableName>
+  	<ntssTableName>ord_coop_no</ntssTableName>
+  </tableInfo>
+  <tableInfo>
+  	<name>指示受け承認情報</name>
+  	<fnwTableName>IND_RECEIVE</fnwTableName>
+  	<ntssTableName>pat_ind_approve</ntssTableName>
+  </tableInfo> 
+  <!-- 8038 コンバート施設で一部の情報が表示されない 楊 start-->
+  <tableInfo>
+	<name>指示受け承認情報履歴</name>
+	<fnwTableName>IND_RECEIVE</fnwTableName>
+	<ntssTableName>pat_ind_approve_history</ntssTableName>
+	</tableInfo>
+  <tableInfo>
+  	<name>設定値読み込み履歴</name>
+  	<fnwTableName></fnwTableName>
+  	<ntssTableName>ord_treat_condition</ntssTableName>
+  </tableInfo>
+  <!-- 8038 コンバート施設で一部の情報が表示されない 楊 end-->
+  <!--<tableInfo>
+  	<name>計算材料保持情報</name>
+  	<fnwTableName></fnwTableName>
+  	<ntssTableName>ord_material_save</ntssTableName>
+  </tableInfo>-->
+</rootNode>

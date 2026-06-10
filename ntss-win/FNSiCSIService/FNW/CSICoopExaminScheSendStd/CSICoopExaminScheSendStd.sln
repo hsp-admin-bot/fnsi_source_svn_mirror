@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSICoopExaminScheSendStd", "CSICoopExaminScheSendStd.csproj", "{AD8492AF-D0CC-4724-B9C4-EF061E993E46}"
+EndProject
+Global
+	GlobalSection(SourceCodeControl) = preSolution
+		SccNumberOfProjects = 2
+		SccProjectUniqueName0 = CSICoopExaminScheSendStd.csproj
+		SccLocalPath0 = .
+		SccLocalPath1 = .
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AD8492AF-D0CC-4724-B9C4-EF061E993E46}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD8492AF-D0CC-4724-B9C4-EF061E993E46}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD8492AF-D0CC-4724-B9C4-EF061E993E46}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD8492AF-D0CC-4724-B9C4-EF061E993E46}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

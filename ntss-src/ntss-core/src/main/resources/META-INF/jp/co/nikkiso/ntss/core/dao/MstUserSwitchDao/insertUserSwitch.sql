@@ -1,0 +1,21 @@
+insert into mst_user_switch(
+            	group_id,
+            	user_id,
+            	opt_status,
+            	facility_cd,
+              reg_staff,
+              up_staff,
+              up_date,
+              reg_date
+            )
+            values
+              (
+                /*entity.groupId*/'',
+                /*entity.userId*/0,
+                /*entity.optStatus*/'',
+                /*entity.facilityCd*/'',
+                /*entity.regStaff*/0,
+                /*entity.upStaff*/0,
+                                  now(),
+                                  now()
+              )

@@ -1,0 +1,25 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="FNSiCSIService.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="SyncDB" Type="(Connection string)" Scope="Application">
+      <DesignTimeValue Profile="(Default)" />
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="BaseUri" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">https://iesfn.com</Value>
+    </Setting>
+    <Setting Name="UserId" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">CSI</Value>
+    </Setting>
+    <Setting Name="UserPW" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">CSI00</Value>
+    </Setting>
+    <Setting Name="FacilityHash" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">%242a%2410%24X93jF5QrhyaNSgbYAHOiFOvI0W1YtdRfC9uDh9G921BILcG1rI3yC</Value>
+    </Setting>
+    <Setting Name="PollingPeriod" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">10</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

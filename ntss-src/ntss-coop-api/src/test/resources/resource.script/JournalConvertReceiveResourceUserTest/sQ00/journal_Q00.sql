@@ -1,0 +1,18 @@
+DELETE FROM sys_coop_journal
+WHERE ctl_no = 3000000;
+
+INSERT INTO sys_coop_journal
+(ctl_no,facility_cd,coop_cd,coop_cd_index,crud,direction,ord_no,coop_ord_no,hosp_pat_id,pat_id,accept_no
+,ana_result,in_ana_date,out_ana_date
+,coop_result,in_reg_date,out_reg_date
+,dump_path
+,dump
+,is_editable,is_del,user_id,reg_date,up_date) VALUES(
+3000000,'F_hQ00','user_test','1001','C','R',1,1,1,1,0,
+'0','20200601','20200601',
+'9','20200601','20200601',
+'',
+--01,11,ああああ,いいいい,アアアア,イイイイ,AAAA,IIII,mail1@example.com,mail2@example.com,1020,033-AAAA-AAAA,090-XXXX-XXXX,033-YYYY-YYYY,001,0011,東京都千代田区霞が関,トウキョウトチヨダクカスミガセキ,JJ,12,1,0,1234,5678,1,311-46-2210
+decode('30312c31312c82a082a082a082a02c82a282a282a282a22c83418341834183412c83438343834383432c414141412c494949492c6d61696c31406578616d706c652e636f6d2c6d61696c32406578616d706c652e636f6d2c313032302c3033332d414141412d414141412c3039302d585858582d585858582c3033332d595959592d595959592c3030312c303031312c938c8b9e937390e791e393638be689e082aa8ad62c83678345834c83878345836783608388835f834e834a8358837e834b835a834c2c4a4a2c31322c312c302c313233342c353637382c312c3331312d34362d32323130', 'hex'),
+'0','0',12345,'20200601','20200601'
+);

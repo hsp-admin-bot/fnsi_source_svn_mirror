@@ -1,0 +1,1 @@
+TRUNCATE TABLE mst_user CASCADE;

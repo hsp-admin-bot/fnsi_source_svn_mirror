@@ -1,0 +1,206 @@
+import org.gradle.internal.os.OperatingSystem
+
+buildscript {
+  repositories {
+//    jcenter()
+    mavenLocal()
+    mavenCentral()
+    maven { url "https://start.spring.io/plugins-release" }
+    maven { url "https://start.spring.io/milestone" }
+    maven { url "https://plugins.gradle.org/m2/" }
+  }
+  dependencies {
+    classpath "org.springframework.boot:spring-boot-gradle-plugin:${spring_boot_version}"
+//    classpath 'io.spring.gradle:propdeps-plugin:0.0.10.RELEASE'
+    classpath "io.spring.gradle:dependency-management-plugin:1.0.7.RELEASE"
+    classpath "org.flywaydb:flyway-gradle-plugin:6.0.4"
+  }
+}
+
+apply plugin: 'maven-publish'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'org.flywaydb.flyway'
+//apply plugin: 'propdeps'
+//apply plugin: 'propdeps-eclipse'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'idea'
+defaultTasks 'bootRun'
+
+bootJar {
+  enabled = false // 実行可能Jarを作成しない(単体では動かさない)
+}
+
+jar {
+  enabled = true // Jarを作成する(依存元に組み込む)
+  duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+springBoot {
+  buildInfo()
+}
+
+if (OperatingSystem.current().isWindows()) {
+  task pathingJar(type: Jar) {
+    dependsOn configurations.runtimeClasspath
+    archiveAppendix = 'pathing'
+
+    doFirst {
+      manifest {
+        attributes 'Class-Path': configurations.runtimeClasspath.getFiles().collect {
+          it.toURI().toString().replaceFirst(/file:\/+/, '/').replaceAll(' ', '%20')
+        }.join(' ')
+      }
+    }
+  }
+
+  bootRun {
+    dependsOn pathingJar
+    doFirst {
+      classpath = files("$buildDir/classes/java/main", "$buildDir/resources/main", pathingJar.archiveFile)
+    }
+  }
+} else {
+  bootRun {
+    jvmArgs = ["-Dspring.output.ansi.enabled=ALWAYS"]
+  }
+}
+
+test {
+  // CI用にテスト時のprofileを設定
+  if (project.hasProperty('ci')) {
+    jvmArgs = ["-Dspring.profiles.active=ci"]
+  }
+}
+
+jacoco {
+  toolVersion = "0.8.8"
+}
+
+jacocoTestReport {
+  reports {
+      xml.enabled false
+      csv.enabled false
+  }
+}
+
+apply from: 'gradle/eclipse.gradle'
+apply from: 'gradle/docker.gradle'
+//jhipster-needle-gradle-apply-from - JHipster will add additional gradle scripts to be applied here
+
+description = ''
+
+repositories {
+  mavenLocal()
+  mavenCentral()
+//  jcenter()
+  maven { url 'https://start.spring.io/milestone' }
+  maven { url 'https://start.spring.io/snapshot' }
+  maven { url 'https://repository.jboss.org/nexus/content/repositories/releases' }
+  maven { url 'https://oss.sonatype.org/content/repositories/releases' }
+  maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+  maven { url 'https://repo.maven.apache.org/maven2' }
+}
+
+dependencies {
+  implementation "org.springframework.boot:spring-boot-autoconfigure"
+  implementation "org.springframework.boot:spring-boot-starter-web"
+  implementation "org.springframework.boot:spring-boot-starter-jdbc"
+  implementation "org.springframework.boot:spring-boot-starter-actuator"
+  implementation "org.springframework.boot:spring-boot-starter-aop"
+  implementation "org.seasar.doma.boot:doma-spring-boot-starter:${doma_spring_version}"
+  implementation "org.seasar.doma:doma:2.24.0"
+  annotationProcessor "org.seasar.doma:doma:2.24.0"
+  implementation "org.postgresql:postgresql"
+  implementation 'org.projectlombok:lombok:1.18.28'
+  annotationProcessor 'org.projectlombok:lombok:1.18.28'
+  implementation 'org.modelmapper:modelmapper:2.3.4'
+//  implementation 'org.mongodb:mongo-java-driver:3.10.1'
+  implementation "org.json:json:20180813"
+  implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+  implementation group: 'com.google.guava', name: 'guava', version: '27.1-jre'
+  implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.9'
+  testImplementation ("org.springframework.boot:spring-boot-starter-test") {
+    exclude group: 'com.vaadin.external.google', module: 'android-json'
+  }
+  testImplementation "org.springframework.boot:spring-boot-test"
+  testImplementation "junit:junit"
+  testImplementation "org.mockito:mockito-core"
+  annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+  implementation "com.amazonaws:aws-java-sdk-dynamodb:${aws_sdk_v1_version}"
+  implementation 'javax.xml.bind:jaxb-api:2.3.1'
+  implementation 'com.sun.xml.bind:jaxb-core:2.3.0'
+  implementation 'com.sun.xml.bind:jaxb-impl:2.3.4'
+  implementation "org.springframework.boot:spring-boot-starter-validation"
+  testCompileOnly 'org.projectlombok:lombok:1.18.28'
+  testAnnotationProcessor 'org.projectlombok:lombok:1.18.28'
+  implementation group: 'com.google.code.gson', name: 'gson', version: '2.8.6'
+}
+
+clean { delete "target" }
+
+task cleanResources(type: Delete) { delete 'build/resources' }
+
+task wrapper(type: Wrapper) { gradleVersion = '7.2' }
+
+// 必要なDB設定ファイルの名前を定義します。
+// 設定ファイルは、下記の通り、指定したプロファイルおよび名前で配置、構成しています。
+// flyway_${profile}${name}.conf
+def databaseList = ["db4", "db5", "db6"]
+
+// DB設定ファイル分、flywayのコマンドのタスクを定義します。プロファイル毎に設定しています。
+databaseList.each { name ->
+  task  "${name}FlywayMigrate" (type: org.flywaydb.gradle.task.FlywayMigrateTask) {
+    configFiles = ["src/main/flyway/flyway_${profile}/flyway_${profile}${name}.conf"]
+  }
+
+  task "${name}FlywayBaseline"(type: org.flywaydb.gradle.task.FlywayBaselineTask) {
+    configFiles = ["src/main/flyway/flyway_${profile}/flyway_${profile}${name}.conf"]
+  }
+
+  task  "${name}FlywayClean"(type: org.flywaydb.gradle.task.FlywayCleanTask) {
+    configFiles = ["src/main/flyway/flyway_${profile}/flyway_${profile}${name}.conf"]
+  }
+
+  task  "${name}FlywayInfo"(type: org.flywaydb.gradle.task.FlywayInfoTask) {
+    configFiles = ["src/main/flyway/flyway_${profile}/flyway_${profile}${name}.conf"]
+  }
+}
+
+// 上記で設定したflywayMigrateを定義したDB設定ファイル分、実行します。
+task flywayMigrateAll {
+  databaseList.each { name ->
+    dependsOn "${name}FlywayMigrate"
+  }
+}
+
+// 上記で設定したflywayCleanを定義したDB設定ファイル分、実行します。
+task flywayCleanAll {
+    databaseList.each { name ->
+      dependsOn "${name}FlywayClean"
+    }
+}
+
+tasks.withType(Test) {
+    systemProperty "file.encoding", "UTF-8"
+}
+
+// Doma2のSQLファイルをJavaのコンパイル前にコピーしておく
+// SQLファイルが存在するかしないとJavaのコンパイル時にSQLファイルが存在するかのチェックでエラーになるため。
+//processResources.destinationDir = compileJava.destinationDir
+//compileJava.dependsOn processResources
+//
+//processResources.dependsOn cleanResources, bootBuildInfo
+//bootBuildInfo.mustRunAfter cleanResources
+
+def domaResources = ['doma.compile.config', 'META-INF/**/*.sql']
+task copyDomaResourcesJava(type: Copy) {
+  from sourceSets.main.resources.srcDirs
+  into compileJava.destinationDirectory
+  include domaResources
+}
+compileJava {
+  dependsOn copyDomaResourcesJava
+}
+processResources {
+  exclude domaResources
+}

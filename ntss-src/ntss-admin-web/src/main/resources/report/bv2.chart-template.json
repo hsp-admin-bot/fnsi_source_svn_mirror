@@ -1,0 +1,96 @@
+{
+  "chart": {
+    "marginRight": 50,
+    "marginLeft": 45,
+    "width": 800,
+    "height": 500,
+    "animation": false
+  },
+  "exporting": {
+    "enabled": false
+  },
+  "time": { "useUTC": false },
+  "credits": { "enabled": false },
+  "title": {
+    "text": ""
+  },
+  "xAxis": {
+    "type": "datetime",
+    "labels": {
+      "format": "{value:%H:%M}"
+    },
+    "tickInterval": 1800000,
+    "gridLineWidth": 1
+  },
+  "yAxis": [
+    {
+      "title": {
+        "text" : "除水速度[L/h]/PRR[L/h]",
+        "margin" : 2
+      },
+      "min": #Y1From#,
+      "max": #Y1To#,
+      "alignTicks": false,
+      "labels": {
+        "align": "left",
+        "x": -28,
+        "style": { "width": "50px" },
+        "formart": "{value:.1f} L/h"
+      }
+    },
+    {
+      "title": {
+        "text" : "透析液濃度[mS/cm]",
+        "margin" : 2
+      },
+      "min": [#Y2From#],
+      "max": [#Y2To#],
+      "alignTicks": false,
+      "opposite": true,
+      "labels": {
+        "align": "right",
+        "x": 45,
+        "style": { "width": "50px" },
+        "format": "{value:.1f}"
+      }
+    }
+  ],
+  "legend": {
+    "layout": "horizontal",
+    "align": "left",
+    "verticalAlign": "top",
+    "floating": false,
+    "itemWidth": 100,
+    "x": 20,
+    "y": -5
+  },
+  "plotOptions": {
+    "series": {
+      "marker": { "enabled": true },
+      "animation": false
+    }
+  },
+  "series": [
+    {
+      "type": "line",
+      "name": "除水速度",
+      "color": "#99FFFF",
+      "data": [#uFPSpeed#],
+      "yAxis": 0
+    },
+    {
+      "type": "line",
+      "name": "PRR",
+      "color": "#FF9933",
+      "data": [#pRR#],
+      "yAxis": 0
+    },
+    {
+      "type": "line",
+      "name": "透析液濃度",
+      "color": "#FF3333",
+      "data": [#totalCond#],
+      "yAxis": 1
+    }
+  ]
+}

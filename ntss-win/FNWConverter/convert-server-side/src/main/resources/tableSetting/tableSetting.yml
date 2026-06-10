@@ -1,0 +1,1056 @@
+# tableSetting.yml
+# mst_selectorテーブルのデータ生成構成。1つ目はcode、2つ目はテキストnameを表示する,参考NKKGNBによるデータ
+selector:
+  mst_add_monitor: vital_monitor_item_cd,vital_monitor_item_name
+  mst_addition: addition_cd,null,fn_add_cd
+  mst_bbs_kind: kind_no,kind_name,fn_category_id
+  mst_bed: bed_cd,bed_name
+  mst_com_fixed_phrase: com_fixed_phrase_cd,com_fixed_phrase,fn_addition_cd
+  mst_comp_treatment: comp_treatment_cd,treatment,fn_comp_treatment_cd
+  mst_complaint: complaint_cd,complaint_name,fn_complaint_cd
+  mst_comsv_setting: comsv_cd,null
+  mst_course: course_cd,course_name,fn_course_cd
+  mst_dialysis_difficulty: dialysis_difficulty_cd,dialysis_difficulty_name,fn_dialysis_difficulty_cd
+  mst_dialyzer: dialyzer_cd,model_number,fn_dialyzer_cd
+  mst_disease: disease_cd,disease_name,fn_class_cd
+  mst_equipment: equipment_cd,equipment_name,fn_equipment_cd
+  mst_equipment_class: class_cd,class_name
+  mst_exam_item: exam_item_cd,exam_item_name,fn_exam_item_cd
+  mst_exam_set: exam_set_cd,exam_set_name,fn_exam_set_cd
+  mst_holiday: holiday_cd,null
+  mst_infection: infection_cd,infection_name,fn_infection_cd
+  mst_job: job_cd,job_name,fn_job_class_cd
+  mst_kur: kur_cd,kur_name
+  mst_machine: machine_no,machine_name
+  mst_medicate_timing: medicate_timing_cd,medicate_timing_name,fn_medicate_timing_cd
+  mst_medicine: medicine_cd,medicine_name,fn_medicine_cd
+  mst_medicine_class: class_cd,class_name
+  mst_medicine_group: medicine_group_cd,medicine_group_name
+  mst_medicine_mix: medicine_mix_cd,medicine_mix_name,fn_set_medicine_cd
+  mst_medicine_support: medicine_support_cd,medicine_support_name
+  mst_monitor_graph: monitor_graph_cd,monitor_graph_name
+  mst_obs_kind: kind_no,kind_name
+  mst_pat_event_category: category_cd,category_name,fn_event_category_cd_1
+  mst_pat_event_data_template: template_cd,template_name,fn_template_cd
+  mst_pat_event_sub_category: sub_category_cd,sub_category_name,'a'||fn_event_category_class||fn_event_category_cd_2
+  mst_pat_viewer_layout: layout_cd,layout_name
+  mst_procedure: procedure_cd,pricedure_name,fn_procedure_cd
+  mst_rad_set: rad_set_cd,rad_set_name
+  mst_room_bed_group: room_bed_group_cd,room_bed_group_name,fn_room_bed_group_no
+  mst_self_measure_result: self_measure_result_cd,disp_machine_name
+  mst_severity: severity_cd,severity_name,fn_severity_cd
+  #  mst_spitz: spitz_cd,spitz_name
+  mst_taboo_allergy: taboo_allergy_cd,content,fn_taboo_allergy_cd
+  mst_take_medicine: take_medicine_cd,list_name
+  mst_transport: transport_cd,transport_name,fn_transport_cd
+  mst_treatment: treatment_cd,treatment_name,fn_treatment_cd
+  mst_treatment_set: treatment_set_cd,treatment_set_name
+  mst_treatment_status_layout: layout_no,layout_name
+  mst_trend_graph_template: template_cd,template_name
+  mst_user: user_id,null,fn_staff_cd
+  mst_va: va_cd,va_name,fn_va_cd
+  mst_vital_graph: vital_graph_cd,vital_graph_name
+  mst_ward: ward_cd,ward_name,fn_ward_cd
+  mst_water_survey_point: survey_point_cd,point_name,fn_survey_point_cd
+  mst_water_survey_type: survey_type_cd,survey_type_name
+  mst_weight: weight_cd,weight_name
+  mst_wheel_chair: wheel_chair_cd,wheel_chair_name
+  pat_group: pat_group_cd,pat_group_name,fn_pat_group_cd
+  mst_mainte_detail: mainte_detail_cd,null
+  mst_mainte_category: mainte_category_cd,null
+  mst_mainte_layout: mainte_layout_cd,null
+  mst_mainte_layout_group: mainte_layout_group_cd,null
+  mst_trend_graph_monitor_set: monitor_set_cd,monitor_set_name,fn_monitor_set_cd||model
+  mst_favorite_facility: master_cd,null
+  mst_pat_list_layout: pat_list_layout_cd,pat_list_layout_name
+  mst_pat_calendar_layout: pat_calendar_layout_cd,pat_calendar_layout_name
+# DBのリレーション設定（コード変換用の一時表取得処理に使用）
+db-relation:
+  config:
+    mst_treatment:
+      - mst_report
+    mst_bed:
+      - mst_machine
+    mst_equipment:
+      - mst_equipment_class
+    mst_medicine:
+      - mst_medicine_class
+    mst_medicine_mix:
+      - mst_medicine_class
+      - mst_medicine
+    mst_taboo_allergy:
+      - mst_medicine
+      - mst_medicine_mix
+      - mst_equipment
+      - mst_dialyzer
+    mst_room_bed_group:
+      - mst_bed
+    mst_selector:
+      - mst_facility
+      - mst_disease
+      - mst_dialysis_difficulty
+      - mst_severity
+      - mst_transport
+      - mst_course
+      - mst_ward
+      - mst_medicine_class
+      - mst_medicine
+      - mst_medicine_mix
+      - mst_equipment_class
+      - mst_equipment
+      - mst_dialyzer
+      - mst_taboo_allergy
+      - mst_infection
+      - mst_treatment
+      - mst_va
+      - mst_procedure
+      - mst_medicate_timing
+      - mst_kur
+      - mst_machine
+      - mst_bed
+      - mst_room_bed_group
+      #  - mst_obs_kind
+      - mst_com_fixed_phrase
+      - mst_water_survey_point
+      - mst_water_survey_type
+      - mst_take_medicine
+      - mst_complaint
+      - mst_comp_treatment
+#      - mst_spitz
+      - mst_pat_event_data_template
+      - mst_medicine_group
+      - mst_holiday
+      - mst_pat_viewer_layout
+      - mst_bbs_kind
+      - mst_pat_event_sub_category
+      - mst_exam_set
+      - mst_treatment_set
+      - mst_treatment_status_layout
+      - mst_monitor_graph
+      - mst_job
+      - pat_group
+      - mst_self_measure_result
+    mst_machine:
+      - mst_device_edge
+    pat_personal_main:
+      - mst_disease
+      - mst_severity
+      - mst_transport
+      - mst_dialysis_difficulty
+    pat_main:
+      - pat_personal_main
+      - mst_taboo_allergy
+      - mst_infection
+      - mst_dialysis_difficulty
+      - mst_personal_user
+      - mst_medicine_mix
+      - mst_addition
+      - mst_course
+      - mst_ward
+    pat_unique:
+      - pat_personal_main
+      - mst_ward
+      - mst_course
+      - mst_disease
+      - mst_personal_user
+    ord_personal_prescription:
+      - pat_personal_main
+      - mst_personal_user
+      - ord_prescription
+    ord_main:
+      - mst_procedure
+      - mst_bed
+      - mst_medicate_timing
+      - pat_main
+      - pat_personal_main
+      - mst_kur
+      - mst_va
+      - mst_treatment
+      - mst_ward
+      - mst_course
+      - mst_medicine
+      - mst_medicine_mix
+      - mst_equipment
+      - mst_dialyzer
+      - mst_personal_user
+      - mst_facility
+      - mst_wheel_chair
+      - mst_comp_treatment
+      - mst_complaint
+      - mst_equipment_class
+      - mst_medicine_class
+      - mst_machine
+    mni_monitor:
+      - ord_main
+      - pat_personal_main
+      - mst_machine
+    mst_personal_user:
+      - mst_job
+    mst_user:
+      - mst_personal_user
+    mst_user_authentication:
+      - mst_personal_user
+    #    pat_prescription:
+    #      - pat_personal_main
+    #      - mst_personal_user
+    #    pat_prescription_detail:
+    #      - pat_personal_main
+    #      - mst_medicine
+    #      - pat_prescription
+    #pat_obs_rec:
+    #  - mst_personal_user
+    #  - mst_obs_kind
+    #  - pat_personal_main
+    #  - bbs_info
+    mst_wheel_chair:
+      - mst_personal_user
+      - pat_personal_main
+      - mst_facility
+    mst_comsv_setting:
+      - mst_personal_user
+      - mst_exam_item
+    mst_device_set_info_default:
+      - mst_facility
+    mst_weight:
+      - mst_facility
+    mst_weight_scale:
+      - mst_facility
+    ord_checklist:
+      - mst_checklist
+      - mst_personal_user
+      - mst_equipment
+      - ord_main
+    mst_exam_set:
+      - mst_exam_item
+    mst_rad_set:
+      - mst_exam_item
+    mst_pat_event_category:
+      - mst_facility
+    mst_pat_event_sub_category:
+      - mst_facility
+      - mst_pat_event_category
+      - mst_pat_event_data_template
+    mst_take_medicine:
+      - mst_facility
+    mst_complaint:
+      - mst_facility
+    mst_comp_treatment:
+      - mst_facility
+      - mst_medicine
+      - mst_medicine_mix
+      - mst_procedure
+    mst_water_survey_point:
+      - mst_facility
+      - mst_water_survey_type
+    mst_water_survey_type:
+      - mst_facility
+    mst_device_edge:
+      - mst_facility
+    mst_ward:
+      - mst_facility
+    mst_vital_graph:
+      - mst_facility
+    bbs_info:
+      - mst_bbs_kind
+      - mst_personal_user
+      - pat_personal_main
+    pat_exam_main:
+      - mst_personal_user
+      - pat_personal_main
+      - mst_exam_set
+      - mst_exam_item
+    pat_rad_main:
+      - pat_personal_main
+      - mst_rad_set
+    pat_event:
+      - pat_personal_main
+      - mst_pat_event_category
+      - mst_pat_event_sub_category
+      - mst_pat_event_data_template
+    pat_treatment_pattern:
+      - mst_procedure
+      - mst_bed
+      - mst_medicate_timing
+      - pat_main
+      - pat_personal_main
+      - mst_kur
+      - mst_va
+      - mst_treatment
+      - mst_ward
+      - mst_course
+      - mst_medicine
+      - mst_medicine_mix
+      - mst_equipment
+      - mst_dialyzer
+      - mst_personal_user
+      - mst_facility
+      - mst_wheel_chair
+    mst_pat_viewer_layout:
+      - mst_medicine_group
+    mst_checklist:
+      - mst_equipment_class
+    mst_medicine_group:
+      - mst_medicine
+    pat_group_detail:
+      - pat_personal_main
+      - pat_group
+    ord_exception_period:
+      - pat_personal_main
+    ord_coop_no:
+      - pat_personal_main
+      - ord_main
+    pat_ind_approve:
+      - mst_personal_user
+      - ord_main
+    ord_material_save:
+      - pat_personal_main
+      - ord_prescription
+      - ord_main
+    mst_treatment_set:
+      - mst_medicine
+      - mst_medicine_mix
+      - mst_equipment
+      - mst_va
+      - mst_dialyzer
+      - mst_treatment
+    mst_treatment_status_layout:
+      - mst_facility
+    pat_coop_detail:
+      - mst_personal_user
+      - pat_personal_main
+    pat_insurance:
+      - pat_personal_main
+    mnt_motion_record:
+      - mst_machine
+      - mst_device_edge
+      - ord_main
+      - mst_bed
+    ord_treat_condition:
+      - mst_machine
+      - ord_main
+    mnt_mainte_main:
+      - mst_machine
+
+convert-priority:
+  config:
+    mst_facility: 0
+    mst_vital_graph: 1
+    mst_report: 1
+    mst_disease: 1
+    mst_dialysis_difficulty: 1
+    mst_severity: 1
+    mst_transport: 1
+    mst_course: 1
+    mst_ward: 1
+    mst_medicine_class: 1
+    mst_equipment_class: 1
+    mst_dialyzer: 1
+    mst_infection: 1
+    mst_treatment: 1
+    mst_va: 1
+    mst_procedure: 1
+    mst_medicate_timing: 1
+    mst_kur: 1
+    mnt_machine_state: 1
+    mst_machine: 1
+    # mst_obs_kind: 1
+    mst_job: 1
+    mst_com_fixed_phrase: 2
+    mst_device_set_info_default: 1
+    mst_weight_scale: 1
+    mst_weight: 2
+    mst_exam_item: 1
+#    mst_spitz: 1
+    mst_bbs_kind: 1
+    mst_pat_event_category: 1
+    mst_pat_event_data_template: 2
+    mst_water_survey_point: 2
+    mst_water_survey_type: 1
+    mst_take_medicine: 1
+    mst_complaint: 1
+    mst_treatment_status_layout: 1
+    mst_self_measure_result: 1
+    mst_monitor_graph: 1
+    mst_personal_user: 2
+    mst_medicine: 2
+    mst_medicine_mix: 2
+    mst_medicine_group: 3
+    mst_equipment: 2
+    mst_bed: 2
+    mst_checklist: 2
+    mst_exam_set: 2
+    mst_rad_set: 2
+    mst_pat_event_sub_category: 2
+    mst_comp_treatment: 3
+    mst_taboo_allergy: 3
+    mst_room_bed_group: 3
+    mnt_notification_status: 2
+    mnt_notification_message: 3
+    mst_user: 3
+    mst_user_authentication: 3
+    mst_comsv_setting: 3
+    #    pat_insurance: 3
+    mst_holiday: 3
+    mst_addition: 3
+    mst_add_monitor: 1
+    mst_trend_graph_template: 3
+    mnt_mainte_main: 4
+    mnt_water_survey: 3
+    mst_treatment_set: 3
+    mst_selector: 99
+    pat_personal_main: 4
+    pat_insurance: 5
+    mst_wheel_chair: 5
+    bbs_info: 5
+    pat_main: 5
+    pat_unique: 5
+    ord_personal_prescription: 6
+    ord_prescription: 5
+    mst_pat_viewer_layout: 5
+    pat_group: 1
+    pat_group_detail: 5
+    ord_exception_period: 5
+    mst_medicine_support: 5
+    #    pat_prescription: 5
+    pat_exam_main: 5
+    pat_rad_main: 5
+    pat_event: 5
+    #    pat_prescription_detail: 6
+    # pat_obs_rec: 6
+    pat_treatment_pattern: 6
+    ord_schedule: 6
+    ord_main: 7
+    mni_monitor: 8
+    ord_checklist: 8
+    ord_coop_no: 8
+    pat_ind_approve: 8
+    pat_ind_approve_history: 8
+    ord_material_save: 8
+    ord_weight_scale: 8
+    pat_coop_detail: 8
+    ord_treat_condition: 8
+    mst_facility_setting: 2
+    mnt_motion_record: 100
+    mst_machine_record_control: 1
+    mst_graph_setting: 2
+    mst_mainte_detail: 1
+    mst_mainte_category: 2
+    mst_mainte_layout: 2
+    mst_mainte_layout_group: 3
+    mst_trend_graph_monitor_set: 1
+    medicine_latest_no: 5
+    mst_favorite_facility: 1
+    mst_pat_list_layout: 5
+    mst_pat_calendar_layout: 3
+
+convert-key:
+  config:
+    ord_main:
+      - ord_main
+      - ord_no
+      - fn_pat_id:0
+      - treat_date:0
+      - fn_plural:1
+    mst_disease:
+      - mst_disease
+      - disease_cd
+      - fn_disease_cd:0
+    mst_dialysis_difficulty:
+      - mst_dialysis_difficulty
+      - dialysis_difficulty_cd
+      - fn_dialysis_difficulty_cd:0
+    mst_severity:
+      - mst_severity
+      - severity_cd
+      - fn_severity_cd:0
+    mst_transport:
+      - mst_transport
+      - transport_cd
+      - fn_transport_cd:0
+    mst_course:
+      - mst_course
+      - course_cd
+      - fn_course_cd:0
+    mst_ward:
+      - mst_ward
+      - ward_cd
+      - fn_ward_cd:0
+    mst_com_fixed_phrase:
+      - mst_com_fixed_phrase
+      - com_fixed_phrase_cd
+      - fn_addition_cd:0
+    mst_medicine_class:
+      - mst_medicine_class
+      - class_cd
+      - fn_class_cd:0
+    mst_medicine:
+      - mst_medicine
+      - medicine_cd
+      - fn_medicine_cd:0
+    mst_medicine_mix:
+      - mst_medicine_mix
+      - medicine_mix_cd
+      - fn_set_medicine_cd:0
+    mst_equipment_class:
+      - mst_equipment_class
+      - class_cd
+      - fn_class_cd:0
+    mst_equipment:
+      - mst_equipment
+      - equipment_cd
+      - fn_equipment_cd:0
+    mst_dialyzer:
+      - mst_dialyzer
+      - dialyzer_cd
+      - fn_dialyzer_cd:0
+    mst_taboo_allergy:
+      - mst_taboo_allergy
+      - taboo_allergy_cd
+      - fn_taboo_allergy_cd:0
+    mst_infection:
+      - mst_infection
+      - infection_cd
+      - fn_infection_cd:0
+    mst_treatment:
+      - mst_treatment
+      - treatment_cd
+      - fn_treatment_cd:0
+    mst_va:
+      - mst_va
+      - va_cd
+      - fn_va_cd:0
+    mst_procedure:
+      - mst_procedure
+      - procedure_cd
+      - fn_procedure_cd:0
+    mst_medicate_timing:
+      - mst_medicate_timing
+      - medicate_timing_cd
+      - fn_medicate_timing_cd:0
+    mst_kur:
+      - mst_kur
+      - kur_cd
+      - fn_kur_cd:0
+    mst_bed:
+      - mst_bed
+      - bed_cd
+      - fn_bed_no:1
+    mst_room_bed_group:
+      - mst_room_bed_group
+      - room_bed_group_cd
+      - fn_room_bed_group_no:0
+      - group_class:1
+    mst_job:
+      - mst_job
+      - job_cd
+      - fn_job_class_cd:1
+    mst_complaint:
+      - mst_complaint
+      - complaint_cd
+      - fn_complaint_cd:0
+    mst_comp_treatment:
+      - mst_comp_treatment
+      - comp_treatment_cd
+      - fn_comp_treatment_cd:0
+    mst_take_medicine:
+      - mst_take_medicine
+      - take_medicine_cd
+      - list_class:0
+    mst_water_survey_point:
+      - mst_water_survey_point
+      - survey_point_cd
+      - fn_survey_point_cd:0
+    mst_water_survey_type:
+      - mst_water_survey_type
+      - survey_type_cd
+      - fn_survey_type_cd:0
+    mst_personal_user:
+      - mst_personal_user
+      - user_id
+      - fn_staff_cd:0
+    mst_wheel_chair:
+      - mst_wheel_chair
+      - wheel_chair_cd
+      - fn_wheel_chair_cd:0
+    mst_exam_item:
+      - mst_exam_item
+      - exam_item_cd
+      - fn_exam_item_cd:0
+    mst_medicine_group:
+      - mst_medicine_group
+      - medicine_group_cd
+      - fn_medicine_group_cd:0
+    mst_exam_set:
+      - mst_exam_set
+      - exam_set_cd
+      - fn_exam_set_cd:0
+    mst_rad_set:
+      - mst_rad_set
+      - rad_set_cd
+      - fn_exam_set_cd:0
+#    mst_spitz:
+#      - mst_spitz
+#      - spitz_cd
+#      - fn_exam_set_cd:0
+    mst_pat_event_category:
+      - mst_pat_event_category
+      - category_cd
+      - fn_event_category_cd_1:1
+    mst_pat_event_sub_category:
+      - mst_pat_event_sub_category
+      - sub_category_cd
+      - fn_event_category_cd_2:1
+      - fn_event_category_class:1
+    mst_bbs_kind:
+      - mst_bbs_kind
+      - kind_no
+      - fn_category_id:0
+    pat_personal_main:
+      - pat_personal_main
+      - pat_id
+      - fn_pat_id:0
+    mst_machine:
+      - mst_machine
+      - facility_cd||fn_device_no||fn_class_cd
+      - fn_device_no:1
+      - fn_class_cd:0
+    mst_user_authentication:
+      - mst_user_authentication
+      - user_id
+      - (select fn_staff_cd from mst_personal_user where user_id = mst_user_authentication.user_id):0
+    mst_weight_scale:
+      - mst_weight_scale
+      - weight_scale_cd
+      - facility_cd:0
+    mst_weight:
+      - mst_weight
+      - weight_cd
+      - weight_no:1
+    mst_comsv_setting:
+      - mst_comsv_setting
+      - comsv_cd
+      - fn_comsv_no:1
+#      - device_edge_no:1
+    mst_checklist:
+      - mst_checklist
+      - checklist_cd
+      - facility_cd:0
+    #  mst_obs_kind:
+    #   - mst_obs_kind
+    #   - kind_no
+    #   - fn_kind_id:1
+    mst_addition:
+      - mst_addition
+      - addition_cd
+      - fn_add_cd:0
+    bbs_info:
+      - bbs_info
+      - bbs_ctl_no
+      - fn_seq_id:1
+      - is_disp_bbs:0
+    pat_event:
+      - pat_event
+      - trim('') || pat_id || fn_ctl_no
+      - (SELECT fn_pat_id FROM pat_personal_main WHERE pat_id = pat_event.pat_id):1
+      - fn_ctl_no:1
+    pat_rad_main:
+      - pat_rad_main
+      - rad_result_cd
+      - fn_pat_id:0
+      - reg_rad_date:1
+    pat_exam_main:
+      - pat_exam_main
+      - exam_main_cd
+      - fn_pat_id:0
+      - reg_exam_date:1
+      - exam_status:0
+      - reg_order_class:0
+    mst_treatment_set:
+      - mst_treatment_set
+      - treatment_set_cd
+      - treatment_set_name:0
+      - facility_cd:0
+    mst_treatment_status_layout:
+      - mst_treatment_status_layout
+      - layout_no
+      - fn_layout_no:0
+    mst_self_measure_result:
+      - mst_self_measure_result
+      - self_measure_result_cd
+      - fn_self_measure_result_cd:0
+    mst_monitor_graph:
+      - mst_monitor_graph
+      - monitor_graph_cd
+      - fn_monitor_graph_cd:1
+    ord_material_save:
+      - ord_material_save
+      - ord_material_save_no
+      - pat_id:1
+    ord_prescription:
+      - ord_prescription
+      - ord_prescription_no
+      - fn_ord_prescription_no:0
+    mst_vital_graph:
+      - mst_vital_graph
+      - vital_graph_cd
+      - fn_vital_graph_cd:0
+    mst_medicine_support:
+      - mst_medicine_support
+      - medicine_support_cd
+      - fn_medicine_support_cd:0
+    mst_pat_viewer_layout:
+      - mst_pat_viewer_layout
+      - layout_cd
+      - fn_layout_cd:0
+    pat_group:
+      - pat_group
+      - pat_group_cd
+      - fn_pat_group_cd:0
+    pat_group_detail:
+      - pat_group_detail
+      - pat_group_cd
+      - (SELECT fn_pat_group_cd FROM pat_group WHERE pat_group_cd = pat_group_detail.pat_group_cd):0
+      - (SELECT fn_pat_id FROM pat_personal_main WHERE pat_id = pat_group_detail.pat_id):0
+    pat_insurance:
+      - pat_insurance
+      - insurance_cd
+      - fn_pat_id:0
+      - fn_ctl_no:0
+    mst_device_set_info_default:
+      - mst_device_set_info_default
+      - facility_cd
+      - facility_cd:0
+    mst_pat_event_data_template:
+      - mst_pat_event_data_template
+      - template_cd
+      - fn_template_cd:0
+#    mst_machine_record:
+#      - mst_machine_record
+#      - machine_record_cd
+#      - machine_record_cd:0
+    mst_machine_record_control:
+      - mst_machine_record_control
+      - machine_record_cd
+      - machine_record_cd:0
+    mst_holiday:
+      - mst_holiday
+      - holiday_cd
+      - facility_cd:0
+      - holiday_y:1
+      - class：0
+    mst_trend_graph_template:
+      - mst_trend_graph_template
+      - template_cd
+      - fn_template_cd:0
+    mst_facility_setting:
+      - mst_facility_setting
+      - facility_setting_no
+      - facility_setting_no:0
+    mst_selector:
+      - mst_selector
+      - master_physical_name
+      - master_physical_name:0
+    ord_personal_prescription:
+      - ord_personal_prescription
+      - ord_prescription_no
+      - fn_ord_prescription_no:0
+    mnt_motion_record:
+      - mnt_motion_record
+      - motion_record_no
+      - facility_cd:0
+      - machine_serial:0
+      - event_reg_date:1
+      - machine_record_cd:0
+    mnt_mainte_main:
+      - mnt_mainte_main
+      - mainte_no
+      - facility_cd:0
+      - mainte_class:0
+      - (SELECT fn_device_no FROM mst_machine WHERE machine_no = mnt_mainte_main.machine_no):1
+      - fn_checkplan_no:0
+    mnt_water_survey:
+      - mnt_water_survey
+      - survey_record_no
+      - facility_cd:0
+      - inspection_date:1
+    mst_add_monitor:
+      - mst_add_monitor
+      - vital_monitor_item_cd
+      - facility_cd:0
+      - fn_vital_monitor_item_cd:1
+    ord_exception_period:
+      - ord_exception_period
+      - exception_period_no
+      - facility_cd:0
+    mst_graph_setting:
+      - mst_graph_setting
+      - graph_setting_no
+      - facility_cd:0
+      - graph_setting_no:0
+    mst_mainte_detail:
+      - mst_mainte_detail
+      - mainte_detail_cd
+      - facility_cd:0
+      - fn_mainte_detail_cd:0
+    mst_mainte_category:
+      - mst_mainte_category
+      - mainte_category_cd
+      - facility_cd:0
+      - fn_mainte_category_cd:0
+    pat_ind_approve:
+      - pat_ind_approve
+      - ord_no
+      - (select fn_pat_id || treat_date || fn_plural from ord_main where ord_no = pat_ind_approve.ord_no):0
+    pat_ind_approve_history:
+      - pat_ind_approve_history
+      - ord_no
+      - (select fn_pat_id || treat_date || fn_plural from ord_main where ord_no = pat_ind_approve_history.ord_no):0
+    mst_user:
+      - mst_user
+      - user_id
+      - (select fn_staff_cd from mst_personal_user where user_id = mst_user.user_id):0
+    pat_coop_detail:
+      - pat_coop_detail
+      - coop_save_no
+      - (save_2->> 'ord_no'):0
+    mst_trend_graph_monitor_set:
+      - mst_trend_graph_monitor_set
+      - monitor_set_cd
+      - mst_trend_graph_monitor_set.facility_cd:0
+      - mst_trend_graph_monitor_set.model:0
+      - mst_trend_graph_monitor_set.fn_monitor_set_cd:1
+    medicine_latest_no:
+      - medicine_latest_no
+      - pat_id
+      - (SELECT fn_pat_id FROM pat_personal_main WHERE pat_id = medicine_latest_no.pat_id):1
+    mst_favorite_facility:
+      - mst_favorite_facility
+      - master_cd
+      - facility_cd:0
+  configb:
+    mni_monitor:
+      - ord_main
+      - ord_no
+      - rst_fn_dialysis_no:0
+    ord_checklist:
+      - ord_main
+      - ord_no
+      - rst_fn_dialysis_no:0
+    mst_device_set_info_default:
+      - mst_device_set_info_default
+      - facility_cd
+    pat_main:
+      - pat_personal_main
+      - pat_id
+      - fn_pat_id:0
+    pat_unique:
+      - pat_personal_main
+      - pat_id
+      - fn_pat_id:0
+    pat_treatment_pattern:
+      - pat_personal_main
+      - pat_id
+      - fn_pat_id:0
+    ord_coop_no:
+      - ord_main
+      - ord_no
+    ord_weight_scale:
+      - ord_main
+      - ord_no
+    ord_treat_condition:
+      - ord_treat_condition
+      - condition_cd
+  noseq:
+    mst_facility_setting:
+    mst_device_set_info_default:
+    pat_main:
+    mst_user:
+    mst_user_authentication:
+    mst_selector:
+    pat_unique:
+    ord_personal_prescription:
+    pat_group_detail:
+    pat_treatment_pattern:
+    pat_ind_approve:
+    mst_machine_record_control:
+    medicine_latest_no:
+
+  orderby:
+    bbs_info: bbs_ctl_no
+    medicine_latest_no: pat_id
+    mni_monitor: bio_moni_ctl_no
+    mnt_mainte_main: mainte_no
+    mnt_motion_record: motion_record_no
+    mnt_water_survey: survey_record_no
+    mst_add_monitor: vital_monitor_item_cd
+    mst_addition: addition_cd
+    mst_bbs_kind: kind_no
+    mst_bed: bed_cd
+    mst_checklist: checklist_cd
+    mst_com_fixed_phrase: com_fixed_phrase_cd
+    mst_comp_treatment: comp_treatment_cd
+    mst_complaint: complaint_cd
+    mst_comsv_setting: comsv_cd
+    mst_course: course_cd
+    mst_device_edge: serial_no
+    mst_device_set_info_default: facility_cd
+    mst_dialysis_difficulty: dialysis_difficulty_cd
+    mst_dialyzer: dialyzer_cd
+    mst_disease: disease_cd
+    mst_equipment: equipment_cd
+    mst_equipment_class: class_cd
+    mst_exam_item: exam_item_cd
+    mst_exam_set: exam_set_cd
+    mst_facility_setting: facility_setting_no
+    mst_holiday: holiday_cd
+    mst_infection: infection_cd
+    mst_job: job_cd
+    mst_kur: kur_cd
+    mst_mainte_category: mainte_category_cd
+    mst_mainte_detail: mainte_detail_cd
+    mst_mainte_layout: mainte_layout_cd
+    mst_mainte_layout_group: mainte_layout_group_cd
+    mst_medicate_timing: medicate_timing_cd
+    mst_medicine: medicine_cd
+    mst_medicine_class: class_cd
+    mst_medicine_group: medicine_group_cd
+    mst_medicine_mix: medicine_mix_cd
+    mst_medicine_set: medicine_set_cd
+    mst_medicine_support: medicine_support_cd
+    mst_monitor_graph: monitor_graph_cd
+    mst_obs_kind: kind_no
+    mst_pat_event_category: category_cd
+    mst_pat_event_data_template: template_cd
+    mst_pat_event_sub_category: sub_category_cd
+    mst_pat_viewer_layout: layout_cd
+    mst_personal_user: user_id
+    mst_procedure: procedure_cd
+    mst_rad_set: rad_set_cd
+    mst_room_bed_group: room_bed_group_cd
+    mst_self_measure_result: self_measure_result_cd
+    mst_severity: severity_cd
+    mst_spitz: spitz_cd
+    mst_taboo_allergy: taboo_allergy_cd
+    mst_take_medicine: take_medicine_cd
+    mst_transport: transport_cd
+    mst_treatment: treatment_cd
+    mst_treatment_set: treatment_set_cd
+    mst_treatment_status_layout: layout_no
+    mst_trend_graph_monitor_set: monitor_set_cd
+    mst_trend_graph_template: template_cd
+    mst_user: user_id
+    mst_user_authentication: user_id
+    mst_va: va_cd
+    mst_vital_graph: vital_graph_cd
+    mst_ward: ward_cd
+    mst_water_survey_point: survey_point_cd
+    mst_water_survey_type: survey_type_cd
+    mst_weight: weight_cd
+    mst_weight_scale: weight_scale_cd
+    mst_wheel_chair: wheel_chair_cd
+    ord_checklist: checklist_ctl_no
+    ord_coop_no: ctl_no
+    ord_exception_period: exception_period_no
+    ord_main: ord_no
+    ord_material_save: ord_material_save_no
+    ord_personal_prescription: ord_prescription_no
+    ord_prescription: ord_prescription_no
+    ord_treat_condition: condition_cd
+    ord_weight_scale: weight_scale_no
+    pat_coop_detail: coop_save_no
+    pat_event: pat_event_cd
+    pat_exam_main: exam_main_cd
+    pat_group: pat_group_cd
+    pat_ind_approve: ord_no
+    pat_insurance: insurance_cd
+    pat_main: pat_id
+    pat_personal_main: pat_id
+    pat_rad_main: rad_result_cd
+    pat_unique: pat_id
+    sys_coop_no: ctl_no
+    mst_favorite_facility: master_cd
+    mst_pat_list_layout: pat_list_layout_cd
+  prodDbTableKey: # 本番DBの各テーブルにおける主キー列名を設定する
+    bbs_info: bbs_ctl_no
+    mni_monitor: bio_moni_ctl_no
+    mnt_mainte_main: mainte_no
+    mnt_motion_record: motion_record_no
+    mnt_water_survey: survey_record_no
+    mst_add_monitor: vital_monitor_item_cd
+    mst_addition: addition_cd
+    mst_bbs_kind: kind_no
+    mst_bed: bed_cd
+    mst_checklist: checklist_cd
+    mst_com_fixed_phrase: com_fixed_phrase_cd
+    mst_comp_treatment: comp_treatment_cd
+    mst_complaint: complaint_cd
+    mst_comsv_setting: comsv_cd
+    mst_course: course_cd
+    mst_dialysis_difficulty: dialysis_difficulty_cd
+    mst_dialyzer: dialyzer_cd
+    mst_disease: disease_cd
+    mst_equipment: equipment_cd
+    mst_equipment_class: class_cd
+    mst_exam_item: exam_item_cd
+    mst_exam_set: exam_set_cd
+    mst_holiday: holiday_cd
+    mst_infection: infection_cd
+    mst_job: job_cd
+    mst_kur: kur_cd
+    mst_machine: machine_no
+    mst_mainte_category: mainte_category_cd
+    mst_mainte_detail: mainte_detail_cd
+    mst_mainte_layout: mainte_layout_cd
+    mst_mainte_layout_group: mainte_layout_group_cd
+    mst_medicate_timing: medicate_timing_cd
+    mst_medicine: medicine_cd
+    mst_medicine_class: class_cd
+    mst_medicine_group: medicine_group_cd
+    mst_medicine_mix: medicine_mix_cd
+    mst_medicine_support: medicine_support_cd
+    mst_monitor_graph: monitor_graph_cd
+    mst_pat_event_category: category_cd
+    mst_pat_event_data_template: template_cd
+    mst_pat_event_sub_category: sub_category_cd
+    mst_pat_viewer_layout: layout_cd
+    mst_personal_user: user_id
+    mst_procedure: procedure_cd
+    mst_rad_set: rad_set_cd
+    mst_room_bed_group: room_bed_group_cd
+    mst_self_measure_result: self_measure_result_cd
+    mst_severity: severity_cd
+    mst_taboo_allergy: taboo_allergy_cd
+    mst_take_medicine: take_medicine_cd
+    mst_transport: transport_cd
+    mst_treatment: treatment_cd
+    mst_treatment_set: treatment_set_cd
+    mst_treatment_status_layout: layout_no
+    mst_trend_graph_monitor_set: monitor_set_cd
+    mst_trend_graph_template: template_cd
+    mst_va: va_cd
+    mst_vital_graph: vital_graph_cd
+    mst_ward: ward_cd
+    mst_water_survey_point: survey_point_cd
+    mst_water_survey_type: survey_type_cd
+    mst_weight: weight_cd
+    mst_weight_scale: weight_scale_cd
+    mst_wheel_chair: wheel_chair_cd
+    ord_checklist: checklist_ctl_no
+    ord_coop_no: ctl_no
+    ord_exception_period: exception_period_no
+    ord_main: ord_no
+    ord_material_save: ord_material_save_no
+    ord_prescription: ord_prescription_no
+    ord_treat_condition: condition_cd
+    ord_weight_scale: weight_scale_no
+    pat_coop_detail: coop_save_no
+    pat_event: pat_event_cd
+    pat_exam_main: exam_main_cd
+    pat_group: pat_group_cd
+    pat_ind_approve_history: ind_approve_history_no
+    pat_insurance: insurance_cd
+    pat_personal_main: pat_id
+    pat_rad_main: rad_result_cd
+    mst_favorite_facility: master_cd
+    mst_pat_list_layout: pat_list_layout_cd
+    mst_pat_calendar_layout: pat_calendar_layout_cd

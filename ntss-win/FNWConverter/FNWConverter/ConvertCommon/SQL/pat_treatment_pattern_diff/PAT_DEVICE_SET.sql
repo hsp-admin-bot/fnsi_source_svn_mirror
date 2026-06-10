@@ -1,0 +1,1 @@
+﻿SELECT DISTINCT b.patid from v_pat_device_set b where {0}

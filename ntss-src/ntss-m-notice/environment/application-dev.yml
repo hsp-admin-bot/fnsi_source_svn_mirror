@@ -1,0 +1,60 @@
+# AWS開発環境用
+spring:
+  main:
+    allow-circular-references: true
+  datasource:
+    default:
+      jdbc-url: jdbc:postgresql://172.30.15.151:5432/ntss_db5?stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk5
+      password: nkk5
+      serialization:
+        WRITE_DATES_AS_TIMESTAMPS: false
+    personal:
+      jdbc-url: jdbc:postgresql://172.30.15.151:5432/ntss_db6?stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk6
+      password: nkk6
+      serialization:
+        WRITE_DATES_AS_TIMESTAMPS: false
+    auth:
+      jdbc-url: jdbc:postgresql://172.30.15.151:5432/ntss_db4?stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk4
+      password: nkk4
+      serialization:
+        WRITE_DATES_AS_TIMESTAMPS: false
+  application:
+    name: ntss-m-notice
+  jmx:
+    default-domain: ntss-m-notice
+
+doma:
+  dialect: postgres
+
+securityporicy:
+  accesskeycheck: true
+
+spring.thymeleaf.cache: false
+
+logging:
+  level:
+    org.springframework.transaction.interceptor: TRACE
+
+cloud:
+  aws:
+    region:
+      auto: true
+    stack:
+      auto: false
+
+ntss:
+  m-notice:
+    mail:
+      sesRegion: us-west-2
+      fromAddress: ReMS@nikkiso.co.jp
+    viewer:
+      url: 'https://dev.nksfn.com/ntss-admin-web/#/?key=%s&FUNC=00103&FACILITYCD=%s&MACHINETYPECD=%s&MACHINESERIAL=%s'
+    nikkiso-facility-cd: nkknkk
+    nikkiso-user-mail-address-regex: ^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@nikkiso\.(co|biz\.ezweb\.ne)\.jp$
+

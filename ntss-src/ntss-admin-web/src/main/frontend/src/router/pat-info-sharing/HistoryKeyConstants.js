@@ -1,0 +1,7 @@
+const PREFIX = "PAT_INFO_SHARING_";
+
+// 患者情報共有
+export const HISTORY_KEY_PAT_INFO_SHARING = PREFIX + "SHARING";
+
+// 患者情報共有詳細
+export const HISTORY_KEY_PAT_INFO_SHARING_DETAIL = PREFIX + "DETAIL";

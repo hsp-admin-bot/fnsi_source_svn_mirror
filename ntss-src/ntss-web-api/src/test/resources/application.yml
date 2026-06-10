@@ -1,0 +1,108 @@
+spring:
+#  profiles:
+    #active: mongo
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration,
+             org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: ntss
+      username: nkk
+      password: nkk
+  datasource:
+    default:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntsstest_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkktest5
+      password: nkktest5
+      type: com.zaxxer.hikari.HikariDataSource
+      maximumPoolSize: 1
+    personal:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntsstest_db6?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkktest6
+      password: nkktest6
+      type: com.zaxxer.hikari.HikariDataSource
+      maximumPoolSize: 1
+    auth:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntsstest_db4?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkktest4
+      password: nkktest4
+      type: com.zaxxer.hikari.HikariDataSource
+      maximumPoolSize: 1
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+    date-format: yyyy-MM-dd'T'HH:mm:ss.SSSXXX
+    time-zone: Asia/Tokyo
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  application:
+    name: ntss-web-api
+  jmx:
+    default-domain: ntss-web-api
+server:
+  servlet:
+    contextPath: /ntss-web-api
+  port:
+    8088
+doma:
+  dialect: postgres
+
+logging:
+  level:
+    org.springframework.transaction.interceptor: TRACE
+
+securityporicy:
+  accesskeycheck: true
+
+schedule-extend:
+  cron: 0 0 2 * * *
+  execute: true
+
+#cloud:
+#  aws:
+#    region:
+#      auto: false
+#      static: ap-northeast-1
+cloud:
+  aws:
+    region:
+      auto: true
+    stack:
+       auto: false
+
+fileIO:
+  pathSeparator: /
+  processTimeout: 300
+  deleteFileTimeout: 10
+  upload:
+    tempDir: /var/lib/tomcat9/webapps/ntss-web-api/ntssUploadTemp
+    tempPreFix: NtssUploadTempFile
+    tempSufFix: .tmp
+  download:
+    tempDir: /var/lib/tomcat9/webapps/ntss-web-api/ntssDownloadTemp
+
+ntss:
+  web-api:
+    web-socket-notify:
+      app-sv:
+        ws-port: 8090
+        ws-api: '/ntss-client-comm/api/sendclient'
+        header-name: 'SSECCAYEK'
+        header-value: 'NTSS-NKK-ESM-TDC-YSK'
+    coop-api:
+      url: http://localhost:8092/ntss-coop-api
+---
+spring:
+  config:
+    activate:
+      on-profile: mongo
+  autoconfigure:
+    exclude:

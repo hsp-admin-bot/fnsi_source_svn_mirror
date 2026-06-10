@@ -1,0 +1,181 @@
+{
+  "chart": {
+    "marginRight": 50,
+    "marginLeft": 45,
+    "width": 800,
+    "height": 500,
+    "animation": false
+  },
+  "exporting": {
+    "enabled": false
+  },
+  "time": { "useUTC": false },
+  "credits": { "enabled": false },
+  "title": {
+    "text": ""
+  },
+  "xAxis": {
+    "type": "datetime",
+    "labels": {
+      "format": "{value:%H:%M}"
+    },
+    "gridLineWidth": 1
+  },
+  "yAxis": [
+    {
+      "title": {
+        "margin":"2",
+      	"text" : "ΔBV[%]"
+      },
+      "min": #Y1From#,
+      "max": #Y1To#,
+       "tickInterval": 2.5,
+      "allowDecimals" : true,
+      "alignTicks": false,
+      "labels": {
+        "align": "left",
+        "x": -28,
+        "style": { "width": "50px" },
+        "format": "{value:.1f}"
+      }
+    },
+    {
+      "title": {
+       "margin":"2",
+       "text" : "血圧[mmHg]/脈拍[bpm]"
+      },
+      "min": #Y2From#,
+      "max": #Y2To#,
+      "alignTicks": false,
+      "opposite": true,
+      "labels": {
+        "align": "right",
+        "x": 45,
+        "style": { "width": "50px" },
+        "format": "{value:.1f}"
+      }
+    }
+  ],
+  "legend": {
+    "layout": "horizontal",
+    "align": "left",
+    "verticalAlign": "top",
+    "floating": false,
+    "itemWidth": 100,
+    "x": 20,
+    "y": -5
+  },
+  "plotOptions": {
+    "series": {
+      "marker": { "enabled": true },
+      "animation": false
+    }
+  },
+  "series": [
+    {
+      "type": "line",
+      "name": "ΔBV",
+      "color": "#99FFFF",
+      "data": [#dBV#],
+      "yAxis": 0
+    },
+    {
+      "type": "line",
+      "name": "ΔBV基準値",
+      "color": "#FF9933",
+      "data": [#dBVBaseValue#],
+      "yAxis": 0
+    },
+    {
+      "type": "line",
+      "name": "ΔBVリファレンスエリア上限",
+      "color": "#FF3333",
+      "data": [#dBVReferenceAreaUpperLimit#],
+      "yAxis": 0
+    },
+    {
+      "type": "line",
+      "name": "ΔBVリファレンスエリア下限",
+      "color": "#99FF33",
+      "data": [#dBVReferenceAreaLowerLimit#],
+      "yAxis": 0
+    },
+    {
+      "type": "line",
+      "name": "ΔBV基準線",
+      "color": "#91a3a1",
+      "data": [#dBVAVR5min#],
+      "yAxis": 0
+    },
+    {
+      "type": "line",
+      "name": "最高血圧",
+      "color": "#d67231",
+      "data": [#sysBP#],
+      "yAxis": 1
+    },
+    {
+      "type": "line",
+      "name": " 最低血圧",
+      "color": "#111888",
+      "data": [#diaBP#],
+      "yAxis": 1
+    },
+    {
+      "type": "line",
+      "name": " 脈拍血圧",
+      "color": "#888444",
+      "data": [#pulse#],
+      "yAxis": 1
+    },
+    {
+      "type": "scatter",
+      "name": "ΔBV初期化",
+      "color": "#00FF00",
+      "data": [#event1#],
+      "yAxis": 1
+    },
+     {
+      "type": "scatter",
+      "name": "除水停止",
+      "color": "#008000",
+      "data": [#event2#],
+      "yAxis": 1
+    },
+     {
+      "type": "scatter",
+      "name": "除水開始",
+      "color": "#00FFFF",
+      "data": [#event3#],
+      "yAxis": 1
+    },
+     {
+      "type": "scatter",
+      "name": "再循環率測定開始",
+      "color": "#008080",
+      "data": [#event4#],
+      "yAxis": 1
+    },
+     {
+      "type": "scatter",
+      "name": "再循環率測定終了",
+      "color": "#FF00FF",
+      "data": [#event5#],
+      "yAxis": 1
+    },
+     {
+      "type": "scatter",
+      "name": "その他",
+      "color": "#800080",
+      "data": [#event99#],
+      "yAxis": 1
+    },
+     {
+      "type": "scatter",
+      "name": "複数イベント",
+      "color": "#808080",
+      "data": [#event100#],
+      "yAxis": 1
+    }
+  ]
+}

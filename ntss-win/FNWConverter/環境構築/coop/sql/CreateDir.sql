@@ -1,0 +1,2 @@
+CREATE DIRECTORY FnwDumpDir as 'D:\WORK';
+EXIT;

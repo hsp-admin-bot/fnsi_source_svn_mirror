@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<ReportDefinition>
+  <report type="Dialysis" hasTmpl="0" />
+  <paramTable>
+    <param id="M1:O1" dispType="0" dataCode="treatment_name" sqlCode="5" dataType="string" isShrink="0" dispLength="7" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="1" colWidth="" />
+    <param id="R1:X1" dispType="0" dataCode="rst_start_date" sqlCode="2" dataType="DateTime" isShrink="0" dispLength="" filterType="" dispFormat="HH:mm" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AH1:AK1" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="J2:S2" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="D3:G3" dispType="0" dataCode="pat_id" sqlCode="1" dataType="string" isShrink="0" dispLength="8" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="1" colWidth="" />
+    <param id="J3:S3" dispType="0" dataCode="pat_name" sqlCode="1" dataType="string" isShrink="0" dispLength="14" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="1" colWidth="" />
+    <param id="W3:Z3" dispType="0" dataCode="in_out_class" sqlCode="1" dataType="string" isShrink="0" dispLength="8" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="1" colWidth="">
+      <convTable cls="">
+        <conv code="0" item="外来" disp="外来" />
+        <conv code="1" item="入院" disp="入院" />
+      </convTable>
+      <formatCondition comparisonOperator="!=" value="'外来'">
+        cond-format-color-red
+      </formatCondition>
+    </param>
+    <param id="AE3:AF3" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="D5:I5" dispType="0" dataCode="rst_start_date" sqlCode="2" dataType="DateTime" isShrink="0" dispLength="" filterType="" dispFormat="HH:mm" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="">
+      <formatCondition comparisonOperator="==" value="'02:00'">
+        cond-format-color-red
+      </formatCondition>
+    </param>
+    <param id="O5:Q5" dispType="1" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="" formula="[3.weight_before]-[5.dw]" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="X5:AC5" dispType="0" dataCode="dialyzer" sqlCode="5" dataType="string" isShrink="0" dispLength="13" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="1" colWidth="" />
+    <param id="AH5:AM5" dispType="0" dataCode="anti_coagulant" sqlCode="5" dataType="string" isShrink="0" dispLength="15" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="1" colWidth="" />
+    <param id="D6:I6" dispType="0" dataCode="rst_end_date" sqlCode="2" dataType="DateTime" isShrink="0" dispLength="" filterType="" dispFormat="HH:mm" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="O6:Q6" dispType="1" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="" formula="[.]/1000" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="X6:AC6" dispType="0" dataCode="" sqlCode="" dataType="DateTime" isShrink="0" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AH6:AJ6" dispType="0" dataCode="anti_coagulant_one_shot_amount" sqlCode="5" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AK6:AM6" dispType="0" dataCode="anti_coagulant_sustained_amount_unit" sqlCode="5" dataType="string" isShrink="0" dispLength="6" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="1" colWidth="" />
+    <param id="E7:G7" dispType="0" dataCode="dw" sqlCode="5" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.2f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="">
+      <formatCondition comparisonOperator="==" value="">
+        cond-format-background-color-yellow
+      </formatCondition>
+    </param>
+    <param id="O7:Q7" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.2f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="X7:Z7" dispType="0" dataCode="blood_flow" sqlCode="5" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="">
+      <formatCondition comparisonOperator="&lt;" value="600">
+        cond-format-color-red
+      </formatCondition>
+    </param>
+    <param id="AH7:AJ7" dispType="0" dataCode="anti_coagulant_sustained_speed" sqlCode="5" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AK7:AM7" dispType="0" dataCode="anti_coagulant_sustained_speed_unit" sqlCode="5" dataType="string" isShrink="0" dispLength="6" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="1" colWidth="" />
+    <param id="E8:G8" dispType="0" dataCode="weight_before" sqlCode="3" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.2f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="O8:Q8" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.2f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="X8:AC8" dispType="0" dataCode="puncture_user_name" sqlCode="3" dataType="string" isShrink="0" dispLength="13" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="1" colWidth="" />
+    <param id="AH8:AJ8" dispType="0" dataCode="anti_coagulant_sustained_amount" sqlCode="5" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AK8:AM8" dispType="0" dataCode="anti_coagulant_sustained_amount_unit" sqlCode="5" dataType="string" isShrink="0" dispLength="6" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="1" colWidth="" />
+    <param id="E9:G9" dispType="0" dataCode="weight_after" sqlCode="3" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.2f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="O9:Q9" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.2f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="X9:AC9" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="0" dispLength="13" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="1" colWidth="" />
+    <param id="AH9:AK9" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.2f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="A10:AC43" dispType="0" dataCode="" sqlCode="" dataType="byte[]" isShrink="0" dispLength="" filterType="" dispFormat="" formula="" groupID="実績.グラフ.実績.グラフ.外" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AD12:AH13" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AI12:AL13" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AD14:AH15" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AI14:AL15" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AD16:AH17" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AI16:AL17" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AD18:AH19" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AI18:AL19" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AI20:AL21" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AD24:AH25" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AI24:AL25" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AD26:AH27" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AI26:AL27" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AD28:AH29" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AI28:AL29" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AD30:AH31" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AI30:AL31" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AI32:AL33" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="0" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="A45:X48" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="0" dispLength="70" filterType="" dispFormat="" formula="" groupID="観察記録.カテゴリ2.観察記録.カテゴリ2.外" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="Y45:AF45" dispType="0" dataCode="medi_name" sqlCode="4" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="指示.投薬.指示.投薬.外" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="AG45:AH45" dispType="0" dataCode="medi_amount" sqlCode="4" dataType="decimal" isShrink="1" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="指示.投薬.指示.投薬.外" isInTmpl="0" isNewPage="" colWidth="">
+      <formatCondition comparisonOperator="&gt;=" value="3">
+        cond-format-color-red
+      </formatCondition>
+      <formatCondition comparisonOperator="&lt;=" value="1">
+        cond-format-color-blue
+      </formatCondition>
+    </param>
+    <param id="AI45:AK45" dispType="0" dataCode="medi_timing_name" sqlCode="4" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="指示.投薬.指示.投薬.外" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="A70" dispType="0" dataCode="" sqlCode="" dataType="decimal" isShrink="" dispLength="" filterType="" dispFormat="%.0f" formula="" groupID="" isInTmpl="">
+      <function name="SUM(AG45:AH45,AG46:AH46,AG47:AH47,AG48:AH48,AG49:AH49,AG50:AH50,AG51:AH51,AG52:AH53,AG54:AH55,AG56:AH57)" />
+      <targetCell ids="AG45:AH45,AG46:AH46,AG47:AH47,AG48:AH48,AG49:AH49,AG50:AH50,AG51:AH51,AG52:AH53,AG54:AH55,AG56:AH57" />
+    </param>
+    <param id="F70" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="">
+      <function name="IF(D6 = &quot;&quot;, &quot;終了時刻が設定されていません&quot;, &quot;&quot;)" />
+      <targetCell ids="D6" />
+    </param>
+    <param id="C70" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="" dispLength="" filterType="" dispFormat="" formula="" groupID="" isInTmpl="">
+      <function name="VLOOKUP(&quot;EPO2&quot;,Y45:AK57,11,TRUE)" />
+      <targetCell ids="" />
+    </param>
+    <param id="A53:C53" dispType="0" dataCode="occur_time" sqlCode="6" dataType="DateTime" isShrink="1" dispLength="" filterType="" dispFormat="HH:mm" formula="" groupID="実績.愁訴処置.実績.愁訴処置.外" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="D53:L53" dispType="0" dataCode="complaint" sqlCode="6" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="実績.愁訴処置.実績.愁訴処置.外" isInTmpl="0" isNewPage="" colWidth="" />
+    <param id="M53:Q53" dispType="0" dataCode="treat_name" sqlCode="6" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="実績.愁訴処置.実績.愁訴処置.外" isInTmpl="0" isNewPage="" colWidth="95" />
+    <param id="R53:U53" dispType="0" dataCode="treat_medicine" sqlCode="6" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="実績.愁訴処置.実績.愁訴処置.外" isInTmpl="0" isNewPage="" colWidth="73" />
+    <param id="V53:X53" dispType="0" dataCode="treat_staff_name" sqlCode="6" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="実績.愁訴処置.実績.愁訴処置.外" isInTmpl="0" isNewPage="" colWidth="54" />
+    <param id="Y59:AM59" dispType="0" dataCode="" sqlCode="" dataType="string" isShrink="1" dispLength="" filterType="" dispFormat="" formula="" groupID="指示.指示簿.指示.指示簿.外" isInTmpl="0" isNewPage="" colWidth="" />
+  </paramTable>
+  <groupTable>
+    <group id="実績.グラフ.実績.グラフ.外" repeatMax="1" isNewPage="1" filterType="" />
+    <group id="観察記録.カテゴリ2.観察記録.カテゴリ2.外" repeatMax="2" isNewPage="1" filterType="" />
+    <group id="指示.投薬.指示.投薬.外" repeatMax="10" isNewPage="1" filterType="Medicine">
+      <filterTable>
+        <filter item="1" col="medi_class_cd" />
+        <filter item="2.1" col="medi_class_cd.medi_class_type" />
+        <filter item="3.1.3" col="medi_class_cd.medi_class_type.medi_cd" />
+      </filterTable>
+    </group>
+    <group id="実績.愁訴処置.実績.愁訴処置.外" repeatMax="17" isNewPage="1" filterType="" />
+    <group id="指示.指示簿.指示.指示簿.外" repeatMax="11" isNewPage="1" filterType="" />
+  </groupTable>
+  <tmplRepeat />
+</ReportDefinition>

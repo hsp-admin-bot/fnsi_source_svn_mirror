@@ -1,0 +1,7 @@
+DELETE FROM pat_personal_main
+WHERE pat_id BETWEEN 51001810 AND 51001819;
+
+DELETE FROM pat_insurance
+WHERE pat_id BETWEEN 51001810 AND 51001819;
+
+SELECT SETVAL('pat_personal_main_pat_id_seq', 51001809);

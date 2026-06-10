@@ -1,0 +1,8 @@
+-- select
+--   /*%expand */*
+-- from
+--   ntss.mst_user
+-- where
+--   user_id = /*userId*/'0'
+-- and
+--   card_idm = /*cardIdm*/null

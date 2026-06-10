@@ -1,0 +1,68 @@
+﻿
+namespace FNSiViewSyncService
+{
+    partial class ProjectInstaller
+    {
+        /// <summary>
+        /// 必要なデザイナー変数です。
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary> 
+        /// 使用中のリソースをすべてクリーンアップします。
+        /// </summary>
+        /// <param name="disposing">マネージド リソースを破棄する場合は true を指定し、その他の場合は false を指定します。</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region コンポーネント デザイナーで生成されたコード
+
+        /// <summary>
+        /// デザイナー サポートに必要なメソッドです。このメソッドの内容を
+        /// コード エディターで変更しないでください。
+        /// </summary>
+        private void InitializeComponent()
+        {
+            this.serviceProcessInstaller = new System.ServiceProcess.ServiceProcessInstaller();
+            this.serviceInstaller = new System.ServiceProcess.ServiceInstaller();
+            // 
+            // serviceProcessInstaller
+            // 
+            this.serviceProcessInstaller.Account = System.ServiceProcess.ServiceAccount.LocalSystem;
+            this.serviceProcessInstaller.Password = null;
+            this.serviceProcessInstaller.Username = null;
+            this.serviceProcessInstaller.AfterInstall += new System.Configuration.Install.InstallEventHandler(this.serviceProcessInstaller_AfterInstall);
+            // 
+            // serviceInstaller
+            // 
+            this.serviceInstaller.DelayedAutoStart = true;
+            this.serviceInstaller.Description = "日機装株式会社製VIEW連携同期サービス";
+            this.serviceInstaller.DisplayName = "NKK VIEW連携同期サービス";
+            this.serviceInstaller.ServiceName = "FNSiViewSyncService";
+
+            // upd 2023-07-11 bug #8503 FNSiViewSyncServiceのCPU負荷が高い 崔 start
+            //this.serviceInstaller.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
+            this.serviceInstaller.StartType = System.ServiceProcess.ServiceStartMode.Manual;
+            // upd 2023-07-11 bug #8503 FNSiViewSyncServiceのCPU負荷が高い 崔 end
+
+            this.serviceInstaller.AfterInstall += new System.Configuration.Install.InstallEventHandler(this.serviceInstaller1_AfterInstall);
+            // 
+            // ProjectInstaller
+            // 
+            this.Installers.AddRange(new System.Configuration.Install.Installer[] {
+            this.serviceProcessInstaller,
+            this.serviceInstaller});
+        }
+
+        #endregion
+
+        private System.ServiceProcess.ServiceProcessInstaller serviceProcessInstaller;
+        private System.ServiceProcess.ServiceInstaller serviceInstaller;
+    }
+}

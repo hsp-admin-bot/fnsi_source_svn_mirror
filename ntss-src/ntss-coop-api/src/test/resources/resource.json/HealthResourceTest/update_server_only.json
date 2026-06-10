@@ -1,0 +1,7 @@
+{
+  "facility_cd":"000011",
+  "if_edge_no":"3",
+  "healthmon_server_conn":{
+    "status" : "F0"
+  }
+}

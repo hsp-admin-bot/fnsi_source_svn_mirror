@@ -1,0 +1,6 @@
+-- UPDATE
+-- 		mst_user
+-- SET
+-- 		card_idm = /* cardIdm*/null
+-- WHERE
+-- 		user_id = /* userId*/'0'

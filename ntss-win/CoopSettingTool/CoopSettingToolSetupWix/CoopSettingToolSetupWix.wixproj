@@ -1,0 +1,133 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="WixToolset.Sdk/4.0.6">
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <OutputName>CoopSettingToolSetup</OutputName>
+    <Platforms>x86</Platforms>
+    <Platform Condition="'$(Platform)' == ''">x86</Platform>
+    <Cultures>ja-JP</Cultures>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <!--
+      ★ バージョンアップ時はここだけ変更する ★
+      ProductCode は UpgradeCodeGuid + ProductVersion から自動生成される（UUID v5）
+      UpgradeCodeGuid は絶対に変えない
+    -->
+    <ProductVersion>2.0.9</ProductVersion>
+    <UpgradeCodeGuid>D7E09695-3C1D-42AD-9054-141F16BC845F</UpgradeCodeGuid>
+    <DefineConstants>
+      SrcBin=$(MSBuildProjectDirectory)\..\CoopSettingTool.App\bin\$(Configuration)\;
+      SrcSetup=$(MSBuildProjectDirectory)\..\CoopSettingToolSetup\;
+      ProductVersion=$(ProductVersion)
+    </DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext"   Version="4.0.6" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="4.0.6" />
+  </ItemGroup>
+
+  <UsingTask TaskName="GenerateUuidV5ProductCode"
+             TaskFactory="CodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <UpgradeCode    ParameterType="System.String" Required="true" />
+      <ProductVersion ParameterType="System.String" Required="true" />
+      <OutputFile     ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var nsGuid  = System.Guid.Parse(UpgradeCode);
+        var nsBytes = nsGuid.ToByteArray();
+        System.Array.Reverse(nsBytes, 0, 4);
+        System.Array.Reverse(nsBytes, 4, 2);
+        System.Array.Reverse(nsBytes, 6, 2);
+
+        var verBytes = System.Text.Encoding.UTF8.GetBytes(ProductVersion);
+        var input    = new byte[nsBytes.Length + verBytes.Length];
+        System.Array.Copy(nsBytes,  0, input, 0,              nsBytes.Length);
+        System.Array.Copy(verBytes, 0, input, nsBytes.Length,  verBytes.Length);
+
+        var sha1 = System.Security.Cryptography.SHA1.Create();
+        var hash = sha1.ComputeHash(input);
+
+        var h = new byte[16];
+        System.Array.Copy(hash, h, 16);
+        h[6] = (byte)((h[6] & 0x0F) | 0x50);
+        h[8] = (byte)((h[8] & 0x3F) | 0x80);
+
+        System.Array.Reverse(h, 0, 4);
+        System.Array.Reverse(h, 4, 2);
+        System.Array.Reverse(h, 6, 2);
+
+        var productCode = new System.Guid(h).ToString("B").ToUpper();
+        Log.LogMessage(MessageImportance.High, "ProductCode (v" + ProductVersion + "): " + productCode);
+
+        var lines = new string[] {
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>",
+            "<Include>",
+            "  <?define ProductCode = \"" + productCode + "\" ?>",
+            "</Include>"
+        };
+        System.IO.File.WriteAllLines(OutputFile, lines, System.Text.Encoding.UTF8);
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="GenerateProductCode" BeforeTargets="CoreCompile;Build">
+    <GenerateUuidV5ProductCode
+      UpgradeCode="$(UpgradeCodeGuid)"
+      ProductVersion="$(ProductVersion)"
+      OutputFile="$(MSBuildProjectDirectory)\GeneratedProductCode.wxi" />
+  </Target>
+
+  <UsingTask TaskName="HideMsiChangeButton"
+             TaskFactory="CodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <MsiPath ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var type      = System.Type.GetTypeFromProgID("WindowsInstaller.Installer");
+        var installer = System.Activator.CreateInstance(type);
+        var db = type.InvokeMember("OpenDatabase", System.Reflection.BindingFlags.InvokeMethod, null, installer,
+                     new object[] { MsiPath, 1 });
+        var dbType = db.GetType();
+        var sqls = new string[][] {
+            new string[] {
+                "INSERT INTO ControlCondition (Dialog_, Control_, Action, Condition) VALUES ('MaintenanceTypeDlg', 'ChangeButton',       'Hide', '1')",
+                "UPDATE ControlCondition SET Condition = '1' WHERE Dialog_ = 'MaintenanceTypeDlg' AND Control_ = 'ChangeButton'       AND Action = 'Hide'"
+            },
+            new string[] {
+                "INSERT INTO ControlCondition (Dialog_, Control_, Action, Condition) VALUES ('MaintenanceTypeDlg', 'ChangeDisabledText', 'Hide', '1')",
+                "UPDATE ControlCondition SET Condition = '1' WHERE Dialog_ = 'MaintenanceTypeDlg' AND Control_ = 'ChangeDisabledText' AND Action = 'Hide'"
+            }
+        };
+        foreach (var sqlPair in sqls) {
+            var view = dbType.InvokeMember("OpenView", System.Reflection.BindingFlags.InvokeMethod, null, db,
+                           new object[] { sqlPair[0] });
+            var viewType = view.GetType();
+            bool ok = false;
+            try {
+                viewType.InvokeMember("Execute", System.Reflection.BindingFlags.InvokeMethod, null, view, null);
+                ok = true;
+            } catch (System.Runtime.InteropServices.COMException) { }
+            viewType.InvokeMember("Close", System.Reflection.BindingFlags.InvokeMethod, null, view, null);
+            if (!ok) {
+                var upd = dbType.InvokeMember("OpenView", System.Reflection.BindingFlags.InvokeMethod, null, db,
+                              new object[] { sqlPair[1] });
+                var updType = upd.GetType();
+                updType.InvokeMember("Execute", System.Reflection.BindingFlags.InvokeMethod, null, upd, null);
+                updType.InvokeMember("Close",   System.Reflection.BindingFlags.InvokeMethod, null, upd, null);
+            }
+        }
+        dbType.InvokeMember("Commit", System.Reflection.BindingFlags.InvokeMethod, null, db, null);
+        Log.LogMessage(MessageImportance.High, "HideChangeButton: ControlCondition rows added to " + MsiPath);
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="HideChangeButton" AfterTargets="Build">
+    <HideMsiChangeButton MsiPath="$(MSBuildProjectDirectory)\$(OutputPath)$(OutputName).msi" />
+  </Target>
+</Project>

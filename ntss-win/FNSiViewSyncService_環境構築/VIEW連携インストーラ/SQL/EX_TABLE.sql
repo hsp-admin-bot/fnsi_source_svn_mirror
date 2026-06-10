@@ -1,0 +1,1 @@
+CREATE DIRECTORY EX_TABLE AS 'C:\FNWSiTools\FNSiViewSyncService\ExTable';

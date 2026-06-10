@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<rootNode>
+  <tableInfo>
+    <name>患者放射線検査結果</name>
+    <convertKind>PERIOD</convertKind>
+    <xmlConfigName>PAT_EXAMIN_SCHEDULE-pat_rad_main</xmlConfigName>
+    <fnwTableName>PAT_EXAMIN_SCHEDULE</fnwTableName>
+    <ntssTableName>pat_rad_main</ntssTableName>
+    <fnwPk>PATID</fnwPk>
+    <mstSelectorCode></mstSelectorCode>
+    <mstSelectorName></mstSelectorName>
+    <sqlForTool>
+		WITH CONVERT_HISTORY AS(
+		select * from sync_convert_history a
+		inner join sync_convert_history_dtl b
+		on (a.seq_no=b.seq_no) where table_kind = 'EXM'
+		)
+		{NoWITHIndTimePeriod}
+		select
+		a.PATID,
+		a.PATID as FN_PAT_ID,
+		TO_CHAR(TO_DATE(a.EXAM_DATE,'yyyy-mm-dd hh24:mi:ss'),'yyyy-mm-dd hh24:mi:ss') as EXAM_DATE,
+		a.EXAM_SET_CD,
+		case　a.EXAM_DIVISION
+		when '0' then '1'
+		when '1' then '2'
+		when '2' then '0' end as EXAM_DIVISION,
+		trim(a.DOCTOR_CODE) as DOCTOR_CODE,
+		trim(a.ORDER_STAFF) as ORDER_STAFF,
+		trim(a.UPDATE_CODE) as UPDATE_CODE,
+		0 as RAD_STATUS,
+		'' as ORDER_RAD_SET_INFO,
+		a.UP_DATE,
+		CASE EXAM_PROC_CD WHEN '1'
+		THEN '0'ELSE '1'END	EXAM_PROC_CD
+		from PAT_EXAMIN_SCHEDULE a
+		{IndTimePeriodWhere}
+		where not exists(
+		select * from PAT_EXAMIN_SCHEDULE b
+		where a.PATID=b.PATID
+		and a.EXAM_DATE=b.EXAM_DATE
+		and a.EXAM_SET_CD=b.EXAM_SET_CD
+		and a.EXAM_DIVISION=b.EXAM_DIVISION
+		and a.UP_DATE&lt;b.UP_DATE)
+      and substr(a.EXAM_SET_CD,1,1)='X'
+      and exists(select * from PAT_INDEX_INFO c where a.PATID=c.PATID and PAT_STATUS='0')
+      {sqlForSpecifyPeriod}
+      {sqlForExclusiveOutputted}
+      {sqlForSync}
+      order by a.PATID,EXAM_DATE,EXAM_SET_CD,EXAM_DIVISION
+    </sqlForTool>
+    <sqlForSync>
+      and {0}
+    </sqlForSync>
+    <sqlForSpecifyPeriod>
+      and a.EXAM_DATE >= :START_DATE and a.EXAM_DATE &lt;:END_DATE
+	</sqlForSpecifyPeriod>
+    <sqlForExclusiveOutputted>
+		and not exists(
+		select * from CONVERT_HISTORY ch
+		where ch.facility_cd=:facility_cd
+		{sqlForSync}
+		and a.patid=ch.CONVERTTS
+		and ch.table_kind = 'EXM'
+		and a.EXAM_DATE >= ch.start_date
+		and a.EXAM_DATE &lt; ch.end_date + 1)
+    </sqlForExclusiveOutputted>
+	<sqlForSyncTableAlias>a</sqlForSyncTableAlias>
+  </tableInfo>
+</rootNode>
