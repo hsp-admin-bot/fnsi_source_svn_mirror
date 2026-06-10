@@ -1,0 +1,20 @@
+update V_IND_DIALYSIS_MEDI
+set PATID ='@patid',
+		DIALYSIS_DATE ='@dialysisDate',
+		PLURAL='@plural',
+		CTL_NO='@ctlNo',
+		UP_DATE=to_date('@upDate','yyyy-mm-dd hh24:mi:ss'),
+		MEDICINE_CD='@medicineCd',
+		MEDICINE_CD2='@medicineCd2',
+		MEDICINE_NAME='@medicineName',
+		MEDI_CLASS_NAME='@mediClassName',
+		AMOUNT='@amount',
+		UNIT='@uint',
+		TIMING_NAME='@timingName',
+		PROCEDURE_CD='@procedureCd',
+		PROCEDURE_CD2='@procedureCd2',
+		PROCEDURE_NAME='@peocedureName',
+		COMMENTS='@comments',
+		INDICATOR_CD='@indicatorCd',
+		OPE_IND_PLAN='@opeIndPlan'
+ where PATID = @patid;

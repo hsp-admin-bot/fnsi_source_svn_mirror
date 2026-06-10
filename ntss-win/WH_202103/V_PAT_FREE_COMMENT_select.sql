@@ -1,0 +1,1 @@
+select * from V_PAT_FREE_COMMENT where PATID = @patid;

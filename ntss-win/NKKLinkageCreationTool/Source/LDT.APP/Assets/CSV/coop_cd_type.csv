@@ -1,0 +1,17 @@
+﻿浄化申し込み・初回指示,ini_dial
+死亡退院,is_death
+患者プロファイル,profile
+透析予約,ind_dial
+オーダ受け,ord_dial
+受付情報,accept
+透析実績,rst_dial
+透析レポート,rep_dial
+検査結果,exam_rst
+検査オーダ,exam_ord
+放射線検査オーダ,rad_ord
+心電図検査オーダ,phy_ord
+透析注射連携,shot_ord
+処方情報連携,pre_ord
+スタッフマスタ連携,staff_mst
+バイタル連携,vit_cop
+カルテ記載連携,karte_ord

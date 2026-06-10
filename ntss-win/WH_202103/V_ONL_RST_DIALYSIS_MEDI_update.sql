@@ -1,0 +1,22 @@
+update V_ONL_RST_DIALYSIS_MEDI
+set PATID ='@patid',
+		DIALYSIS_DATE ='@dialysisDate',
+		DIALYSIS_NO='@dialysisNo',
+		CTL_NO ='@ctlNo',
+		UP_DATE =to_date('@upDate','yyyy-mm-dd hh24:mi:ss'),
+		MEDICINE_CD='@medicineCd',
+		MEDICINE_CD2='@medicineCd2',
+		MEDICINE_NAME='@medicineName',
+		MEDICINE_CLASS_NAME='@medicineClassName',
+		AMOUNT='@amount',
+		UNIT='@Unit',
+		EFFECT_FLG='@effectFlg',
+		EFFECT_DATE=to_date('@effectDate','yyyy-mm-dd hh24:mi:ss'),
+		TIMING_NAME='@timingName',
+		PROCEDURE_CD='@procedureCd',
+		PROCEDURE_CD2='@procedureCd2',
+		PROCEDURE_NAME='@procedureName',
+		STAFF_CD='@staffCd',
+		STAFF_NAME='@staffName',
+		COMMENTS='@comments'
+ where PATID = @patid;

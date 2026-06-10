@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Statistics WiX v4 インストーラー
+  製品名   : Statistics
+  バージョン: 2.0.0
+  メーカー : Nikkiso
+  インストール先: C:\FNWSiTools\Statistics
+
+  画面フロー:
+    ようこそ → インストール先選択 → 確認 → 進捗 → [設定ダイアログ(CA)] → 完了
+
+  機能:
+    - 日本語 UI
+    - サイレントインストール(/quiet): 設定ダイアログをスキップ
+    - バージョンダウングレード検知・ブロック
+    - 実行中の StatisticsTool_2025 プロセスを自動終了（アップグレード/アンインストール時）
+-->
+<?include GeneratedProductCode.wxi?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package
+    Name="Statistics"
+    Manufacturer="Nikkiso"
+    Version="$(var.ProductVersion)"
+    ProductCode="$(var.ProductCode)"
+    UpgradeCode="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9E3F1}"
+    Language="1041"
+    Codepage="932"
+    InstallerVersion="500"
+    Compressed="yes"
+    Scope="perMachine">
+
+    <SummaryInformation Description="Statistics インストーラー" Keywords="インストーラー" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- ============================== アイコン ============================== -->
+    <Icon Id="StatisticsIcon" SourceFile="$(var.SrcApp)Statistics.ico" />
+
+    <Property Id="ARPPRODUCTICON" Value="StatisticsIcon" />
+    <Property Id="ARPCONTACT"     Value="Nikkiso" />
+    <Property Id="ARPCOMMENTS"    Value="Statistics" />
+    <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
+
+    <!-- インストール後の「再起動してください」ダイアログを非表示にする -->
+    <Property Id="REBOOT" Value="ReallySuppress" />
+
+    <!-- Restart Manager を無効化（FilesInUse ダイアログ抑制） -->
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <Property Id="RUNNING_PROCESSES" Secure="yes" />
+
+    <!-- インストール先を常に C: ドライブに固定 -->
+    <Property Id="ROOTDRIVE" Value="C:\" />
+
+    <!-- ============================== バージョン管理 ============================== -->
+    <Upgrade Id="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9E3F1}">
+      <UpgradeVersion
+        Minimum="0.0.0"
+        Maximum="$(var.ProductVersion)"
+        IncludeMinimum="yes"
+        IncludeMaximum="no"
+        Property="OLDERVERSIONBEINGUPGRADED"
+        MigrateFeatures="yes" />
+      <UpgradeVersion
+        Minimum="$(var.ProductVersion)"
+        IncludeMinimum="no"
+        Property="NEWERVERSIONALREADYINSTALLED" />
+    </Upgrade>
+
+    <Launch Condition="NOT NEWERVERSIONALREADYINSTALLED"
+            Message="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
+
+    <!-- ============================== ディレクトリ構成 ============================== -->
+    <StandardDirectory Id="TARGETDIR">
+      <Directory Id="FNWSITOOLS" Name="FNWSiTools">
+        <Directory Id="INSTALLFOLDER" Name="Statistics">
+          <Directory Id="DIR_STATISTICSTOOL" Name="StatisticsTool">
+            <Directory Id="DIR_TOOLCONFIG" Name="config" />
+          </Directory>
+          <Directory Id="DIR_SETTING" Name="StatisticsSetting" />
+          <Directory Id="DIR_EXPORT"  Name="StatisticsExport" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+    <StandardDirectory Id="WindowsFolder" />
+
+    <!-- ============================== コンポーネント ============================== -->
+
+    <!-- (1) メインアプリケーション EXE -->
+    <Component Id="C_MainExe"
+               Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B001}"
+               Directory="DIR_STATISTICSTOOL">
+      <File Id="F_MainExe"
+            Source="$(var.SrcBin)StatisticsTool_2025.exe"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (2) StatisticsTool_2025.exe.config -->
+    <Component Id="C_ExeConfig"
+               Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B002}"
+               Directory="DIR_STATISTICSTOOL">
+      <File Id="F_ExeConfig"
+            Source="$(var.SrcBin)StatisticsTool_2025.exe.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (3) InstallerCustomAction.dll（InstallUtil のターゲット） -->
+    <Component Id="C_InstallerDll"
+               Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B003}"
+               Directory="DIR_STATISTICSTOOL">
+      <File Id="F_InstallerDll"
+            Source="$(var.SrcInstaller)InstallerCustomAction.dll"
+            KeyPath="yes" />
+      <RemoveFile Id="RF_InstallState"
+                  Name="InstallerCustomAction.InstallState"
+                  On="uninstall" />
+    </Component>
+
+    <!-- (4) Statistics.ico -->
+    <Component Id="C_AppIcon"
+               Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B004}"
+               Directory="DIR_STATISTICSTOOL">
+      <File Id="F_AppIcon"
+            Source="$(var.SrcApp)Statistics.ico"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (5) プロジェクト参照 DLL 群 -->
+    <ComponentGroup Id="CG_ProjectDlls" Directory="DIR_STATISTICSTOOL">
+      <Component Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B011}"><File Source="$(var.SrcBin)ConfigHelper.dll" /></Component>
+      <Component Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B012}"><File Source="$(var.SrcBin)NKKCommon.dll" /></Component>
+      <Component Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B013}"><File Source="$(var.SrcBin)Ionic.Zip.dll" /></Component>
+    </ComponentGroup>
+
+    <!-- (6) NuGet DLL 群 -->
+    <ComponentGroup Id="CG_NuGetDlls" Directory="DIR_STATISTICSTOOL">
+      <Component Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B021}"><File Source="$(var.SrcBin)Newtonsoft.Json.dll" /></Component>
+      <Component Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B022}"><File Source="$(var.SrcBin)System.ValueTuple.dll" /></Component>
+    </ComponentGroup>
+
+    <!-- (7) config サブディレクトリ -->
+    <Component Id="C_CopySettingFile"
+               Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B031}"
+               Directory="DIR_TOOLCONFIG">
+      <File Id="F_CopySettingFile"
+            Source="$(var.SrcModel)StatisticsTool\config\CopySettingFile.bat"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (8) StatisticsSetting ディレクトリ（dummy ファイルで保持） -->
+    <Component Id="C_SettingDummy"
+               Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B041}"
+               Directory="DIR_SETTING"
+               Permanent="yes"
+               NeverOverwrite="yes">
+      <File Id="F_SettingDummy"
+            Source="$(var.SrcModel)StatisticsSetting\dummy"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (9) StatisticsExport ディレクトリ（dummy ファイルで保持） -->
+    <Component Id="C_ExportDummy"
+               Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B042}"
+               Directory="DIR_EXPORT"
+               Permanent="yes"
+               NeverOverwrite="yes">
+      <File Id="F_ExportDummy"
+            Source="$(var.SrcModel)StatisticsExport\dummy"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (10) デスクトップショートカット -->
+    <Component Id="C_DesktopShortcut"
+               Guid="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9B051}"
+               Directory="DIR_STATISTICSTOOL">
+      <Shortcut Id="SC_Statistics"
+                Directory="DesktopFolder"
+                Name="Statistics"
+                Target="[DIR_STATISTICSTOOL]StatisticsTool_2025.exe"
+                WorkingDirectory="DIR_STATISTICSTOOL"
+                Icon="StatisticsIcon" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\Nikkiso\Statistics"
+                     Name="ShortcutsInstalled"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+      <RemoveRegistryKey Root="HKCU"
+                         Key="Software\Nikkiso\Statistics"
+                         Action="removeOnUninstall" />
+    </Component>
+
+    <!-- ============================== フィーチャー ============================== -->
+    <Feature Id="ProductFeature"
+             Title="Statistics"
+             Level="1"
+             ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentRef Id="C_MainExe" />
+      <ComponentRef Id="C_ExeConfig" />
+      <ComponentRef Id="C_InstallerDll" />
+      <ComponentRef Id="C_AppIcon" />
+      <ComponentGroupRef Id="CG_ProjectDlls" />
+      <ComponentGroupRef Id="CG_NuGetDlls" />
+      <ComponentRef Id="C_CopySettingFile" />
+      <ComponentRef Id="C_SettingDummy" />
+      <ComponentRef Id="C_ExportDummy" />
+      <ComponentRef Id="C_DesktopShortcut" />
+    </Feature>
+
+    <!-- ============================== カスタムアクション ============================== -->
+
+    <!-- 実行中の StatisticsTool_2025 プロセスを強制終了（ファイルロック解放） -->
+    <CustomAction Id="KillRunningInstances"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c taskkill /F /IM StatisticsTool_2025.exe &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- InstallUtil 実行引数をプロパティに設定（通常インストール時） -->
+    <CustomAction Id="SetInstallServiceProperty"
+                  Property="InstallServiceWithInstaller"
+                  Value="&quot;[DIR_STATISTICSTOOL]InstallerCustomAction.dll&quot;" />
+
+    <!-- サイレントインストール時: /silent=1 を追加 -->
+    <CustomAction Id="SetInstallServicePropertySilent"
+                  Property="InstallServiceWithInstaller"
+                  Value="/silent=1 &quot;[DIR_STATISTICSTOOL]InstallerCustomAction.dll&quot;" />
+
+    <!-- InstallUtil.exe で InstallerCustomAction を実行 -->
+    <CustomAction Id="InstallServiceWithInstaller"
+                  Directory="WindowsFolder"
+                  ExeCommand="Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /LogToConsole=false /LogFile= [InstallServiceWithInstaller]"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check" />
+    <CustomAction Id="CA_DetectRunningProcesses"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_DetectRunningProcesses.vbs" />
+    <CustomAction Id="CA_KillGUIApps"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_KillGUIApps.vbs" />
+
+    <!-- ============================== シーケンス ============================== -->
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallInitialize" />
+
+      <!-- 実行中プロセスを終了してからファイル操作（アップグレード/修復/アンインストール共通） -->
+      <Custom Action="KillRunningInstances" Before="RemoveFiles" Condition="1" />
+
+      <!-- 新規インストール / 修復時: InstallFiles 後に InstallerCustomAction 実行 -->
+      <Custom Action="SetInstallServiceProperty" Before="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &gt;= 5" />
+      <Custom Action="SetInstallServicePropertySilent" Before="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &lt; 5" />
+      <Custom Action="InstallServiceWithInstaller" After="InstallFiles"
+              Condition="NOT REMOVE" />
+    </InstallExecuteSequence>
+
+    <!-- ============================== UI ============================== -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <UI>
+      <Dialog Id="RunningProcessesDlg" Width="370" Height="270" Title="Statistics インストーラー">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}実行中アプリケーションの検出" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="15" Text="インストール前にアプリケーションを終了してください。" />
+        <Control Id="RunningAppsLabel" Type="Text" X="20" Y="58" Width="330" Height="30" Text="以下のアプリケーションが実行中のため、インストールを継続できません。" />
+        <Control Id="RunningAppsList" Type="Text" X="30" Y="92" Width="310" Height="90" Text="[RUNNING_PROCESSES]" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton" X="155" Y="243" Width="56" Height="17" Text="&lt; 戻る">
+          <Publish Event="NewDialog" Value="WelcomeDlg" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="MaintenanceTypeDlg" Condition="Installed" />
+        </Control>
+        <Control Id="CloseAndContinue" Type="PushButton" X="215" Y="243" Width="84" Height="17" Default="yes" Text="終了して続行">
+          <Publish Event="DoAction" Value="CA_KillGUIApps" Order="1" Condition="1" />
+          <Publish Event="NewDialog" Value="InstallDirDlg" Order="2" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="2" Condition="Installed" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="307" Y="243" Width="56" Height="17" Cancel="yes" Text="キャンセル">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="DoAction" Value="CA_DetectRunningProcesses" Order="1" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="RunningProcessesDlg" Order="2" Condition="NOT Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="3" Condition="NOT Installed AND NOT RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="DoAction" Value="CA_DetectRunningProcesses" Order="1" Condition="Installed" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="RunningProcessesDlg" Order="2" Condition="Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" Order="3" Condition="Installed AND NOT RUNNING_PROCESSES" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2" Condition="1" />
+    </UI>
+
+  </Package>
+
+</Wix>

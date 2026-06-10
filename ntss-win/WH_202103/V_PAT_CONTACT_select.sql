@@ -1,0 +1,1 @@
+SELECT * FROM V_PAT_CONTACT where PATID = @patid;

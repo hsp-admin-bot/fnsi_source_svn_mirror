@@ -1,0 +1,2 @@
+InstallUtil.exe NKKScaleBedService.exe
+pause

@@ -1,0 +1,19 @@
+{
+  "API": {
+    "BASE_DOMAIN": "http://localhost:8080",
+    "BASE_URL": "ntss-admin-web/api",
+    "FACILITY_CD": "$2a$10$EXWsftyCEL7pYzTVAilGLOJKZ/r4l/a1JpHsMRbxPWKByjN.9sHNq",
+    "LOGIN_URL": "login",
+    "GET_ALL_MST_COOP_LAYOUT": "linkage_definition/coopLayout",
+    "CREATE_OR_UPDATE_MST_COOP_LAYOUT": "linkage_definition/submitItem",
+    "CREATE_OR_UPDATE_MST_COOP_LAYOUT_DETAIL": "linkage_definition/submitOcc",
+    "GET_ALL_DATA_SET": "linkage_definition/sysDataSet",
+    "GET_BY_MST_COOP_DISTRIBUTE": "linkage_definition/coopDistribute",
+    "GET_BY_MST_COOP_FACILITY": "linkage_definition/coopFacility",
+    "GET_ALL_FACILITY": "mstInfo/mstFacility",
+    "GET_BY_MST_COOP_LAYOUT_DETAIL": "linkage_definition/mstCoopLayoutDetail/get_by"
+  },
+  "CONSTANT": {
+    "COOP_SUB_CD_QUERIES": "pre"
+  }
+}

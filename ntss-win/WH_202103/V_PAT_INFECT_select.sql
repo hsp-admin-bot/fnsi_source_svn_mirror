@@ -1,0 +1,1 @@
+select * from V_PAT_INFECT where PATID = @patid;

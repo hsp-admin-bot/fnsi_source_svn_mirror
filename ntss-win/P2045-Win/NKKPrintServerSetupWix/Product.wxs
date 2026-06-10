@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FNWSi Print Server WiX v4 インストーラー
+  製品名（アプリ一覧表示）: FNWSi 印刷サーバーアプリ
+  バージョン: 2.0.2
+  メーカー : NIKKISO
+  インストール先: C:\FNWSiTools\FNWSiPrintServer
+
+  画面フロー:
+    ようこそ → インストール先選択 → 確認 → 進捗 → [設定ダイアログ(CA)] → 完了
+
+  機能:
+    - 日本語 UI
+    - サイレントインストール(/quiet): 既存 config を使用、なければデフォルト値
+    - バージョンダウングレード警告（サイレント時は中止）
+    - Windows サービス自動登録・起動・停止・削除
+    - アンインストール時に NKKPrint.config を保持
+-->
+<?include GeneratedProductCode.wxi?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package
+    Name="FNWSi 印刷サーバーアプリ"
+    Manufacturer="NIKKISO"
+    Version="$(var.ProductVersion)"
+    ProductCode="$(var.ProductCode)"
+    UpgradeCode="{E8DC0634-0441-4443-8255-B192FF1ECFE7}"
+    Language="1041"
+    Codepage="932"
+    InstallerVersion="500"
+    Compressed="yes"
+    Scope="perMachine">
+
+    <SummaryInformation Description="FNWSi 印刷サーバーアプリ インストーラー" Keywords="インストーラー" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- ============================== アイコン ============================== -->
+    <Icon Id="NKKPrintServerIcon" SourceFile="$(var.SrcSetup)NKKPrintServer.ico" />
+
+    <Property Id="ARPPRODUCTICON" Value="NKKPrintServerIcon" />
+    <Property Id="ARPCONTACT"     Value="NIKKISO" />
+    <Property Id="ARPCOMMENTS"    Value="FNWSi 印刷サーバーアプリ" />
+    <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
+
+    <!-- インストール後の「再起動してください」ダイアログを非表示にする -->
+    <Property Id="REBOOT" Value="ReallySuppress" />
+
+    <!-- Restart Manager を無効化（sc stop で事前停止するため RM 不要、FilesInUse ダイアログ抑制） -->
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <Property Id="RUNNING_PROCESSES" Secure="yes" />
+
+    <!-- インストール先を常に C: ドライブに固定 -->
+    <Property Id="ROOTDRIVE" Value="C:\" />
+
+    <!-- ============================== .NET Framework 4.5 チェック ============================== -->
+    <Property Id="NETFRAMEWORK45" Secure="yes">
+      <RegistrySearch Id="NetFx45Search"
+                      Root="HKLM"
+                      Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"
+                      Name="Release"
+                      Type="raw" />
+    </Property>
+    <Launch Condition="NETFRAMEWORK45"
+            Message="!(loc.LaunchConditionNetFx45)" />
+
+    <!-- ============================== バージョン管理 ============================== -->
+    <Upgrade Id="{E8DC0634-0441-4443-8255-B192FF1ECFE7}">
+      <!-- 旧バージョンをアップグレード対象として検出（現バージョン未満） -->
+      <UpgradeVersion
+        Minimum="0.0.0"
+        Maximum="$(var.ProductVersion)"
+        IncludeMinimum="yes"
+        IncludeMaximum="no"
+        Property="OLDERVERSIONBEINGUPGRADED"
+        MigrateFeatures="yes" />
+      <!-- 新バージョンが既インストールの場合（ダウングレード検出） -->
+      <UpgradeVersion
+        Minimum="$(var.ProductVersion)"
+        IncludeMinimum="no"
+        Property="NEWERVERSIONALREADYINSTALLED" />
+    </Upgrade>
+
+    <!-- ダウングレード禁止: 新バージョンが既にインストール済みの場合はエラー終了 -->
+    <Launch Condition="NOT NEWERVERSIONALREADYINSTALLED"
+            Message="!(loc.LaunchConditionDowngradeBlocked)" />
+
+    <!-- ============================== ディレクトリ構成 ============================== -->
+    <!--
+      デフォルト: C:\FNWSiTools\FNWSiPrintServer
+      TARGETDIR(C:\) > FNWSITOOLS(FNWSiTools) > INSTALLFOLDER(FNWSiPrintServer)
+    -->
+    <StandardDirectory Id="TARGETDIR">
+      <Directory Id="FNWSITOOLS" Name="FNWSiTools">
+        <Directory Id="INSTALLFOLDER" Name="FNWSiPrintServer">
+          <Directory Id="DIR_NL"  Name="nl" />
+          <Directory Id="DIR_X64" Name="x64" />
+          <Directory Id="DIR_X86" Name="x86" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="WindowsFolder" />
+    <!-- 開始メニュー（NKKAccessCard と同様：ショートカット表示名がタスクバー右クリック名に使われる） -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="PrintServerApplicationProgramsFolder" Name="FNWSiTools">
+        <Directory Id="PrintServerProgramsFolder" Name="FNWSiPrintServer" />
+      </Directory>
+    </StandardDirectory>
+
+    <!-- ============================== コンポーネント ============================== -->
+
+    <!-- (1) Windows サービス本体 -->
+    <Component Id="C_NKKPrintServer"
+               Guid="{A1F3C2D4-8B95-4E17-82F3-6A9012345601}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKPrintServerExe"
+            Source="$(var.SrcService)FNWSiPrintServer.exe"
+            KeyPath="yes" />
+      <RemoveFile Id="RF_InstallState"
+                  Name="FNWSiPrintServer.InstallState"
+                  On="uninstall" />
+    </Component>
+
+    <!-- (2) FNWSiPrintServer.exe.config -->
+    <Component Id="C_NKKPrintServerExeConfig"
+               Guid="{A2F3C2D4-8B95-4E17-82F3-6A9012345602}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKPrintServerExeConfig"
+            Source="$(var.SrcService)FNWSiPrintServer.exe.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (3) 管理ツール (FNWSiPrintServerTool.exe) -->
+    <Component Id="C_NKKPrintServerTool"
+               Guid="{A3F3C2D4-8B95-4E17-82F3-6A9012345603}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKPrintServerToolExe"
+            Source="$(var.SrcTool)FNWSiPrintServerTool.exe"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (3b) FNWSiPrintServerTool.exe.config -->
+    <Component Id="C_NKKPrintServerToolConfig"
+               Guid="{A3F3C2D4-8B95-4E17-82F3-6A9012345607}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKPrintServerToolExeConfig"
+            Source="$(var.SrcTool)FNWSiPrintServerTool.exe.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- 保守ツール：開始メニュー ショートカット（AccessCard の S_AccessCardTool と同様、タスクバー表示名用） -->
+    <Component Id="C_PrintServerToolStartMenuShortcut"
+               Guid="{E2D4C6A8-0B1C-4D3E-9F5A-7B8C9D0E1F2A}"
+               Directory="PrintServerProgramsFolder">
+      <Shortcut Id="S_PrintServerTool"
+                Name="印刷サーバー保守ツール"
+                Target="[INSTALLFOLDER]FNWSiPrintServerTool.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="NKKPrintServerIcon"
+                IconIndex="0" />
+      <RemoveFolder Id="RF_PrintServerProgramsFolder" Directory="PrintServerProgramsFolder" On="uninstall" />
+      <RemoveFolder Id="RF_PrintServerApplicationProgramsFolder" Directory="PrintServerApplicationProgramsFolder" On="uninstall" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\NIKKISO\FNWSiPrintServerTool"
+                     Name="StartMenuShortcut"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+
+    <!-- (4) 設定ファイル NKKPrint.config（ユーザー設定を保持） -->
+    <Component Id="C_NKKPrintConfig"
+               Guid="{A4F3C2D4-8B95-4E17-82F3-6A9012345604}"
+               Directory="INSTALLFOLDER"
+               Permanent="yes"
+               NeverOverwrite="yes">
+      <File Id="F_NKKPrintConfig"
+            Source="$(var.SrcService)NKKPrint.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (6) 共有 DLL 群・依存ファイル（NKKPrintServer\bin\Release\ より） -->
+    <ComponentGroup Id="CG_SharedDlls" Directory="INSTALLFOLDER">
+      <Component Guid="{B1F3C2D4-8B95-4E17-82F3-6A9012345611}"><File Source="$(var.SrcService)NKKCommon.dll" /></Component>
+      <Component Guid="{B2F3C2D4-8B95-4E17-82F3-6A9012345612}"><File Source="$(var.SrcService)NKKWeight.dll" /></Component>
+      <Component Guid="{B3F3C2D4-8B95-4E17-82F3-6A9012345613}"><File Source="$(var.SrcService)NKKWeightScaleDB.dll" /></Component>
+      <Component Guid="{B4F3C2D4-8B95-4E17-82F3-6A9012345614}"><File Source="$(var.SrcService)JsonDataSerializeHelp.dll" /></Component>
+      <Component Guid="{B5F3C2D4-8B95-4E17-82F3-6A9012345615}"><File Source="$(var.SrcService)PdfiumViewer.dll" /></Component>
+      <Component Guid="{B6F3C2D4-8B95-4E17-82F3-6A9012345616}"><File Source="$(var.SrcService)Newtonsoft.Json.dll" /></Component>
+      <Component Guid="{B7F3C2D4-8B95-4E17-82F3-6A9012345617}"><File Source="$(var.SrcService)CsvHelper.dll" /></Component>
+      <Component Guid="{B8F3C2D4-8B95-4E17-82F3-6A9012345618}"><File Source="$(var.SrcService)Ionic.Zip.dll" /></Component>
+      <Component Guid="{B9F3C2D4-8B95-4E17-82F3-6A9012345619}"><File Source="$(var.SrcService)WebSocket4Net.dll" /></Component>
+      <Component Guid="{BAF3C2D4-8B95-4E17-82F3-6A901234561A}"><File Source="$(var.SrcService)SuperSocket.ClientEngine.dll" /></Component>
+      <Component Guid="{BEF3C2D4-8B95-4E17-82F3-6A901234561E}"><File Source="$(var.SrcService)System.ValueTuple.dll" /></Component>
+      <Component Guid="{BFF3C2D4-8B95-4E17-82F3-6A901234561F}"><File Source="$(var.SrcService)VBBarCode4.BarCode.4.dll" /></Component>
+    </ComponentGroup>
+
+    <!-- (6b) nl サブフォルダ（PdfiumViewer ローカライズリソース） -->
+    <ComponentGroup Id="CG_NlFiles" Directory="DIR_NL">
+      <Component Guid="{C1F3C2D4-8B95-4E17-82F3-6A9012345621}">
+        <File Source="$(var.SrcService)nl\PdfiumViewer.resources.dll" />
+      </Component>
+    </ComponentGroup>
+
+
+    <!-- ============================== フィーチャー ============================== -->
+    <Feature Id="ProductFeature"
+             Title="FNWSi 印刷サーバーアプリ"
+             Level="1"
+             ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentRef Id="C_NKKPrintServer" />
+      <ComponentRef Id="C_NKKPrintServerExeConfig" />
+      <ComponentRef Id="C_NKKPrintServerTool" />
+      <ComponentRef Id="C_NKKPrintServerToolConfig" />
+      <ComponentRef Id="C_PrintServerToolStartMenuShortcut" />
+      <ComponentRef Id="C_NKKPrintConfig" />
+      <ComponentGroupRef Id="CG_SharedDlls" />
+      <ComponentGroupRef Id="CG_NlFiles" />
+    </Feature>
+
+    <!-- ============================== カスタムアクション ============================== -->
+
+    <!-- インストール先を deferred CA に渡すためのデータセット -->
+    <CustomAction Id="SetInstallServiceProperty"
+                  Property="InstallServiceWithInstaller"
+                  Value="&quot;[INSTALLFOLDER]FNWSiPrintServer.exe&quot;" />
+
+    <!-- サイレントインストール時: /silent=1 をアセンブリパスの前に配置 -->
+    <CustomAction Id="SetInstallServicePropertySilent"
+                  Property="InstallServiceWithInstaller"
+                  Value="/silent=1 &quot;[INSTALLFOLDER]FNWSiPrintServer.exe&quot;" />
+
+    <!-- sc stop + sc delete でサービス停止・削除、taskkill /f でプロセス強制終了してファイルロック解放 -->
+    <CustomAction Id="UninstallServiceWithInstaller"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c sc stop NKKPrintServer &gt; nul 2&gt;&amp;1 &amp; sc delete NKKPrintServer &gt; nul 2&gt;&amp;1 &amp; taskkill /f /im FNWSiPrintServer.exe &gt; nul 2&gt;&amp;1 &amp; taskkill /f /im FNWSiPrintServerTool.exe &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- InstallUtil.exe でサービスをインストール（ProjectInstaller.Commit で設定画面も表示） -->
+    <CustomAction Id="InstallServiceWithInstaller"
+                  Directory="WindowsFolder"
+                  ExeCommand="Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /LogToConsole=false /LogFile= [InstallServiceWithInstaller]"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check" />
+
+    <!-- 交互安装用：起動中プロセス/サービス検出 -->
+    <CustomAction Id="CA_DetectRunningProcesses"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_DetectRunningProcesses.vbs" />
+
+    <!-- 交互安装用：「終了して続行」押下時にGUI終了 + サービス停止 -->
+    <CustomAction Id="CA_KillGUIApps"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_KillGUIApps.vbs" />
+
+    <!-- 静默インストール時のサービス起動兜底 -->
+    <CustomAction Id="StartServiceAfterInstallSilent"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c sc start NKKPrintServer &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- ============================== シーケンス ============================== -->
+
+    <InstallExecuteSequence>
+      <!-- InstallValidate を抑制: サービス稼働中の FilesInUse タイムアウトを回避 -->
+      <InstallValidate Condition="0" />
+
+      <!-- 旧バージョンを早期削除（InstallInitialize 直後） -->
+      <RemoveExistingProducts After="InstallInitialize" />
+
+      <!-- sc stop + sc delete でサービス停止・削除（RemoveFiles 前） -->
+      <Custom Action="UninstallServiceWithInstaller" Before="RemoveFiles"
+              Condition="1" />
+
+      <!--
+        新規インストール / 修復時: InstallFiles 後にサービス登録・起動
+      -->
+      <!-- 交互安装分支（UILevel>=5） -->
+      <Custom Action="SetInstallServiceProperty" Before="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &gt;= 5" />
+
+      <!-- 静默安装分支（UILevel<5） -->
+      <Custom Action="SetInstallServicePropertySilent" Before="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &lt; 5" />
+      <Custom Action="InstallServiceWithInstaller" After="InstallFiles"
+              Condition="NOT REMOVE" />
+      <Custom Action="StartServiceAfterInstallSilent" After="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &lt; 5" />
+    </InstallExecuteSequence>
+
+    <!-- ============================== UI ============================== -->
+    <!--
+      WixUI_InstallDir（日本語）:
+        [ようこそ] → [インストール先選択] → [確認] → [進捗] → [完了]
+      ライセンス同意ダイアログはなし
+    -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <!--
+      ライセンス同意ダイアログをスキップ:
+        WelcomeDlg の Next ボタンを LicenseAgreementDlg → InstallDirDlg に変更
+        InstallDirDlg の Back ボタンを LicenseAgreementDlg → WelcomeDlg に変更
+    -->
+    <UI>
+      <Dialog Id="RunningProcessesDlg" Width="370" Height="270" Title="!(loc.RunningProcessesDlg_Title)">
+        <Control Id="BannerBitmap" Type="Bitmap"
+                 X="0" Y="0" Width="370" Height="44"
+                 TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line"
+                 X="0" Y="44" Width="370" Height="0" />
+        <!-- バナー右側の CD アイコン領域（約 50px）と重ならないよう幅を標準 WixUI に合わせる -->
+        <Control Id="Title" Type="Text"
+                 X="15" Y="6" Width="210" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}実行中アプリケーションの検出" />
+        <Control Id="Description" Type="Text"
+                 X="25" Y="23" Width="280" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="インストール前にアプリケーションを終了してください。" />
+        <Control Id="RunningAppsLabel" Type="Text"
+                 X="20" Y="58" Width="330" Height="30"
+                 Text="以下のアプリケーション/サービスが実行中のため、インストールを継続できません。" />
+        <Control Id="RunningAppsList" Type="Text"
+                 X="30" Y="92" Width="310" Height="50"
+                 Text="[RUNNING_PROCESSES]" />
+        <Control Id="NoteLabel" Type="Text"
+                 X="20" Y="152" Width="330" Height="60"
+                 Text="「終了して続行」をクリックすると、上記アプリケーションを自動的に終了してインストールを継続します。" />
+        <Control Id="BottomLine" Type="Line"
+                 X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton"
+                 X="155" Y="243" Width="56" Height="17"
+                 Text="&lt; 戻る">
+          <Publish Event="NewDialog" Value="WelcomeDlg" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="MaintenanceTypeDlg" Condition="Installed" />
+        </Control>
+        <Control Id="CloseAndContinue" Type="PushButton"
+                 X="215" Y="243" Width="84" Height="17"
+                 Default="yes" Text="終了して続行">
+          <Publish Event="DoAction" Value="CA_KillGUIApps" Order="1" Condition="1" />
+          <Publish Event="NewDialog" Value="InstallDirDlg" Order="2" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="2" Condition="Installed" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton"
+                 X="307" Y="243" Width="56" Height="17"
+                 Cancel="yes" Text="キャンセル">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="DoAction" Value="CA_DetectRunningProcesses"
+               Order="1" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="NewDialog" Value="RunningProcessesDlg"
+               Order="2" Condition="NOT Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="3" Condition="NOT Installed" />
+
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="DoAction" Value="CA_DetectRunningProcesses"
+               Order="1" Condition="Installed" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="NewDialog" Value="RunningProcessesDlg"
+               Order="2" Condition="Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="NewDialog" Value="VerifyReadyDlg"
+               Order="3" Condition="Installed AND NOT RUNNING_PROCESSES" />
+
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2" Condition="1" />
+    </UI>
+
+  </Package>
+
+</Wix>

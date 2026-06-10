@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  NKKScaleBed WiX v4 インストーラー
+  製品名   : NKKスケールベッドアプリ
+  バージョン: 2.0.2
+  メーカー : Nikkiso
+  インストール先: C:\FNWSiTools\NKKScaleBed
+
+  画面フロー:
+    ようこそ → インストール先選択 → 確認 → 進捗 → 完了
+
+  機能:
+    - 日本語 UI
+    - サイレントインストール(/quiet): 既存 config を使用、なければデフォルト値
+    - バージョンダウングレード警告
+    - Windows サービス自動登録・起動・停止・削除
+    - アンインストール時に NKKScaleBed.config を保持
+-->
+<?include GeneratedProductCode.wxi?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package
+    Name="NKKスケールベッドアプリ"
+    Manufacturer="Nikkiso"
+    Version="$(var.ProductVersion)"
+    ProductCode="$(var.ProductCode)"
+    UpgradeCode="{D85F149A-F4FD-4DCA-8D3F-D4472D740C63}"
+    Language="1041"
+    Codepage="932"
+    InstallerVersion="500"
+    Compressed="yes"
+    Scope="perMachine">
+
+    <SummaryInformation Description="スケールベッドアプリ インストーラー" Keywords="インストーラー" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="NKKScaleBedIcon" SourceFile="$(var.SrcSetup)NKKScaleBed.ico" />
+
+    <Property Id="ARPPRODUCTICON" Value="NKKScaleBedIcon" />
+    <Property Id="ARPCONTACT"     Value="Nikkiso" />
+    <Property Id="ARPCOMMENTS"    Value="スケールベッドアプリ" />
+    <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
+
+    <Property Id="REBOOT" Value="ReallySuppress" />
+
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <Property Id="RUNNING_PROCESSES" Secure="yes" />
+
+    <Property Id="ROOTDRIVE" Value="C:\" />
+
+    <Property Id="NETFRAMEWORK45" Secure="yes">
+      <RegistrySearch Id="NetFx45Search"
+                      Root="HKLM"
+                      Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"
+                      Name="Release"
+                      Type="raw" />
+    </Property>
+    <Launch Condition="NETFRAMEWORK45"
+            Message="!(loc.LaunchConditionNetFx45)" />
+
+    <Upgrade Id="{D85F149A-F4FD-4DCA-8D3F-D4472D740C63}">
+      <UpgradeVersion
+        Minimum="0.0.0"
+        Maximum="$(var.ProductVersion)"
+        IncludeMinimum="yes"
+        IncludeMaximum="no"
+        Property="OLDERVERSIONBEINGUPGRADED"
+        MigrateFeatures="yes" />
+      <UpgradeVersion
+        Minimum="$(var.ProductVersion)"
+        IncludeMinimum="no"
+        Property="NEWERVERSIONALREADYINSTALLED" />
+    </Upgrade>
+
+    <Launch Condition="NOT NEWERVERSIONALREADYINSTALLED"
+            Message="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
+
+    <StandardDirectory Id="TARGETDIR">
+      <Directory Id="FNWSITOOLS" Name="FNWSiTools">
+        <Directory Id="INSTALLFOLDER" Name="NKKScaleBed" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="WindowsFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Component Id="C_NKKScaleBedService"
+               Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561001}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKScaleBedServiceExe"
+            Source="$(var.SrcService)NKKScaleBedService.exe"
+            KeyPath="yes" />
+      <RemoveFile Id="RF_InstallState"
+                  Name="NKKScaleBedService.InstallState"
+                  On="uninstall" />
+    </Component>
+
+    <Component Id="C_NKKScaleBedTool"
+               Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561002}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKScaleBedToolExe"
+            Source="$(var.SrcTool)NKKScaleBedTool.exe"
+            KeyPath="yes" />
+    </Component>
+
+    <Component Id="C_NKKScaleBedConfig"
+               Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561004}"
+               Directory="INSTALLFOLDER"
+               Permanent="yes"
+               NeverOverwrite="yes">
+      <File Id="F_NKKScaleBedConfig"
+            Source="$(var.SrcBedProj)NKKScaleBed.config"
+            KeyPath="yes" />
+    </Component>
+
+    <Component Id="C_NKKScaleBedIco"
+               Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561005}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKScaleBedIco"
+            Source="$(var.SrcSetup)NKKScaleBed.ico"
+            KeyPath="yes" />
+    </Component>
+
+    <Component Id="C_DesktopShortcut"
+               Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561040}"
+               Directory="INSTALLFOLDER">
+      <Shortcut Id="SC_NKKScaleBedTool"
+                Directory="DesktopFolder"
+                Name="オフラインスケールベッドアプリ"
+                Target="[INSTALLFOLDER]NKKScaleBedTool.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="NKKScaleBedIcon" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\Nikkiso\NKKScaleBed"
+                     Name="ShortcutsInstalled"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+      <RemoveRegistryKey Root="HKCU"
+                         Key="Software\Nikkiso\NKKScaleBed"
+                         Action="removeOnUninstall" />
+    </Component>
+
+    <ComponentGroup Id="CG_SharedDlls" Directory="INSTALLFOLDER">
+      <Component Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561010}"><File Source="$(var.SrcBed)NKKScaleBed.dll" /></Component>
+      <Component Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561011}"><File Source="$(var.SrcBed)ComScaleBed.dll" /></Component>
+      <Component Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561012}"><File Source="$(var.SrcBed)TcpSocket.dll" /></Component>
+      <Component Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561013}"><File Source="$(var.SrcBed)VBBarCode4.BarCode.4.dll" /></Component>
+      <Component Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561014}"><File Source="$(var.SrcBed)Newtonsoft.Json.dll" /></Component>
+      <Component Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561015}"><File Source="$(var.SrcBed)SuperSocket.ClientEngine.dll" /></Component>
+      <Component Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561016}"><File Source="$(var.SrcBed)WebSocket4Net.dll" /></Component>
+      <Component Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561017}"><File Source="$(var.SrcBed)NKKCommon.dll" /></Component>
+      <Component Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561018}"><File Source="$(var.SrcBed)Ionic.Zip.dll" /></Component>
+      <Component Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561020}"><File Source="$(var.SrcService)NKKScaleBedService.exe.config" /></Component>
+      <Component Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561021}"><File Source="$(var.SrcTool)NKKScaleBedTool.config" /></Component>
+    </ComponentGroup>
+
+    <Component Id="C_NKKScaleBedToolConfig"
+               Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561030}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKScaleBedToolExeConfig"
+            Source="$(var.SrcTool)NKKScaleBedTool.exe.config"
+            KeyPath="yes" />
+    </Component>
+
+    <Feature Id="ProductFeature"
+             Title="NKKスケールベッドアプリ"
+             Level="1"
+             ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentRef Id="C_NKKScaleBedService" />
+      <ComponentRef Id="C_NKKScaleBedTool" />
+      <ComponentRef Id="C_NKKScaleBedToolConfig" />
+      <ComponentRef Id="C_NKKScaleBedConfig" />
+      <ComponentRef Id="C_NKKScaleBedIco" />
+      <ComponentRef Id="C_DesktopShortcut" />
+      <ComponentGroupRef Id="CG_SharedDlls" />
+    </Feature>
+
+    <CustomAction Id="SetInstallServiceProperty"
+                  Property="InstallServiceWithInstaller"
+                  Value="&quot;[INSTALLFOLDER]NKKScaleBedService.exe&quot;" />
+
+    <CustomAction Id="SetInstallServicePropertySilent"
+                  Property="InstallServiceWithInstaller"
+                  Value="/silent=1 &quot;[INSTALLFOLDER]NKKScaleBedService.exe&quot;" />
+
+    <CustomAction Id="UninstallServiceWithInstaller"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c sc stop NKKScaleBed &gt; nul 2&gt;&amp;1 &amp; sc delete NKKScaleBed &gt; nul 2&gt;&amp;1 &amp; taskkill /f /im NKKScaleBedService.exe &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <CustomAction Id="InstallServiceWithInstaller"
+                  Directory="WindowsFolder"
+                  ExeCommand="Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /LogToConsole=false /LogFile= [InstallServiceWithInstaller]"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check" />
+
+    <CustomAction Id="CA_DetectRunningProcesses"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_DetectRunningProcesses.vbs" />
+
+    <CustomAction Id="CA_KillGUIApps"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_KillGUIApps.vbs" />
+
+    <CustomAction Id="StartServiceAfterInstallSilent"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c sc start NKKScaleBed &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <InstallExecuteSequence>
+      <InstallValidate Condition="0" />
+
+      <RemoveExistingProducts After="InstallInitialize" />
+
+      <Custom Action="UninstallServiceWithInstaller" Before="RemoveFiles"
+              Condition="1" />
+
+      <Custom Action="SetInstallServiceProperty" Before="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &gt;= 5" />
+
+      <Custom Action="SetInstallServicePropertySilent" Before="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &lt; 5" />
+      <Custom Action="InstallServiceWithInstaller" After="InstallFiles"
+              Condition="NOT REMOVE" />
+      <Custom Action="StartServiceAfterInstallSilent" After="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &lt; 5" />
+    </InstallExecuteSequence>
+
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <UI>
+      <Dialog Id="RunningProcessesDlg" Width="370" Height="270" Title="スケールベッドアプリ インストーラー">
+        <Control Id="BannerBitmap" Type="Bitmap"
+                 X="0" Y="0" Width="370" Height="44"
+                 TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line"
+                 X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Title" Type="Text"
+                 X="15" Y="6" Width="340" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}実行中アプリケーションの検出" />
+        <Control Id="Description" Type="Text"
+                 X="25" Y="23" Width="340" Height="15"
+                 Text="インストール前にアプリケーションを終了してください。" />
+        <Control Id="RunningAppsLabel" Type="Text"
+                 X="20" Y="58" Width="330" Height="30"
+                 Text="以下のアプリケーション/サービスが実行中のため、インストールを継続できません。" />
+        <Control Id="RunningAppsList" Type="Text"
+                 X="30" Y="92" Width="310" Height="50"
+                 Text="[RUNNING_PROCESSES]" />
+        <Control Id="NoteLabel" Type="Text"
+                 X="20" Y="152" Width="330" Height="60"
+                 Text="「終了して続行」をクリックすると、上記アプリケーションを自動的に終了してインストールを継続します。" />
+        <Control Id="BottomLine" Type="Line"
+                 X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton"
+                 X="155" Y="243" Width="56" Height="17"
+                 Text="&lt; 戻る">
+          <Publish Event="NewDialog" Value="WelcomeDlg" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="MaintenanceTypeDlg" Condition="Installed" />
+        </Control>
+        <Control Id="CloseAndContinue" Type="PushButton"
+                 X="215" Y="243" Width="84" Height="17"
+                 Default="yes" Text="終了して続行">
+          <Publish Event="DoAction" Value="CA_KillGUIApps" Order="1" Condition="1" />
+          <Publish Event="NewDialog" Value="InstallDirDlg" Order="2" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="2" Condition="Installed" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton"
+                 X="307" Y="243" Width="56" Height="17"
+                 Cancel="yes" Text="キャンセル">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="DoAction" Value="CA_DetectRunningProcesses"
+               Order="1" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="NewDialog" Value="RunningProcessesDlg"
+               Order="2" Condition="NOT Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="WelcomeDlg"    Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="3" Condition="NOT Installed" />
+
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="DoAction" Value="CA_DetectRunningProcesses"
+               Order="1" Condition="Installed" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="NewDialog" Value="RunningProcessesDlg"
+               Order="2" Condition="Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="NewDialog" Value="VerifyReadyDlg"
+               Order="3" Condition="Installed AND NOT RUNNING_PROCESSES" />
+
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"    Order="2" Condition="1" />
+    </UI>
+
+  </Package>
+
+</Wix>

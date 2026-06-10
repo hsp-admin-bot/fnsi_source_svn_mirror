@@ -1,0 +1,69 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29926.136
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKWeightService", "NKKWeightService\NKKWeightService.csproj", "{92AE63B8-9713-40D8-9D7B-3EA31B81BA81}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKWeight", "NKKWeight\NKKWeight.csproj", "{12BC2886-0EDF-43B5-9B75-0DDC9DB4CE68}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKWeightTool", "NKKWeightTool\NKKWeightTool.csproj", "{29D0EE11-64C3-4629-A8A0-B0A51FE45EEB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKWeightApp", "NKKWeightApp\NKKWeightApp.csproj", "{F4714181-EAA9-4476-8F2B-A6453C68F530}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKCommon", "NKKCommon\NKKCommon.csproj", "{9E38647A-227C-4570-8E08-6BD25D0E3154}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKWeightScaleApp", "NKKWeightScaleApp\NKKWeightScaleApp.csproj", "{CC854BE6-8121-407D-BA89-738F57CDD95F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NKKWeightScaleDB", "NKKWeightScaleDB\NKKWeightScaleDB.csproj", "{C0FEEABD-A5F8-44A7-86D4-9DDAE21FCAF6}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "NKKWeightSetup", "NKKWeightSetup\NKKWeightSetup.vdproj", "{F7AA0236-1446-40A3-9A37-53A2484BAA24}"
+EndProject
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "NKKWeightSetupWix", "NKKWeightSetupWix\NKKWeightSetupWix.wixproj", "{7D511B8A-4BBA-4440-B890-3487896159E6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{92AE63B8-9713-40D8-9D7B-3EA31B81BA81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92AE63B8-9713-40D8-9D7B-3EA31B81BA81}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92AE63B8-9713-40D8-9D7B-3EA31B81BA81}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92AE63B8-9713-40D8-9D7B-3EA31B81BA81}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12BC2886-0EDF-43B5-9B75-0DDC9DB4CE68}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12BC2886-0EDF-43B5-9B75-0DDC9DB4CE68}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12BC2886-0EDF-43B5-9B75-0DDC9DB4CE68}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12BC2886-0EDF-43B5-9B75-0DDC9DB4CE68}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29D0EE11-64C3-4629-A8A0-B0A51FE45EEB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29D0EE11-64C3-4629-A8A0-B0A51FE45EEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29D0EE11-64C3-4629-A8A0-B0A51FE45EEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29D0EE11-64C3-4629-A8A0-B0A51FE45EEB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F4714181-EAA9-4476-8F2B-A6453C68F530}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4714181-EAA9-4476-8F2B-A6453C68F530}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4714181-EAA9-4476-8F2B-A6453C68F530}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4714181-EAA9-4476-8F2B-A6453C68F530}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E38647A-227C-4570-8E08-6BD25D0E3154}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC854BE6-8121-407D-BA89-738F57CDD95F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC854BE6-8121-407D-BA89-738F57CDD95F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC854BE6-8121-407D-BA89-738F57CDD95F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC854BE6-8121-407D-BA89-738F57CDD95F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C0FEEABD-A5F8-44A7-86D4-9DDAE21FCAF6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C0FEEABD-A5F8-44A7-86D4-9DDAE21FCAF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C0FEEABD-A5F8-44A7-86D4-9DDAE21FCAF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C0FEEABD-A5F8-44A7-86D4-9DDAE21FCAF6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7AA0236-1446-40A3-9A37-53A2484BAA24}.Debug|Any CPU.ActiveCfg = Debug
+		{F7AA0236-1446-40A3-9A37-53A2484BAA24}.Release|Any CPU.ActiveCfg = Release
+		{7D511B8A-4BBA-4440-B890-3487896159E6}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{7D511B8A-4BBA-4440-B890-3487896159E6}.Release|Any CPU.ActiveCfg = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {40F6CF7C-22D2-44F1-A0FE-197157DF73AA}
+	EndGlobalSection
+EndGlobal

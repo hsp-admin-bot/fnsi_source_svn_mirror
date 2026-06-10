@@ -1,0 +1,19 @@
+update V_PAT_RECIPE
+set PATID ='@patid',
+		PRESCRIPT_NO='@prescriptNo',
+		UP_DATE=to_date('@upDate','yyyy-mm-dd hh24:mi:ss'),
+		EXECUTE_DATE='@executeDate',
+		CTL_NO='@ctlNo',
+		MEDICINE_NAME='@medicineName',
+		MEDICINE_CD='@medicineCd',
+		MEDICINE_CD2='@medicineCd2',
+		QUANTITY='@quantity',
+		UNIT='@unit',
+		DOSAGE='@dosage',
+		TAKE_MEDICINE_CD='@takeMedicineCd',
+		TAKE_MEDICINE_NAME='@takeMedicineName',
+		DAY_COUNT='@dayCount',
+		PRESCRIPTER_CD='@prescripterCd',
+		PRESCRIPTER_NAME='@prescripterName',
+		NOTE='@note'
+ where PATID = @patid;

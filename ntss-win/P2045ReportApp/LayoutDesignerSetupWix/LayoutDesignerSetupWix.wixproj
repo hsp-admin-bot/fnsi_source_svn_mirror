@@ -1,0 +1,196 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="WixToolset.Sdk/4.0.6">
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <OutputName>FNWSiLayoutDesignerSetup</OutputName>
+    <Platforms>x86</Platforms>
+    <Platform Condition="'$(Platform)' == ''">x86</Platform>
+    <Cultures>ja-JP</Cultures>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <!--
+      ★ バージョンアップ時はここだけ変更する ★
+      ProductCode は UpgradeCodeGuid + ProductVersion から自動生成される（UUID v5）
+      UpgradeCodeGuid は絶対に変えない
+    -->
+    <ProductVersion>2.0.41</ProductVersion>
+    <UpgradeCodeGuid>29F50B52-E763-4F77-AA5E-DFE362DD19EB</UpgradeCodeGuid>
+    <DefineConstants>
+      SrcDesigner=$(MSBuildProjectDirectory)\..\LayoutDesigner\;
+      SrcBin=$(MSBuildProjectDirectory)\..\LayoutDesigner\bin\$(Configuration)\;
+      SrcSetup=$(MSBuildProjectDirectory)\..\LayoutDesignerSetup\;
+      ProductVersion=$(ProductVersion)
+    </DefineConstants>
+    <HarvestDirectoryGenerateGuidsNow>true</HarvestDirectoryGenerateGuidsNow>
+    <HarvestDirectoryAutogenerateGuids>false</HarvestDirectoryAutogenerateGuids>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="4.0.6" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="4.0.6" />
+    <PackageReference Include="WixToolset.Heat" Version="4.0.6" />
+  </ItemGroup>
+  <!-- sample ソースをインストール先直下の Config / Image / Model に展開（sample フォルダは作らない） -->
+  <ItemGroup>
+    <HarvestDirectory Include="$(MSBuildProjectDirectory)\..\sample">
+      <ComponentGroupName>CG_SampleFiles</ComponentGroupName>
+      <DirectoryRefId>INSTALLFOLDER</DirectoryRefId>
+      <SuppressRootDirectory>true</SuppressRootDirectory>
+    </HarvestDirectory>
+    <BindPath Include="$(MSBuildProjectDirectory)\..\sample" />
+  </ItemGroup>
+  <!--
+    ビルド前に ProductCode を自動生成（UUID v5: UpgradeCode + Version のハッシュ）
+    外部スクリプト不要: インライン C# タスクで完結
+  -->
+  <UsingTask TaskName="GenerateUuidV5ProductCode" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <UpgradeCode ParameterType="System.String" Required="true" />
+      <ProductVersion ParameterType="System.String" Required="true" />
+      <OutputFile ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var nsGuid  = System.Guid.Parse(UpgradeCode);
+        var nsBytes = nsGuid.ToByteArray();
+        System.Array.Reverse(nsBytes, 0, 4);
+        System.Array.Reverse(nsBytes, 4, 2);
+        System.Array.Reverse(nsBytes, 6, 2);
+
+        var verBytes = System.Text.Encoding.UTF8.GetBytes(ProductVersion);
+        var input    = new byte[nsBytes.Length + verBytes.Length];
+        System.Array.Copy(nsBytes,  0, input, 0,             nsBytes.Length);
+        System.Array.Copy(verBytes, 0, input, nsBytes.Length, verBytes.Length);
+
+        var sha1 = System.Security.Cryptography.SHA1.Create();
+        var hash = sha1.ComputeHash(input);
+
+        var h = new byte[16];
+        System.Array.Copy(hash, h, 16);
+        h[6] = (byte)((h[6] & 0x0F) | 0x50);
+        h[8] = (byte)((h[8] & 0x3F) | 0x80);
+
+        System.Array.Reverse(h, 0, 4);
+        System.Array.Reverse(h, 4, 2);
+        System.Array.Reverse(h, 6, 2);
+
+        var productCode = new System.Guid(h).ToString("B").ToUpper();
+        Log.LogMessage(MessageImportance.High, "ProductCode (v" + ProductVersion + "): " + productCode);
+
+        var lines = new string[] {
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>",
+            "<Include>",
+            "  <?define ProductCode = \"" + productCode + "\" ?>",
+            "</Include>"
+        };
+        System.IO.File.WriteAllLines(OutputFile, lines, System.Text.Encoding.UTF8);
+      ]]></Code>
+    </Task>
+  </UsingTask>
+  <Target Name="GenerateProductCode" BeforeTargets="CoreCompile;Build">
+    <GenerateUuidV5ProductCode UpgradeCode="$(UpgradeCodeGuid)" ProductVersion="$(ProductVersion)" OutputFile="$(MSBuildProjectDirectory)\GeneratedProductCode.wxi" />
+  </Target>
+  <!--
+    ビルド後に MaintenanceTypeDlg の ChangeButton を非表示にする
+    Windows Installer COM API で ControlCondition 行を MSI に注入
+  -->
+  <UsingTask TaskName="HideMsiChangeButton" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <MsiPath ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        try {
+            if (!System.IO.File.Exists(MsiPath)) {
+                Log.LogWarning("HideChangeButton skipped: MSI not found: " + MsiPath);
+                return true;
+            }
+
+            var type = System.Type.GetTypeFromProgID("WindowsInstaller.Installer");
+            if (type == null) {
+                Log.LogWarning("HideChangeButton skipped: WindowsInstaller.Installer COM type not found.");
+                return true;
+            }
+
+            var installer = System.Activator.CreateInstance(type);
+            if (installer == null) {
+                Log.LogWarning("HideChangeButton skipped: failed to create Windows Installer COM instance.");
+                return true;
+            }
+
+            var db = type.InvokeMember("OpenDatabase", System.Reflection.BindingFlags.InvokeMethod, null, installer,
+                         new object[] { MsiPath, 1 });
+            var dbType = db.GetType();
+
+            // 1) Hide Change button on maintenance page
+            var sqls = new string[][] {
+                new string[] {
+                    "INSERT INTO ControlCondition (Dialog_, Control_, Action, Condition) VALUES ('MaintenanceTypeDlg', 'ChangeButton',       'Hide', '1')",
+                    "UPDATE ControlCondition SET Condition = '1' WHERE Dialog_ = 'MaintenanceTypeDlg' AND Control_ = 'ChangeButton'       AND Action = 'Hide'"
+                },
+                new string[] {
+                    "INSERT INTO ControlCondition (Dialog_, Control_, Action, Condition) VALUES ('MaintenanceTypeDlg', 'ChangeDisabledText', 'Hide', '1')",
+                    "UPDATE ControlCondition SET Condition = '1' WHERE Dialog_ = 'MaintenanceTypeDlg' AND Control_ = 'ChangeDisabledText' AND Action = 'Hide'"
+                }
+            };
+            foreach (var sqlPair in sqls) {
+                object view = null;
+                try {
+                    view = dbType.InvokeMember("OpenView", System.Reflection.BindingFlags.InvokeMethod, null, db,
+                                   new object[] { sqlPair[0] });
+                    var viewType = view.GetType();
+                    viewType.InvokeMember("Execute", System.Reflection.BindingFlags.InvokeMethod, null, view, null);
+                } catch (System.Runtime.InteropServices.COMException) {
+                    object upd = null;
+                    try {
+                        upd = dbType.InvokeMember("OpenView", System.Reflection.BindingFlags.InvokeMethod, null, db,
+                                      new object[] { sqlPair[1] });
+                        var updType = upd.GetType();
+                        updType.InvokeMember("Execute", System.Reflection.BindingFlags.InvokeMethod, null, upd, null);
+                    } catch (System.Exception ex2) {
+                        Log.LogWarning("HideChangeButton: skip ControlCondition SQL. " + ex2.Message);
+                    } finally {
+                        if (upd != null) {
+                            try { upd.GetType().InvokeMember("Close", System.Reflection.BindingFlags.InvokeMethod, null, upd, null); } catch { }
+                        }
+                    }
+                } finally {
+                    if (view != null) {
+                        try { view.GetType().InvokeMember("Close", System.Reflection.BindingFlags.InvokeMethod, null, view, null); } catch { }
+                    }
+                }
+            }
+
+            // 2) Try to overwrite VerifyReadyDlg body text. Skip when control does not exist.
+            var updateTextSqls = new string[] {
+                "UPDATE Control SET Text='FNWSi Layout Designer をインストールするには［インストール］をクリックしてください。設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。' WHERE Dialog_='VerifyReadyDlg' AND Control_='InstallText'",
+                "UPDATE Control SET Text='FNWSi Layout Designer のインストールを修復するには［修復］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。' WHERE Dialog_='VerifyReadyDlg' AND Control_='RepairText'",
+                "UPDATE Control SET Text='FNWSi Layout Designer をコンピュータから削除するには［削除］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。' WHERE Dialog_='VerifyReadyDlg' AND Control_='RemoveText'",
+                "UPDATE Control SET Text='FNWSi Layout Designer のインストールを修復するには［修復］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。' WHERE Dialog_='VerifyReadyDlg' AND Control_='Description'"
+            };
+            foreach (var updateSql in updateTextSqls) {
+                object view = null;
+                try {
+                    view = dbType.InvokeMember("OpenView", System.Reflection.BindingFlags.InvokeMethod, null, db,
+                                   new object[] { updateSql });
+                    view.GetType().InvokeMember("Execute", System.Reflection.BindingFlags.InvokeMethod, null, view, null);
+                } catch (System.Exception ex3) {
+                    Log.LogMessage(MessageImportance.Low, "HideChangeButton: skip VerifyReadyDlg SQL. " + ex3.Message);
+                } finally {
+                    if (view != null) {
+                        try { view.GetType().InvokeMember("Close", System.Reflection.BindingFlags.InvokeMethod, null, view, null); } catch { }
+                    }
+                }
+            }
+
+            dbType.InvokeMember("Commit", System.Reflection.BindingFlags.InvokeMethod, null, db, null);
+            Log.LogMessage(MessageImportance.High, "HideChangeButton completed: " + MsiPath);
+        } catch (System.Exception ex) {
+            Log.LogWarning("HideChangeButton skipped due to error: " + ex.Message);
+        }
+        return true;
+      ]]></Code>
+    </Task>
+  </UsingTask>
+  <Target Name="HideChangeButton" AfterTargets="Build">
+    <HideMsiChangeButton MsiPath="$(MSBuildProjectDirectory)\$(OutputPath)ja-JP\$(OutputName).msi" />
+  </Target>
+</Project>

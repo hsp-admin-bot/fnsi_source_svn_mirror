@@ -1,0 +1,290 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{B26D2264-B67A-4E4D-AC41-D10AC59A84F2}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>Fnw.StatisticsTool</RootNamespace>
+    <AssemblyName>StatisticsTool_2025</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Statistics.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CompletionStatus.cs" />
+    <Compile Include="FrmFnwCode\FrmFnwCodeMatch.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmFnwCode\FrmFnwCodeMatch.Designer.cs">
+      <DependentUpon>FrmFnwCodeMatch.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Interface\ISysDataSetResponse.cs" />
+    <Compile Include="JsonDataSerializeHelper.cs" />
+    <Compile Include="Models\PatUniqueInitDateResponse.cs" />
+    <Compile Include="Models\BpAndPulseResponse.cs" />
+    <Compile Include="Models\DialysisCountInRangeResponse.cs" />
+    <Compile Include="Models\ExamOneSetByDateResponse.cs" />
+    <Compile Include="Models\ExamOneSetResponse.cs" />
+    <Compile Include="Models\ExamFindingsResponse.cs" />
+    <Compile Include="Models\VaDataResponse.cs" />
+    <Compile Include="Models\InfectionDataResponse.cs" />
+    <Compile Include="Models\InfectOneSetResponse.cs" />
+    <Compile Include="Models\RstDialysisCondResponse.cs" />
+    <Compile Include="Models\IndDialysisCondResponse.cs" />
+    <Compile Include="Models\InOutPatternResponse.cs" />
+    <Compile Include="Models\InOutResponse.cs" />
+    <Compile Include="Models\HeightResponse.cs" />
+    <Compile Include="Models\DialysisTimeResponse.cs" />
+    <Compile Include="Models\LastOrdNoResponse.cs" />
+    <Compile Include="Models\MovingOutInfoResponse.cs" />
+    <Compile Include="Models\PatMainInfoResponse.cs" />
+    <Compile Include="Models\PatInfoResponse.cs" />
+    <Compile Include="Models\TreatmentCdResponse.cs" />
+    <Compile Include="Models\ZipCodeResponse.cs" />
+    <Compile Include="Models\MovingInDateResponse.cs" />
+    <Compile Include="Models\MovingInCountResponse.cs" />
+    <Compile Include="Models\HasDiabetesResponse.cs" />
+    <Compile Include="Models\ExamItemDataResponse.cs" />
+    <Compile Include="Models\FacilityDataResponse.cs" />
+    <Compile Include="Models\DialysisFirstDayDataResponse.cs" />
+    <Compile Include="Models\PatPersonalDataResponse.cs" />
+    <Compile Include="Models\PatDieDataResponse.cs" />
+    <Compile Include="Models\OrdMainOtherPatDataResponse.cs" />
+    <Compile Include="Models\TreatmentDataResponse.cs" />
+    <Compile Include="Models\PrimaryDiseaseDataResponse.cs" />
+    <Compile Include="Models\MstFacilityData.cs" />
+    <Compile Include="FnwCsv.cs" />
+    <Compile Include="FrmCsv\FrmCsvViewer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmCsv\FrmCsvViewer.Designer.cs">
+      <DependentUpon>FrmCsvViewer.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmCustomizeSettings\CustomizeSettings.cs" />
+    <Compile Include="FrmCustomizeSettings\FrmCustomizeSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmCustomizeSettings\FrmCustomizeSettings.Designer.cs">
+      <DependentUpon>FrmCustomizeSettings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmDispCode\FrmDispCodeCheckBox.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmDispCode\FrmDispCodeCheckBox.designer.cs">
+      <DependentUpon>FrmDispCodeCheckBox.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmDispCode\FrmDispCodeMatch.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmDispCode\FrmDispCodeMatch.Designer.cs">
+      <DependentUpon>FrmDispCodeMatch.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmDispCode\FrmDispCodeSelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmDispCode\FrmDispCodeSelect.Designer.cs">
+      <DependentUpon>FrmDispCodeSelect.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmExcel\FrmExcelImport.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmExcel\FrmExcelImport.Designer.cs">
+      <DependentUpon>FrmExcelImport.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmLogin\FrmLoginInput.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmLogin\FrmLoginInput.designer.cs">
+      <DependentUpon>FrmLoginInput.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmLogin\Login.cs" />
+    <Compile Include="Helper\RestResultData.cs" />
+    <Compile Include="Models\SysDataSetRequest.cs" />
+    <Compile Include="Models\DiseaseDataResponse.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Startup.cs" />
+    <Compile Include="StatisticsUtility.cs" />
+    <Compile Include="StatisticsLib.cs" />
+    <Compile Include="FrmLogin\LoginInfo.cs" />
+    <Compile Include="FrmMstExamItem\FrmMstExamItemMatch.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmMstExamItem\FrmMstExamItemMatch.Designer.cs">
+      <DependentUpon>FrmMstExamItemMatch.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmPat\FrmPatMatch.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmPat\FrmPatMatch.Designer.cs">
+      <DependentUpon>FrmPatMatch.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmPat\FrmPatSelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmPat\FrmPatSelect.Designer.cs">
+      <DependentUpon>FrmPatSelect.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FrmStatistics.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmStatistics.Designer.cs">
+      <DependentUpon>FrmStatistics.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Settings.cs" />
+    <Compile Include="StatisticsBase.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="StatisticsConst.cs" />
+    <EmbeddedResource Include="FrmCsv\FrmCsvViewer.resx">
+      <DependentUpon>FrmCsvViewer.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmCustomizeSettings\FrmCustomizeSettings.resx">
+      <DependentUpon>FrmCustomizeSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmDispCode\FrmDispCodeCheckBox.resx">
+      <DependentUpon>FrmDispCodeCheckBox.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmDispCode\FrmDispCodeMatch.resx">
+      <DependentUpon>FrmDispCodeMatch.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmDispCode\FrmDispCodeSelect.resx">
+      <DependentUpon>FrmDispCodeSelect.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmExcel\FrmExcelImport.resx">
+      <DependentUpon>FrmExcelImport.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmFnwCode\FrmFnwCodeMatch.resx">
+      <DependentUpon>FrmFnwCodeMatch.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmLogin\FrmLoginInput.resx">
+      <DependentUpon>FrmLoginInput.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmMstExamItem\FrmMstExamItemMatch.resx">
+      <DependentUpon>FrmMstExamItemMatch.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmPat\FrmPatMatch.resx">
+      <DependentUpon>FrmPatMatch.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmPat\FrmPatSelect.resx">
+      <DependentUpon>FrmPatSelect.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmStatistics.resx">
+      <DependentUpon>FrmStatistics.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="StatisticsBase.resx">
+      <DependentUpon>StatisticsBase.cs</DependentUpon>
+    </EmbeddedResource>
+    <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ConfigHelper\ConfigHelp.csproj">
+      <Project>{3970dde3-24ff-40eb-89ee-f54fddd02153}</Project>
+      <Name>ConfigHelp</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NKKCommon\NKKCommon.csproj">
+      <Project>{9e38647a-227c-4570-8e08-6bd25d0e3154}</Project>
+      <Name>NKKCommon</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Statistics.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

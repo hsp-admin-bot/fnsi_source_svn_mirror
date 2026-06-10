@@ -1,0 +1,1 @@
+select * from V_PAT_REVISE_TARE where PATID = @patid;

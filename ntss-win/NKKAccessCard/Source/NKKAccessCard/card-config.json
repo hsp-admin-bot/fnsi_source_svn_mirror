@@ -1,0 +1,331 @@
+{
+    "blockUnitSize": 16,
+    "metadata": [
+        {
+            "name": "weight_checksum",
+            "label": "チェックサム（体重関連）",
+            "spec": {
+                "type": "number",
+                "range": [],
+                "decimals": 0
+            },
+            "block": 0,
+            "offset": 0,
+            "size": 8
+        },
+        {
+            "name": "weight_before",
+            "label": "前体重",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 0
+            },
+            "block": 0,
+            "offset": 8,
+            "size": 2
+        },
+        {
+            "name": "weight_mea",
+            "label": "体重測定値",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 0
+            },
+            "block": 0,
+            "offset": 10,
+            "size": 2
+        },
+        {
+            "name": "weight_body_flag",
+            "label": "体重値使用済みフラグ",
+            "spec": {
+                "type": "number",
+                "option": [0, 1],
+                "decimals": 0
+            },
+            "block": 0,
+            "offset": 12,
+            "size": 2
+        },
+        {
+            "name": "setting_checksum",
+            "label": "チェックサム（設定関連）",
+            "spec": {
+                "type": "number"
+            },
+            "block": 1,
+            "offset": 0,
+            "size": 8
+        },
+        {
+            "name": "data_ver",
+            "label": "データVer.",
+            "spec": {
+                "type": "number",
+                "range": [1, 32768],
+                "decimals": 0
+            },
+            "block": 1,
+            "offset": 8,
+            "size": 2
+        },
+        {
+            "name": "treat_mode",
+            "label": "治療モード",
+            "spec": {
+                "type": "number",
+                "range": [0, 6],
+                "decimals": 0
+            },
+            "block": 1,
+            "offset": 10,
+            "size": 2
+        },
+        {
+            "name": "dialysis_time",
+            "label": "透析時間",
+            "spec": {
+                "type": "number",
+                "range": [0, 599],
+                "decimals": 0
+            },
+            "block": 1,
+            "offset": 12,
+            "size": 2
+        },
+        {
+            "name": "target_weight",
+            "label": "目標体重",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 0
+            },
+            "block": 1,
+            "offset": 14,
+            "size": 2
+        },
+        {
+            "name": "water_info_name_1",
+            "label": "除水補正値1 名称",
+            "spec": {
+                "type": "string"
+            },
+            "block": 2,
+            "offset": 0,
+            "size": 16
+        },
+        {
+            "name": "water_info_name_2",
+            "label": "除水補正値2 名称",
+            "spec": {
+                "type": "string"
+            },
+            "block": 3,
+            "offset": 0,
+            "size": 16
+        },
+        {
+            "name": "water_info_name_3",
+            "label": "除水補正値3 名称",
+            "spec": {
+                "type": "string"
+            },
+            "block": 4,
+            "offset": 0,
+            "size": 16
+        },
+        {
+            "name": "water_info_name_4",
+            "label": "除水補正値4 名称",
+            "spec": {
+                "type": "string"
+            },
+            "block": 5,
+            "offset": 0,
+            "size": 16
+        },
+        {
+            "name": "water_info_name_5",
+            "label": "除水補正値5 名称",
+            "spec": {
+                "type": "string"
+            },
+            "block": 6,
+            "offset": 0,
+            "size": 16
+        },
+        {
+            "name": "water_info_weight_1",
+            "label": "除水補正値1 重量",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 2
+            },
+            "block": 7,
+            "offset": 0,
+            "size": 2
+        },
+        {
+            "name": "water_info_weight_2",
+            "label": "除水補正値2 重量",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 2
+            },
+            "block": 7,
+            "offset": 2,
+            "size": 2
+        },
+        {
+            "name": "water_info_weight_3",
+            "label": "除水補正値3 重量",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 2
+            },
+            "block": 7,
+            "offset": 4,
+            "size": 2
+        },
+        {
+            "name": "water_info_weight_4",
+            "label": "除水補正値4 重量",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 2
+            },
+            "block": 7,
+            "offset": 6,
+            "size": 2
+        },
+        {
+            "name": "water_info_weight_5",
+            "label": "除水補正値5 重量",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 2
+            },
+            "block": 7,
+            "offset": 8,
+            "size": 2
+        },
+        {
+            "name": "ind_tare_info_name_1",
+            "label": "風袋補正値1 名称",
+            "spec": {
+                "type": "string"
+            },
+            "block": 8,
+            "offset": 0,
+            "size": 16
+        },
+        {
+            "name": "ind_tare_info_name_2",
+            "label": "風袋補正値2 名称",
+            "spec": {
+                "type": "string"
+            },
+            "block": 9,
+            "offset": 0,
+            "size": 16
+        },
+        {
+            "name": "ind_tare_info_name_3",
+            "label": "風袋補正値3 名称",
+            "spec": {
+                "type": "string"
+            },
+            "block": 10,
+            "offset": 0,
+            "size": 16
+        },
+        {
+            "name": "ind_tare_info_name_4",
+            "label": "風袋補正値4 名称",
+            "spec": {
+                "type": "string"
+            },
+            "block": 11,
+            "offset": 0,
+            "size": 16
+        },
+        {
+            "name": "ind_tare_info_name_5",
+            "label": "風袋補正値5 名称",
+            "spec": {
+                "type": "string"
+            },
+            "block": 12,
+            "offset": 0,
+            "size": 16
+        },
+        {
+            "name": "ind_tare_info_weight_1",
+            "label": "風袋補正値1 重量",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 2
+            },
+            "block": 13,
+            "offset": 0,
+            "size": 2
+        },
+        {
+            "name": "ind_tare_info_weight_2",
+            "label": "風袋補正値2 重量",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 2
+            },
+            "block": 13,
+            "offset": 2,
+            "size": 2
+        },
+        {
+            "name": "ind_tare_info_weight_3",
+            "label": "風袋補正値3 重量",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 2
+            },
+            "block": 13,
+            "offset": 4,
+            "size": 2
+        },
+        {
+            "name": "ind_tare_info_weight_4",
+            "label": "風袋補正値4 重量",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 2
+            },
+            "block": 13,
+            "offset": 6,
+            "size": 2
+        },
+        {
+            "name": "ind_tare_info_weight_5",
+            "label": "風袋補正値5 重量",
+            "spec": {
+                "type": "number",
+                "range": [0, 300],
+                "decimals": 2
+            },
+            "block": 13,
+            "offset": 8,
+            "size": 2
+        }
+    ]   
+}

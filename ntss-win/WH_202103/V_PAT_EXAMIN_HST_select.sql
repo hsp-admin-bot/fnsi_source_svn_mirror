@@ -1,0 +1,1 @@
+select * from V_PAT_EXAMIN_HST where PATID = @patid;

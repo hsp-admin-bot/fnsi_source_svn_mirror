@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  NKKAccessCard インストーラー 日本語ローカライゼーション
+  WiX v4 WXL ファイル
+-->
+<WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl"
+                 Culture="ja-JP"
+                 Codepage="932">
+
+  <!-- .NET Framework 要件エラーメッセージ -->
+  <String Id="LaunchConditionNetFx45"
+          Value=".NET Framework 4.5 以上が必要です。&#xA;&#xA;下記 URL からインストール後、再度セットアップを実行してください。&#xA;https://go.microsoft.com/fwlink/?LinkId=225704" />
+
+  <!-- Window title only: remove Japanese setup suffix -->
+  <String Id="AdvancedWelcomeEulaDlg_Title" Value="FNWSi Access Card" />
+  <String Id="BrowseDlg_Title" Value="FNWSi Access Card" />
+  <String Id="CancelDlg_Title" Value="FNWSi Access Card" />
+  <String Id="CustomizeDlg_Title" Value="FNWSi Access Card" />
+  <String Id="DiskCostDlg_Title" Value="FNWSi Access Card" />
+  <String Id="ErrorDlg_Title" Value="FNWSi Access Card" />
+  <String Id="ExitDialog_Title" Value="FNWSi Access Card" />
+  <String Id="FatalError_Title" Value="FNWSi Access Card" />
+  <String Id="FeaturesDlg_Title" Value="FNWSi Access Card" />
+  <String Id="FilesInUse_Title" Value="FNWSi Access Card" />
+  <String Id="InstallDirDlg_Title" Value="FNWSi Access Card" />
+  <String Id="InstallScopeDlg_Title" Value="FNWSi Access Card" />
+  <String Id="InvalidDirDlg_Title" Value="FNWSi Access Card" />
+  <String Id="LicenseAgreementDlg_Title" Value="FNWSi Access Card" />
+  <String Id="MaintenanceTypeDlg_Title" Value="FNWSi Access Card" />
+  <String Id="MaintenanceWelcomeDlg_Title" Value="FNWSi Access Card" />
+  <String Id="MsiRMFilesInUse_Title" Value="FNWSi Access Card" />
+  <String Id="OutOfDiskDlg_Title" Value="FNWSi Access Card" />
+  <String Id="OutOfRbDiskDlg_Title" Value="FNWSi Access Card" />
+  <String Id="PrepareDlg_Title" Value="FNWSi Access Card" />
+  <String Id="ProgressDlg_Title" Value="FNWSi Access Card" />
+  <String Id="ResumeDlg_Title" Value="FNWSi Access Card" />
+  <String Id="SetupTypeDlg_Title" Value="FNWSi Access Card" />
+  <String Id="UserExit_Title" Value="FNWSi Access Card" />
+  <String Id="VerifyReadyDlg_Title" Value="FNWSi Access Card" />
+  <String Id="WaitForCostingDlg_Title" Value="FNWSi Access Card" />
+  <String Id="WelcomeDlg_Title" Value="FNWSi Access Card" />
+  <String Id="WelcomeEulaDlg_Title" Value="FNWSi Access Card" />
+
+  <!-- Replace product name text on highlighted UI labels -->
+  <String Id="WelcomeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Access Card セットアップ ウィザードへようこそ。" />
+  <String Id="WelcomeDlgDescription" Value="セットアップでは、FNWSi Access Card をコンピュータにインストールします。続行する場合は［次へ］を、セットアップを終了する場合は［キャンセル］をクリックしてください。" />
+  <!-- PrepareDlg は本文とは別に PrepareDlgTitle が [ProductName] を参照する（WelcomeDlgTitle だけでは準備画面が直らない） -->
+  <String Id="PrepareDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Access Card セットアップ ウィザードへようこそ。" />
+  <String Id="ResumeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Access Card セットアップ ウィザードの再開" />
+  <String Id="MaintenanceWelcomeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Access Card セットアップ ウィザードへようこそ。" />
+  <String Id="MaintenanceWelcomeDlgDescription" Value="セットアップでは、FNWSi Access Card の機能をコンピュータから変更、修復、または削除できます。続行するには［次へ］をクリックし、終了するには［キャンセル］をクリックしてください。" />
+  <String Id="WelcomeEulaDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Access Card セットアップ ウィザードへようこそ。" />
+  <String Id="WelcomeEulaDlgDescription" Value="セットアップでは、FNWSi Access Card をコンピュータにインストールします。続行する場合は［次へ］を、セットアップを終了する場合は［キャンセル］をクリックしてください。" />
+  <String Id="InstallDirDlgFolderLabel" Value="FNWSi Access Card のインストール先:" />
+  <String Id="MaintenanceTypeDlgRemoveText" Value="FNWSi Access Card をコンピュータから削除します。" />
+  <!-- WiX uses VerifyReadyDlgRemoveText (not …RemoveDescription) for this paragraph -->
+  <String Id="VerifyReadyDlgRemoveTitle" Value="{\WixUI_Font_Title}FNWSi Access Card の削除準備完了" />
+  <String Id="VerifyReadyDlgRemoveText" Value="コンピューターから FNWSi Access Card を削除するには［削除］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="MaintenanceTypeDlgRepairText" Value="欠損や破損したファイル、ショートカット、レジストリ項目を修正して、FNWSi Access Card の直近のインストールで発生した問題を修復します。" />
+  <String Id="VerifyReadyDlgRepairTitle" Value="{\WixUI_Font_Title}FNWSi Access Card の修復準備完了" />
+  <String Id="VerifyReadyDlgRepairText" Value="FNWSi Access Card のインストールを修復するには［修復］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。終了するには［キャンセル］をクリックしてください。" />
+  <String Id="ProgressDlgTextInstalling" Value="FNWSi Access Card をインストールしています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleInstalling" Value="{\WixUI_Font_Title}FNWSi Access Card のインストール中" />
+  <String Id="ProgressDlgTextRemoving" Value="FNWSi Access Card を削除しています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleRemoving" Value="{\WixUI_Font_Title}FNWSi Access Card を削除中" />
+  <String Id="ProgressDlgTextUninstalling" Value="FNWSi Access Card を削除しています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleUninstalling" Value="{\WixUI_Font_Title}FNWSi Access Card を削除中" />
+  <String Id="ProgressDlgTextRepairing" Value="FNWSi Access Card を修復しています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleRepairing" Value="{\WixUI_Font_Title}FNWSi Access Card を修復中" />
+  <String Id="VerifyReadyDlgInstallTitle" Value="{\WixUI_Font_Title}FNWSi Access Card のインストール準備完了。" />
+  <String Id="UserExitTitle" Value="{\WixUI_Font_Bigger}FNWSi Access Card セットアップ ウィザードは中断されました" />
+  <String Id="UserExitDescription1" Value="FNWSi Access Card のセットアップが中断されました。システムは変更されていません。このプログラムを後でインストールするには、インストールを再実行してください。セットアップ ウィザードを終了するには、［完了］ボタンをクリックします。" />
+  <String Id="ExitDialogTitle" Value="{\WixUI_Font_Title}FNWSi Access Card セットアップ ウィザードが完了しました" />
+  <String Id="ExitDialogDescription" Value="セットアップ ウィザードを終了するには、完了ボタンをクリックします。" />
+
+</WixLocalization>

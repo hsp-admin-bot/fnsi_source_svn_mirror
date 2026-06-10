@@ -1,0 +1,1 @@
+﻿select * from V_MNT_WATER_SURVEY where PATID = @patid;

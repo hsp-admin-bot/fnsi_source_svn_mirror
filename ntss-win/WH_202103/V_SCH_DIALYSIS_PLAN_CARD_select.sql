@@ -1,0 +1,1 @@
+select * from V_SCH_DIALYSIS_PLAN_CARD where PATID = @patid;

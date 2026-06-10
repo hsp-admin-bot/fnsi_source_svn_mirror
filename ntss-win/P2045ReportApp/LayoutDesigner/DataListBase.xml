@@ -1,0 +1,215 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<reportTable>
+  <report type="Common" dispName="">
+    <dataTable>
+      <data dataCode="prt_dt" dataName="印刷日時" dataCategory="印刷情報" dataClass="共通情報" sqlCode="" dataType="DateTime" canRepeat="0" filterType="" dispFormat="yyyy/mm/dd" canCalc="0" preview="2011/06/03" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="login" dataName="ログイン者" dataCategory="印刷情報" dataClass="共通情報" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="確認テスト" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="reportClass" dataName="帳票種別" dataCategory="印刷情報" dataClass="共通情報" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="治療経過表" facilityFilterType="0">
+        <convTable cls="帳票種別">
+          <conv code="1" item="治療経過表" disp="治療経過表" />
+          <conv code="2" item="単患者帳票" disp="単患者帳票" />
+          <conv code="3" item="複数患者帳票" disp="複数患者帳票" />
+          <conv code="4" item="準備リスト" disp="準備リスト" />
+          <conv code="5" item="配布リスト(ベッド)" disp="配布リスト(ベッド)" />
+          <conv code="6" item="配布リスト(物品)" disp="配布リスト(物品)" />
+          <conv code="7" item="装置帳票" disp="装置帳票" />
+          <conv code="8" item="ラベル" disp="ラベル" />
+          <conv code="9" item="紹介状" disp="紹介状" />
+          <conv code="10" item="単集計" disp="単集計" />
+          <conv code="11" item="複数集計" disp="複数集計" />
+        </convTable>
+        <facilityTable />
+      </data>
+	  <data dataCode="currentPage" dataName="単位ページ番号" dataCategory="印刷情報" dataClass="共通情報" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="1" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="totalPages" dataName="単位ページ総数" dataCategory="印刷情報" dataClass="共通情報" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="1" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="freeWord" dataName="フリーワード" dataCategory="印刷情報" dataClass="検索条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="患者" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="treatDate" dataName="治療日" dataCategory="印刷情報" dataClass="検索条件" sqlCode="" dataType="DateTime" canRepeat="0" filterType="" dispFormat="yyyy/mm/dd" canCalc="0" preview="2011/06/03" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="expressCondCdStr" dataName="予定/実績" dataCategory="印刷情報" dataClass="検索条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="予定" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="kurNames" dataName="クール名" dataCategory="印刷情報" dataClass="検索条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="午前" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="bedCdListString" dataName="ベッドグループ名" dataCategory="印刷情報" dataClass="検索条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="自動透析" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="patGroups" dataName="患者グループ名" dataCategory="印刷情報" dataClass="検索条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="グループ1" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="dateKindPrint" dataName="基準日" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="透析日" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="fromDate" dataName="開始日" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="DateTime" canRepeat="0" filterType="" dispFormat="yyyy/mm/dd" canCalc="0" preview="2011/06/03" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="toDate" dataName="終了日" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="DateTime" canRepeat="0" filterType="" dispFormat="yyyy/mm/dd" canCalc="0" preview="2011/06/03" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="period" dataName="期間" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="2011年06月03日～2011年06月03日" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="specifyDate" dataName="1日指定日" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="DateTime" canRepeat="0" filterType="" dispFormat="yyyy/mm/dd" canCalc="0" preview="2011/06/03" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="weeks" dataName="週数" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="3週目" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="kind" dataName="種別" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="医療材料" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="equipmentType" dataName="医療材料分類" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="未分類" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="medicineType" dataName="薬剤分類" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="未分類" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="inspectionType" dataName="採血管分類" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="すべて" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="examSetType" dataName="検査セット分類" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="すべて" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="inspectionDate" dataName="検査日数指定基準日" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="DateTime" canRepeat="0" filterType="" dispFormat="yyyy/mm/dd" canCalc="0" preview="2011/06/03" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="inspectionDirection" dataName="検査出力方向" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="後" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="inspectionDays" dataName="検査出力日数" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="6" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="inspectionKbn" dataName="検査区分" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="すべて" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="prescriptionKbn" dataName="処方区分" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="すべて" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="introductionKbn" dataName="紹介区分" dataCategory="印刷情報" dataClass="データ抽出条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="すべて" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="type" dataName="型式" dataCategory="印刷情報" dataClass="画面表示条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="すべて" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="selectedExamSetName" dataName="検査セット" dataCategory="印刷情報" dataClass="画面表示条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="すべて" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="selectedExamGraphName" dataName="グラフセット" dataCategory="印刷情報" dataClass="画面表示条件" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="すべて" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="sortColumn1" dataName="第1優先情報" dataCategory="印刷情報" dataClass="ソート情報" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="治療日" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="sortOrder1" dataName="第1優先昇順/降順" dataCategory="印刷情報" dataClass="ソート情報" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="昇順" facilityFilterType="0">
+        <convTable cls="ソート昇順/降順">
+          <conv code="0" item="昇順" disp="昇順" />
+          <conv code="1" item="降順" disp="降順" />
+        </convTable>
+        <facilityTable />
+      </data>
+      <data dataCode="sortColumn2" dataName="第2優先情報" dataCategory="印刷情報" dataClass="ソート情報" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="クール順" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="sortOrder2" dataName="第2優先昇順/降順" dataCategory="印刷情報" dataClass="ソート情報" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="降順" facilityFilterType="0">
+        <convTable cls="ソート昇順/降順">
+          <conv code="0" item="昇順" disp="昇順" />
+          <conv code="1" item="降順" disp="降順" />
+        </convTable>
+        <facilityTable />
+      </data>
+      <data dataCode="sortColumn3" dataName="第3優先情報" dataCategory="印刷情報" dataClass="ソート情報" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="患者ID" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="sortOrder3" dataName="第3優先昇順/降順" dataCategory="印刷情報" dataClass="ソート情報" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="降順" facilityFilterType="0">
+        <convTable cls="ソート昇順/降順">
+          <conv code="0" item="昇順" disp="昇順" />
+          <conv code="1" item="降順" disp="降順" />
+        </convTable>
+        <facilityTable />
+      </data>
+    </dataTable>
+  </report>
+  <report type="Dialysis" dispName="治療経過表">
+    <dataTable>
+      <data dataCode="" dataName="グラフ" dataCategory="実績" dataClass="グラフ" sqlCode="" dataType="byte[]" canRepeat="1" filterType="" dispFormat="" canCalc="0" preview="graph.jpg" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="qrCodeForNewOne" dataName="二次元バーコード" dataCategory="処方(最新)" dataClass="処方箋情報" sqlCode="" dataType="byte[]" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="prescription_2d.jpg" facilityFilterType="0">
+        <facilityTable />
+      </data>
+    </dataTable>
+  </report>
+  <report type="OnePatient" dispName="単患者帳票">
+    <dataTable>
+      <data dataCode="qrCode" dataName="二次元バーコード" dataCategory="処方" dataClass="処方箋情報" sqlCode="" dataType="byte[]" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="prescription_2d.jpg" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	   <data dataCode="qrCodeForNewOne" dataName="二次元バーコード" dataCategory="処方(最新)" dataClass="処方箋情報" sqlCode="" dataType="byte[]" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="prescription_2d.jpg" facilityFilterType="0">
+        <facilityTable />
+      </data>
+    </dataTable>
+  </report>
+  <report type="Label" dispName="ラベル">
+    <dataTable>
+      <data dataCode="" dataName="分類別情報" dataCategory="ラベル" dataClass="物品情報" sqlCode="" dataType="string" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="静脈側回路内注射" facilityFilterType="0">
+        <facilityTable />
+      </data>
+      <data dataCode="" dataName="透析室名" dataCategory="ラベル" dataClass="透析予定" sqlCode="" dataType="string" canRepeat="1" filterType="" dispFormat="" canCalc="0" preview="透析室名１" facilityFilterType="0">
+        <facilityTable />
+      </data>
+    </dataTable>
+  </report>
+  <report type="ReferralLetter" dispName="紹介状">
+	<dataTable>
+      <data dataCode="qrCodeForNewOne" dataName="二次元バーコード" dataCategory="処方(最新)" dataClass="処方箋情報" sqlCode="" dataType="byte[]" canRepeat="0" filterType="" dispFormat="" canCalc="0" preview="prescription_2d.jpg" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	   <data dataCode="unit_V_total" dataName="合計値" dataCategory="集計" dataClass="縦合計" sqlCode="" dataType="decimal" canRepeat="1" filterType="" dispFormat="0" canCalc="0" preview="0" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="unit_H_total" dataName="合計値" dataCategory="集計" dataClass="横合計" sqlCode="" dataType="decimal" canRepeat="1" filterType="" dispFormat="0" canCalc="0" preview="0" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="grand_total" dataName="合計値" dataCategory="集計" dataClass="総合計" sqlCode="" dataType="decimal" canRepeat="0" filterType="" dispFormat="0" canCalc="0" preview="0" facilityFilterType="0">
+        <facilityTable />
+      </data>
+    </dataTable>
+  </report>
+  <report type="OneTotal" dispName="単集計">
+	<dataTable>
+       <data dataCode="unit_V_total" dataName="合計値" dataCategory="集計" dataClass="縦合計" sqlCode="" dataType="decimal" canRepeat="1" filterType="" dispFormat="0" canCalc="0" preview="0" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="unit_H_total" dataName="合計値" dataCategory="集計" dataClass="横合計" sqlCode="" dataType="decimal" canRepeat="1" filterType="" dispFormat="0" canCalc="0" preview="0" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="grand_total" dataName="合計値" dataCategory="集計" dataClass="総合計" sqlCode="" dataType="decimal" canRepeat="0" filterType="" dispFormat="0" canCalc="0" preview="0" facilityFilterType="0">
+        <facilityTable />
+      </data>
+    </dataTable>
+  </report>
+  <report type="MultiTotal" dispName="複数集計">
+	<dataTable>
+       <data dataCode="unit_V_total" dataName="合計値" dataCategory="集計" dataClass="縦合計" sqlCode="" dataType="decimal" canRepeat="1" filterType="" dispFormat="0" canCalc="0" preview="0" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="unit_H_total" dataName="合計値" dataCategory="集計" dataClass="横合計" sqlCode="" dataType="decimal" canRepeat="1" filterType="" dispFormat="0" canCalc="0" preview="0" facilityFilterType="0">
+        <facilityTable />
+      </data>
+	  <data dataCode="grand_total" dataName="合計値" dataCategory="集計" dataClass="総合計" sqlCode="" dataType="decimal" canRepeat="0" filterType="" dispFormat="0" canCalc="0" preview="0" facilityFilterType="0">
+        <facilityTable />
+      </data>
+    </dataTable>
+  </report>
+</reportTable>

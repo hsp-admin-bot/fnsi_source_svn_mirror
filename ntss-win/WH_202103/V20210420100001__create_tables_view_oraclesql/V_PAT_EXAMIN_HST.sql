@@ -1,0 +1,23 @@
+-- ----------------------------
+-- Table structure for V_PAT_EXAMIN_HST
+-- ----------------------------
+DROP TABLE "V_PAT_EXAMIN_HST";
+CREATE TABLE "V_PAT_EXAMIN_HST" (
+  "PATID" CHAR(12 BYTE) NOT NULL,
+  "EXAM_DATE" DATE,
+  "ORDER_CLASS" VARCHAR2(6 BYTE),
+  "ITEM_UP_DATE" DATE,
+  "EXAM_ITEM_CODE" CHAR(20 BYTE),
+  "EXAM_ITEM_CODE2" CHAR(20 BYTE),
+  "EXAM_ITEM_CODE3" CHAR(20 BYTE),
+  "EXAM_ITEM_NAME" VARCHAR2(40 BYTE),
+  "EXAM_RST" VARCHAR2(256 BYTE),
+  "EXAM_CLASS_RST" VARCHAR2(256 BYTE),
+  "COMMENTS" VARCHAR2(512 BYTE)
+)
+;
+
+-- ----------------------------
+-- Primary Key structure for table V_PAT_EXAMIN_HST
+-- ----------------------------
+ALTER TABLE "V_PAT_EXAMIN_HST" ADD CONSTRAINT "SYS_C007471" PRIMARY KEY ("PATID");

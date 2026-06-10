@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<reportTable>
+  <dataTable>
+    <data dataCategory="患者情報" dataClass="患者グループ"></data>
+    <data dataCategory="患者情報" dataClass="本人情報"></data>
+    <data dataCategory="患者情報" dataClass="連絡先"></data>
+    <data dataCategory="患者情報" dataClass="連絡先(サービス業者)"></data>
+    <data dataCategory="患者情報" dataClass="担当者"></data>
+    <data dataCategory="患者情報" dataClass="患者メモ"></data>
+    <data dataCategory="患者情報" dataClass="保険情報"></data>
+    <data dataCategory="患者情報" dataClass="診療情報"></data>
+    <data dataCategory="患者情報" dataClass="禁忌・アレルギー"></data>
+    <data dataCategory="患者情報" dataClass="禁忌"></data>
+    <data dataCategory="患者情報" dataClass="アレルギー"></data>
+    <data dataCategory="患者情報" dataClass="インプラント"></data>
+    <data dataCategory="患者情報" dataClass="身体情報(昇順)"></data>
+    <data dataCategory="患者情報" dataClass="身体情報(降順)"></data>
+    <data dataCategory="患者情報" dataClass="感染症"></data>
+    <data dataCategory="患者情報" dataClass="感染症(+)"></data>
+    <data dataCategory="患者情報" dataClass="感染症(+)(-)"></data>
+    <data dataCategory="患者情報" dataClass="感染症(+)(-)(不明)"></data>
+    <data dataCategory="患者情報" dataClass="原疾患"></data>
+    <data dataCategory="患者情報" dataClass="既往歴"></data>
+    <data dataCategory="患者情報" dataClass="既往歴(昇順)"></data>
+    <data dataCategory="患者情報" dataClass="既往歴(降順)"></data>
+    <data dataCategory="患者情報" dataClass="透析困難(主)"></data>
+    <data dataCategory="患者情報" dataClass="透析困難・重症度・搬送区分"></data>
+    <data dataCategory="患者情報" dataClass="入外・転入出"></data>
+    <data dataCategory="患者情報" dataClass="風袋・除水補正"></data>
+    <data dataCategory="患者情報" dataClass="装置設定"></data>
+    <data dataCategory="患者情報" dataClass="加算・管理料"></data>
+    <data dataCategory="患者情報" dataClass="死亡情報"></data>
+    <data dataCategory="指示" dataClass="透析予定"></data>
+    <data dataCategory="指示" dataClass="透析パターン"></data>
+    <data dataCategory="指示" dataClass="透析条件"></data>
+    <data dataCategory="指示" dataClass="投薬"></data>
+    <data dataCategory="指示" dataClass="投薬(分解)"></data>
+    <data dataCategory="指示" dataClass="投薬(未来有効)"></data>
+    <data dataCategory="指示" dataClass="投薬(定期)"></data>
+    <data dataCategory="指示" dataClass="医材"></data>
+    <data dataCategory="指示" dataClass="指示コメント"></data>
+    <data dataCategory="指示" dataClass="体重情報(過去指示)"></data>
+    <data dataCategory="指示" dataClass="VA情報"></data>
+    <data dataCategory="指示" dataClass="ベッド情報"></data>
+    <data dataCategory="指示" dataClass="ダイアライザ情報"></data>
+    <data dataCategory="指示" dataClass="風袋・除水補正"></data>
+    <data dataCategory="指示" dataClass="装置設定"></data>
+    <data dataCategory="指示" dataClass="修正内容"></data>
+    <data dataCategory="指示" dataClass="指示履歴(発行日)"></data>
+    <data dataCategory="指示" dataClass="指示履歴(治療日)"></data>
+    <data dataCategory="実績" dataClass="実績情報"></data>
+    <data dataCategory="実績" dataClass="透析条件"></data>
+    <data dataCategory="実績" dataClass="体重情報"></data>
+    <data dataCategory="実績" dataClass="体重情報(過去実績)"></data>
+    <data dataCategory="実績" dataClass="風袋・除水補正"></data>
+    <data dataCategory="実績" dataClass="バイタル(昇順)"></data>
+    <data dataCategory="実績" dataClass="バイタル(降順)"></data>
+    <data dataCategory="実績" dataClass="血圧情報"></data>
+    <data dataCategory="実績" dataClass="血圧情報(過去実績)"></data>
+    <data dataCategory="実績" dataClass="グラフ"></data>
+    <data dataCategory="実績" dataClass="愁訴処置"></data>
+    <data dataCategory="実績" dataClass="愁訴処置(分解)"></data>
+    <data dataCategory="実績" dataClass="愁訴処置・実施薬剤"></data>
+    <data dataCategory="実績" dataClass="愁訴処置・実施薬剤(分解)"></data>
+    <data dataCategory="実績" dataClass="酸素吸入"></data>
+    <data dataCategory="実績" dataClass="酸素吸入総量"></data>
+    <data dataCategory="実績" dataClass="投薬"></data>
+    <data dataCategory="実績" dataClass="投薬(分解)"></data>
+    <data dataCategory="実績" dataClass="実施薬剤(分解)"></data>
+    <data dataCategory="実績" dataClass="医材"></data>
+    <data dataCategory="実績" dataClass="指示コメント"></data>
+    <data dataCategory="実績" dataClass="回診記録"></data>
+    <data dataCategory="実績" dataClass="VA情報"></data>
+    <data dataCategory="実績" dataClass="ベッド情報"></data>
+    <data dataCategory="実績" dataClass="ダイアライザ情報"></data>
+    <data dataCategory="実績" dataClass="加算"></data>
+    <data dataCategory="実績" dataClass="モニタ(昇順)"></data>
+    <data dataCategory="実績" dataClass="モニタ(降順)"></data>
+    <data dataCategory="実績" dataClass="装置設定(昇順)"></data>
+    <data dataCategory="実績" dataClass="装置設定(降順)"></data>
+    <data dataCategory="実績" dataClass="チェックリスト1"></data>
+    <data dataCategory="実績" dataClass="チェックリスト2"></data>
+    <data dataCategory="実績" dataClass="チェックリスト3"></data>
+    <data dataCategory="実績" dataClass="チェックリスト4"></data>
+    <data dataCategory="実績" dataClass="チェックリスト5"></data>
+    <data dataCategory="実績" dataClass="チェックリスト6"></data>
+    <data dataCategory="実績" dataClass="チェックリスト7"></data>
+    <data dataCategory="実績" dataClass="チェックリスト8"></data>
+    <data dataCategory="スケジュール表"></data>
+    <data dataCategory="治療状況リスト"></data>
+    <data dataCategory="レセプト"></data>
+    <data dataCategory="観察記録" dataClass="共通情報"></data>
+    <data dataCategory="観察記録(患者指定)" dataClass="共通情報"></data>
+    <data dataCategory="患者イベント" dataClass="共通情報"></data>
+    <data dataCategory="紹介状"></data>
+    <data dataCategory="処方" dataClass="処方箋情報"></data>
+    <data dataCategory="処方" dataClass="処方情報"></data>
+    <data dataCategory="処方" dataClass="処方箋"></data>
+    <data dataCategory="処方" dataClass="処方(詳細)"></data>
+    <data dataCategory="処方" dataClass="薬剤情報"></data>
+    <data dataCategory="処方(最新)" dataClass="処方箋情報"></data>
+    <data dataCategory="処方(最新)" dataClass="処方情報"></data>
+    <data dataCategory="処方(最新)" dataClass="処方箋"></data>
+    <data dataCategory="処方(最新)" dataClass="処方(詳細)"></data>
+    <data dataCategory="処方(最新)" dataClass="薬剤情報"></data>
+    <data dataCategory="検査" dataClass="検査結果(指定日)"></data>
+    <data dataCategory="検査" dataClass="検査結果(指定日以前)"></data>
+    <data dataCategory="検査" dataClass="検査結果(日付範囲)"></data>
+    <data dataCategory="検査" dataClass="検査予定(セット・指定日)"></data>
+    <data dataCategory="検査" dataClass="検査予定(セット・指定日以降)"></data>
+    <data dataCategory="検査" dataClass="検査予定(セット・日付範囲)"></data>
+    <data dataCategory="検査" dataClass="検査予定(単項目・指定日)"></data>
+    <data dataCategory="検査" dataClass="検査予定(単項目・指定日以降)"></data>
+    <data dataCategory="検査" dataClass="検査予定(単項目・日付範囲)"></data>
+    <data dataCategory="検査" dataClass="検査予定(採血管・指定日)"></data>
+    <data dataCategory="検査" dataClass="検査予定(採血管・指定日以降)"></data>
+    <data dataCategory="検査" dataClass="検査予定(採血管・日付範囲)"></data>
+    <data dataCategory="検査" dataClass="検査結果(フィルタなし)"></data>
+    <data dataCategory="一般撮影" dataClass="放射線検査予定(指定日)"></data>
+    <data dataCategory="一般撮影" dataClass="放射線検査予定(指定日以降)"></data>
+    <data dataCategory="一般撮影" dataClass="放射線検査予定(日付範囲)"></data>
+    <data dataCategory="施設イベント"></data>
+    <data dataCategory="準備リスト"></data>
+    <data dataCategory="配布リスト(ベッド)" dataClass="選択クール名"></data>
+    <data dataCategory="配布リスト(ベッド)" dataClass="ベッド情報"></data>
+    <data dataCategory="配布リスト(ベッド)" dataClass="物品情報"></data>
+    <data dataCategory="配布リスト(ベッド)" dataClass="ベッド情報(分解)"></data>
+    <data dataCategory="配布リスト(ベッド)" dataClass="物品情報(分解)"></data>
+    <data dataCategory="配布リスト(物品)" dataClass="基本情報"></data>
+    <data dataCategory="配布リスト(物品)" dataClass="ベッド情報"></data>
+    <data dataCategory="配布リスト(物品)" dataClass="物品情報"></data>
+    <data dataCategory="配布リスト(物品)" dataClass="基本情報(分解)"></data>
+    <data dataCategory="配布リスト(物品)" dataClass="ベッド情報(分解)"></data>
+    <data dataCategory="配布リスト(物品)" dataClass="物品情報(分解)"></data>
+    <data dataCategory="ラベル" dataClass="患者情報"></data>
+    <data dataCategory="ラベル" dataClass="透析予定"></data>
+    <data dataCategory="ラベル" dataClass="物品情報"></data>
+    <data dataCategory="週間"></data>
+    <data dataCategory="集計"></data>
+    <data dataCategory="装置情報" dataClass="基本設定"></data>
+    <data dataCategory="装置情報" dataClass="オプション"></data>
+    <data dataCategory="機器保守" dataClass="自己診断"></data>
+    <data dataCategory="機器保守" dataClass="日常点検(基本情報)"></data>
+    <data dataCategory="機器保守" dataClass="日常点検(記録簿)"></data>
+    <data dataCategory="機器保守" dataClass="定期点検(基本情報)"></data>
+    <data dataCategory="機器保守" dataClass="定期点検(記録簿)"></data>
+    <data dataCategory="機器保守" dataClass="定期点検(交換部品)"></data>
+    <data dataCategory="装置一覧表"></data>
+    <data dataCategory="水質管理"></data>
+    <data dataCategory="施設"></data>
+    <data dataCategory="印刷情報" dataClass="共通情報"></data>
+  </dataTable>
+</reportTable>

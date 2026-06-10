@@ -1,0 +1,617 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{7FBA0E27-D7BD-4A91-A42B-B72A2C8A7373}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>LayoutDesigner</RootNamespace>
+    <AssemblyName>FNWSiLayoutDesigner</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>..\bin\x86\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <OutputPath>..\bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Properties\LayoutDesigner.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>LayoutDesigner.Program</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Office.Interop.Excel, Version=15.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+      <HintPath>..\packages\Office\Microsoft.Office.Interop.Excel.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="office, Version=15.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+      <HintPath>..\packages\Office\office.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration.Install" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Attributes\GridAttributes\RldGridRCBehaviorComboBoxAttribute.cs" />
+    <Compile Include="Attributes\GridAttributes\RldGridRCAppearanceComboBoxAttribute.cs" />
+    <Compile Include="Attributes\GridAttributes\RldGridRCAppearanceDefaultCellStyleAttribute.cs" />
+    <Compile Include="Attributes\GridAttributes\RldGridRCBehaviorTextBoxAttribute.cs" />
+    <Compile Include="Attributes\GridAttributes\RldGridRCDataCheckBoxAttribute.cs" />
+    <Compile Include="Attributes\GridAttributes\RldGridRCBehaviorCheckBoxAttribute.cs" />
+    <Compile Include="Attributes\GridAttributes\RldGridRCAppearanceCheckBoxAttribute.cs" />
+    <Compile Include="Attributes\GridAttributes\RldGridRCAppearanceButtonAttribute.cs" />
+    <Compile Include="Attributes\GridAttributes\RldGridRCDesignAttribute.cs" />
+    <Compile Include="Attributes\GridAttributes\RldGridRCAttributeReflector.cs" />
+    <Compile Include="Attributes\GridAttributes\RldGridRCBehaviorAttribute.cs" />
+    <Compile Include="Controls\RldDropDownButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\RldTriStateTreeNode.cs" />
+    <Compile Include="Controls\RldTriStateTreeView.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\RldUpDownSwitchButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Controls\ucLabelClass.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\ucLabelClass.designer.cs">
+      <DependentUpon>ucLabelClass.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Data\AdditionalInfo.cs" />
+    <Compile Include="Data\DesignGroupFromOldReportData.cs" />
+    <Compile Include="Data\DesignItemConvertListData.cs" />
+    <Compile Include="Data\DesignItemListDataOrder.cs" />
+    <Compile Include="Data\DesignParamFromOldReportData.cs" />
+    <Compile Include="Data\FilterCategoryData.cs" />
+    <Compile Include="Data\FilterDistributionData.cs" />
+    <Compile Include="Data\FilterReceiptData.cs" />
+    <Compile Include="Data\FilterWaterTestPointData.cs" />
+    <Compile Include="Data\MstFacilityData.cs" />
+    <Compile Include="Data\MstMachineTypeData.cs" />
+    <Compile Include="Data\ReportType.cs" />
+    <Compile Include="Data\SysReportClass.cs" />
+    <Compile Include="Data\TotalLayoutData.cs" />
+    <Compile Include="Data\InspectionLayoutData.cs" />
+    <Compile Include="Data\FilterInspectionData.cs" />
+    <Compile Include="Data\MstMainteLayoutData.cs" />
+    <Compile Include="Data\FilterWaterSurveyPointData.cs" />
+    <Compile Include="Data\DesignHistoryData.cs" />
+    <Compile Include="Data\DesignParamDatasList.cs" />
+    <Compile Include="Data\FilterAdditionData.cs" />
+    <Compile Include="Data\FilterExamItemData.cs" />
+    <Compile Include="Data\FilterExamSetData.cs" />
+    <Compile Include="Data\FilterDialDiffData.cs" />
+    <Compile Include="Data\FilterEquipData.cs" />
+    <Compile Include="Data\FilterPatEventData.cs" />
+    <Compile Include="Data\FormatConditionRule.cs" />
+    <Compile Include="Data\FormatConditionRules.cs" />
+    <Compile Include="Data\LayoutDataSetChecker.cs" />
+    <Compile Include="Data\DesignComboBoxItemData.cs" />
+    <Compile Include="Data\DesignConvertList.cs" />
+    <Compile Include="Data\DesignConvertListData.cs" />
+    <Compile Include="Data\DesignFilterMstObsKindData.cs" />
+    <Compile Include="Data\DesignGroupData.cs" />
+    <Compile Include="Data\DesignItemListData.cs" />
+    <Compile Include="Data\DesignParamData.cs" />
+    <Compile Include="Data\DesignSettingData.cs" />
+    <Compile Include="Data\DesignTempleteData.cs" />
+    <Compile Include="Data\FilterDataSet.cs" />
+    <Compile Include="Data\FilterObsKindData.cs" />
+    <Compile Include="Data\FilterMedicineData.cs" />
+    <Compile Include="Data\MstPrinterData.cs" />
+    <Compile Include="Data\MstReportData.cs" />
+    <Compile Include="Data\MstReportType.cs" />
+    <Compile Include="Data\ReportTypeData.cs" />
+    <Compile Include="Attributes\GridAttributes\RldGridRCAppearanceAttribute.cs" />
+    <Compile Include="Attributes\GridAttributes\RldGridRCLayoutAttribute.cs" />
+    <Compile Include="Data\SysDataSetData.cs" />
+    <Compile Include="Data\SysDataSetDetailConvTableData.cs" />
+    <Compile Include="Data\SysDataSetPreSqlInfo.cs" />
+    <Compile Include="Data\SysDataSetDetailConvSqlData.cs" />
+    <Compile Include="Data\SysDataSetPreSqlInfoData.cs" />
+    <Compile Include="Data\SysDataSetDetailInfoData.cs" />
+    <Compile Include="Data\SysDataSetDetailData.cs" />
+    <Compile Include="EventArgs\DesignNotifyInfo\RldDesignNotifyInfoRequestRemoveAllParamEventArgs.cs" />
+    <Compile Include="EventArgs\MainMenuNotifyInfo\RldMainMenuNotifyInfoCannotAccess.cs" />
+    <Compile Include="EventArgs\MainMenuNotifyInfo\RldMainMenuNotifyInfoCheckDeactiveEventArgs.cs" />
+    <Compile Include="EventArgs\MainMenuNotifyInfo\RldMainMenuNotifyInfoRequestConvertReportEventArgs.cs" />
+    <Compile Include="EventArgs\MainMenuNotifyInfo\RldMainMenuNotifyInfoRequestNewReportEventArgs.cs" />
+    <Compile Include="EventArgs\MainMenuNotifyInfo\RldMainMenuNotifyInfoRequestEditReportEventArgs.cs" />
+    <Compile Include="EventArgs\MainMenuNotifyInfo\RldMainMenuNotifyInfoEventArgs.cs" />
+    <Compile Include="EventArgs\DesignNotifyInfo\RldDesignNotifyInfoNotifyDragDropCompletedEventArgs.cs" />
+    <Compile Include="EventArgs\DesignNotifyInfo\RldDesignNotifyInfoNotifySelectedParamChangedEventArgs.cs" />
+    <Compile Include="EventArgs\DesignNotifyInfo\RldDesignNotifyInfoRequestOpenDialogEventArgs.cs" />
+    <Compile Include="EventArgs\DesignNotifyInfo\RldDesignNotifyInfoRequestPreviewEventArgs.cs" />
+    <Compile Include="EventArgs\DesignNotifyInfo\RldDesignNotifyInfoRequestSaveDropFileEventArgs.cs" />
+    <Compile Include="EventArgs\MainMenuNotifyInfo\RldMainMenuNotifyInfoRequestTempReportEventArgs.cs" />
+    <Compile Include="EventArgs\RldSimpleTextEventArgs.cs" />
+    <Compile Include="EventArgs\DesignNotifyInfo\RldDesignNotifyInfoRequestRecordExceptionEventArgs.cs" />
+    <Compile Include="EventArgs\DesignNotifyInfo\RldDesignNotifyInfoEventArgs.cs" />
+    <Compile Include="EventArgs\DesignNotifyInfo\RldDesignNotifyInfoRequestCloseEventArgs.cs" />
+    <Compile Include="EventArgs\DesignNotifyInfo\RldDesignNotifyInfoRequestShowMessageEventArgs.cs" />
+    <Compile Include="Extentions\RldXmlExtentions.cs" />
+    <Compile Include="Forms\AboutBox1.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\AboutBox1.Designer.cs">
+      <DependentUpon>AboutBox1.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildLayoutTotal.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildLayoutTotal.Designer.cs">
+      <DependentUpon>frmDesignChildLayoutTotal.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildLayoutDevice.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildLayoutDevice.Designer.cs">
+      <DependentUpon>frmDesignChildLayoutDevice.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildProgress.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildProgress.Designer.cs">
+      <DependentUpon>frmDesignChildProgress.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmSelectMainteFilter.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSelectMainteFilter.designer.cs">
+      <DependentUpon>frmSelectMainteFilter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmSelecTotalUnit.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSelecTotalUnit.Designer.cs">
+      <DependentUpon>frmSelecTotalUnit.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmEditLabelClass.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmEditLabelClass.Designer.cs">
+      <DependentUpon>frmEditLabelClass.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmFormatCondition.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmFormatCondition.Designer.cs">
+      <DependentUpon>FrmFormatCondition.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmFormatConditions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmFormatConditions.Designer.cs">
+      <DependentUpon>FrmFormatConditions.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmHistoryList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmHistoryList.Designer.cs">
+      <DependentUpon>frmHistoryList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmInputSavingReportInfo.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmInputSavingReportInfo.Designer.cs">
+      <DependentUpon>frmInputSavingReportInfo.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmLayoutHistoryList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmLayoutHistoryList.Designer.cs">
+      <DependentUpon>frmLayoutHistoryList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmLoading.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmLoading.Designer.cs">
+      <DependentUpon>frmLoading.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmMainMenuChildEditReport.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmMainMenuChildEditReport.Designer.cs">
+      <DependentUpon>frmMainMenuChildEditReport.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmDesignParent.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDesignParent.Designer.cs">
+      <DependentUpon>frmDesignParent.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmMainMenu.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmMainMenu.Designer.cs">
+      <DependentUpon>frmMainMenu.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmMainMenuChildMakeReport.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmMainMenuChildMakeReport.Designer.cs">
+      <DependentUpon>frmMainMenuChildMakeReport.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmSelectWaterSurveyPointFilter.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSelectWaterSurveyPointFilter.designer.cs">
+      <DependentUpon>frmSelectWaterSurveyPointFilter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmSelectExamFilter.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSelectExamFilter.designer.cs">
+      <DependentUpon>frmSelectExamFilter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmSelectGenericFilter.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSelectGenericFilter.Designer.cs">
+      <DependentUpon>frmSelectGenericFilter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Helpers\LoadingHelper.cs" />
+    <Compile Include="Helpers\RldAmazonS3Helper.cs" />
+    <Compile Include="Helpers\DataGridView\RldDataGridViewCurrentCellObserver.cs" />
+    <Compile Include="Helpers\DataGridView\RldDataGridViewCellValueObserver.cs" />
+    <Compile Include="Helpers\DataGridView\RldDataGridViewParamDataEditHelper.cs" />
+    <Compile Include="Helpers\DataGridView\RldDataGridViewStaticMethods.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelUtility.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelWorksheetFunctionEx.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelFontEx.cs" />
+    <Compile Include="Helpers\GlobalVariables.cs" />
+    <Compile Include="Helpers\RldExcelHtmlHelper.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelWebOptions.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelPublishObjectEx.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelPublishObjectsEx.cs" />
+    <Compile Include="Helpers\MenuStrip\RldMenuStripRenderHelper.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelShapeEx.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelShapesEx.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelWorksheetEx.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelRangeEx.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelWindowsEx.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelWindowEx.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelWorksheetsEx.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelWorkbooksEx.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelWorkbookEx.cs" />
+    <Compile Include="Helpers\ExcelHelpers\ExcelApplicationEx.cs" />
+    <Compile Include="Helpers\ExcelHelpers\AbstructExcelComEx.cs" />
+    <Compile Include="Helpers\DataGridView\RldDataGridViewSelectionRenderer.cs" />
+    <Compile Include="Helpers\RldExcelHelper.cs" />
+    <Compile Include="Helpers\RldReportDefineFileHelper.cs" />
+    <Compile Include="Helpers\RldRestResultData.cs" />
+    <Compile Include="ProjectInstaller.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="ProjectInstaller.Designer.cs">
+      <DependentUpon>ProjectInstaller.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Interfaces\IRldMainMenuChild.cs" />
+    <Compile Include="Interfaces\IRldDesignColleague.cs" />
+    <Compile Include="Interfaces\IRldDesignMediator.cs" />
+    <Compile Include="Interfaces\IRldDesignSendOnlyColleague.cs" />
+    <Compile Include="Interfaces\IRldDesignRecvOnlyColleague.cs" />
+    <Compile Include="Data\LayoutDataSet.cs" />
+    <Compile Include="Forms\frmDesignChildBase.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildBase.Designer.cs">
+      <DependentUpon>frmDesignChildBase.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildDataList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildDataList.Designer.cs">
+      <DependentUpon>frmDesignChildDataList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildLayoutGroup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildLayoutGroup.Designer.cs">
+      <DependentUpon>frmDesignChildLayoutGroup.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildLayoutParam.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildLayoutParam.Designer.cs">
+      <DependentUpon>frmDesignChildLayoutParam.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildLayoutTemplete.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildLayoutTemplete.Designer.cs">
+      <DependentUpon>frmDesignChildLayoutTemplete.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildLayout.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildLayout.Designer.cs">
+      <DependentUpon>frmDesignChildLayout.cs</DependentUpon>
+    </Compile>
+    <Compile Include="JavaFormatStrings.cs" />
+    <Compile Include="RldConst.cs" />
+    <Compile Include="RldLib.cs" />
+    <Compile Include="RldStartupFormDisplayer.cs" />
+    <Compile Include="Forms\frmEditConvList.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmEditConvList.Designer.cs">
+      <DependentUpon>frmEditConvList.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildSelectedItem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDesignChildSelectedItem.Designer.cs">
+      <DependentUpon>frmDesignChildSelectedItem.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmEditRepeat.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmEditRepeat.Designer.cs">
+      <DependentUpon>frmEditRepeat.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmSelectFormat.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSelectFormat.Designer.cs">
+      <DependentUpon>frmSelectFormat.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ModifyInstallParameter.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ModifyInstallParameter.Designer.cs">
+      <DependentUpon>ModifyInstallParameter.cs</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="Controls\RldTriStateTreeView.resx">
+      <DependentUpon>RldTriStateTreeView.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Controls\ucLabelClass.resx">
+      <DependentUpon>ucLabelClass.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\AboutBox1.resx">
+      <DependentUpon>AboutBox1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmDesignChildBase.resx">
+      <DependentUpon>frmDesignChildBase.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmDesignChildLayoutDevice.resx">
+      <DependentUpon>frmDesignChildLayoutDevice.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmDesignChildLayoutGroup.resx">
+      <DependentUpon>frmDesignChildLayoutGroup.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmDesignChildLayoutParam.resx">
+      <DependentUpon>frmDesignChildLayoutParam.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmDesignChildLayoutTotal.resx">
+      <DependentUpon>frmDesignChildLayoutTotal.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmDesignChildLayoutTemplete.resx">
+      <DependentUpon>frmDesignChildLayoutTemplete.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmDesignChildLayout.resx">
+      <DependentUpon>frmDesignChildLayout.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmDesignChildProgress.resx">
+      <DependentUpon>frmDesignChildProgress.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmDesignParent.resx">
+      <DependentUpon>frmDesignParent.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmSelectMainteFilter.resx">
+      <DependentUpon>frmSelectMainteFilter.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmSelecTotalUnit.resx">
+      <DependentUpon>frmSelecTotalUnit.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmEditConvList.resx">
+      <DependentUpon>frmEditConvList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmDesignChildSelectedItem.resx">
+      <DependentUpon>frmDesignChildSelectedItem.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmDesignChildDataList.resx">
+      <DependentUpon>frmDesignChildDataList.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmEditLabelClass.resx">
+      <DependentUpon>frmEditLabelClass.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmEditRepeat.resx">
+      <DependentUpon>frmEditRepeat.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmFormatCondition.resx">
+      <DependentUpon>FrmFormatCondition.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmFormatConditions.resx">
+      <DependentUpon>FrmFormatConditions.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmHistoryList.resx">
+      <DependentUpon>frmHistoryList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmInputSavingReportInfo.resx">
+      <DependentUpon>frmInputSavingReportInfo.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmLayoutHistoryList.resx">
+      <DependentUpon>frmLayoutHistoryList.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmLoading.resx">
+      <DependentUpon>frmLoading.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmMainMenu.resx">
+      <DependentUpon>frmMainMenu.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmMainMenuChildEditReport.resx">
+      <DependentUpon>frmMainMenuChildEditReport.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmMainMenuChildMakeReport.resx">
+      <DependentUpon>frmMainMenuChildMakeReport.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmSelectWaterSurveyPointFilter.resx">
+      <DependentUpon>frmSelectWaterSurveyPointFilter.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmSelectExamFilter.resx">
+      <DependentUpon>frmSelectExamFilter.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmSelectFormat.resx">
+      <DependentUpon>frmSelectFormat.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmSelectGenericFilter.resx">
+      <DependentUpon>frmSelectGenericFilter.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <EmbeddedResource Include="ModifyInstallParameter.resx">
+      <DependentUpon>ModifyInstallParameter.cs</DependentUpon>
+    </EmbeddedResource>
+    <None Include="api\index.md" />
+    <None Include="articles\intro.md" />
+    <None Include="articles\toc.md" />
+    <None Include="index.md" />
+    <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <None Include="ReportLayoutDesigner.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="toc.yml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Properties\LayoutDesigner.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <COMReference Include="VBIDE">
+      <Guid>{0002E157-0000-0000-C000-000000000046}</Guid>
+      <VersionMajor>5</VersionMajor>
+      <VersionMinor>3</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>primary</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\NKKWeight\Source\NKKCommon\NKKCommon.csproj">
+      <Project>{9e38647a-227c-4570-8e08-6bd25d0e3154}</Project>
+      <Name>NKKCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\JsonDataSerializeHelp\JsonDataSerializeHelp.csproj">
+      <Project>{f9309b93-4a48-4f2a-b7bb-25dd8d63b73e}</Project>
+      <Name>JsonDataSerializeHelp</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LayoutDesignerUtility\LayoutDesignerUtilityLib.csproj">
+      <Project>{c141aeba-cfce-4149-abed-e58bdfda67d4}</Project>
+      <Name>LayoutDesignerUtilityLib</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SignInLib\SignInLib.csproj">
+      <Project>{2751aad6-21f5-4ae5-acc7-2c4767980a30}</Project>
+      <Name>SignInLib</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\DragItemImage.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include=".gitignore" />
+    <Content Include="api\.gitignore" />
+    <Content Include="DataListBase.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DataVersion.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\loading.gif" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

@@ -1,0 +1,23 @@
+INSERT INTO V_ONL_RST_DIALYSIS_MEDI  VALUES (
+'@patid',
+'@dialysisDate',
+'@dialysisNo',
+'@ctlNo',
+to_date('@upDate','yyyy-mm-dd hh24:mi:ss'),
+'@medicineCd',
+'@medicineCd2',
+'@medicineName',
+
+'@medicineClassName',
+'@amount',
+'@Unit',
+'@effectFlg',
+to_date('@effectDate','yyyy-mm-dd hh24:mi:ss'),
+'@timingName',
+'@procedureCd',
+'@procedureCd2',
+'@procedureName',
+'@staffCd',
+'@staffName',
+'@comments'
+);

@@ -1,0 +1,1 @@
+select * from V_PAT_LIFE_LIST where PATID = @patid;

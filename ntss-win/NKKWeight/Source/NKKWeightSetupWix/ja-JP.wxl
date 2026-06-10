@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  NKKWeight（体重計）インストーラー 日本語ローカライゼーション
+  WiX v4 WXL（NKKAccessCardSetupWix と同構成）
+
+  目的:
+    Package Name="FNWSi 体重計アプリ" およびデスクトップショートカット名は
+    変更せず、インストールウィザード画面の表示名のみ "FNWSi Scale" に統一する。
+-->
+<WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl"
+                 Culture="ja-JP"
+                 Codepage="932">
+
+  <String Id="LaunchConditionNetFx45"
+          Value=".NET Framework 4.5 以上が必要です。&#xA;&#xA;下記 URL からインストール後、再度セットアップを実行してください。&#xA;https://go.microsoft.com/fwlink/?LinkId=225704" />
+
+  <String Id="AdvancedWelcomeEulaDlg_Title" Value="FNWSi Scale" />
+  <String Id="BrowseDlg_Title" Value="FNWSi Scale" />
+  <String Id="CancelDlg_Title" Value="FNWSi Scale" />
+  <String Id="CustomizeDlg_Title" Value="FNWSi Scale" />
+  <String Id="DiskCostDlg_Title" Value="FNWSi Scale" />
+  <String Id="ErrorDlg_Title" Value="FNWSi Scale" />
+  <String Id="ExitDialog_Title" Value="FNWSi Scale" />
+  <String Id="FatalError_Title" Value="FNWSi Scale" />
+  <String Id="FeaturesDlg_Title" Value="FNWSi Scale" />
+  <String Id="FilesInUse_Title" Value="FNWSi Scale" />
+  <String Id="InstallDirDlg_Title" Value="FNWSi Scale" />
+  <String Id="InstallScopeDlg_Title" Value="FNWSi Scale" />
+  <String Id="InvalidDirDlg_Title" Value="FNWSi Scale" />
+  <String Id="LicenseAgreementDlg_Title" Value="FNWSi Scale" />
+  <String Id="MaintenanceTypeDlg_Title" Value="FNWSi Scale" />
+  <String Id="MaintenanceWelcomeDlg_Title" Value="FNWSi Scale" />
+  <String Id="MsiRMFilesInUse_Title" Value="FNWSi Scale" />
+  <String Id="OutOfDiskDlg_Title" Value="FNWSi Scale" />
+  <String Id="OutOfRbDiskDlg_Title" Value="FNWSi Scale" />
+  <String Id="PrepareDlg_Title" Value="FNWSi Scale" />
+  <String Id="ProgressDlg_Title" Value="FNWSi Scale" />
+  <String Id="ResumeDlg_Title" Value="FNWSi Scale" />
+  <String Id="SetupTypeDlg_Title" Value="FNWSi Scale" />
+  <String Id="UserExit_Title" Value="FNWSi Scale" />
+  <String Id="VerifyReadyDlg_Title" Value="FNWSi Scale" />
+  <String Id="WaitForCostingDlg_Title" Value="FNWSi Scale" />
+  <String Id="WelcomeDlg_Title" Value="FNWSi Scale" />
+  <String Id="WelcomeEulaDlg_Title" Value="FNWSi Scale" />
+
+  <String Id="WelcomeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Scale セットアップ ウィザードへようこそ。" />
+  <String Id="WelcomeDlgDescription" Value="セットアップでは、FNWSi Scale をコンピュータにインストールします。続行する場合は［次へ］を、セットアップを終了する場合は［キャンセル］をクリックしてください。" />
+  <!-- PrepareDlg は本文とは別に PrepareDlgTitle が [ProductName] を参照する -->
+  <String Id="PrepareDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Scale セットアップ ウィザードへようこそ。" />
+  <String Id="ResumeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Scale セットアップ ウィザードの再開" />
+  <String Id="MaintenanceWelcomeDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Scale セットアップ ウィザードへようこそ。" />
+  <String Id="MaintenanceWelcomeDlgDescription" Value="セットアップでは、FNWSi Scale の機能をコンピュータから変更、修復、または削除できます。続行するには［次へ］をクリックし、終了するには［キャンセル］をクリックしてください。" />
+  <String Id="WelcomeEulaDlgTitle" Value="{\WixUI_Font_Bigger}FNWSi Scale セットアップ ウィザードへようこそ。" />
+  <String Id="WelcomeEulaDlgDescription" Value="セットアップでは、FNWSi Scale をコンピュータにインストールします。続行する場合は［次へ］を、セットアップを終了する場合は［キャンセル］をクリックしてください。" />
+  <String Id="InstallDirDlgFolderLabel" Value="FNWSi Scale のインストール先:" />
+  <String Id="MaintenanceTypeDlgRemoveText" Value="FNWSi Scale をコンピュータから削除します。" />
+  <String Id="VerifyReadyDlgRemoveTitle" Value="{\WixUI_Font_Title}FNWSi Scale の削除準備完了" />
+  <String Id="VerifyReadyDlgRemoveText" Value="コンピューターから FNWSi Scale を削除するには［削除］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="MaintenanceTypeDlgRepairText" Value="欠損や破損したファイル、ショートカット、レジストリ項目を修正して、FNWSi Scale の直近のインストールで発生した問題を修復します。" />
+  <String Id="MaintenanceTypeDlgChangeText" Value="FNWSi Scale の機能を変更します。" />
+  <String Id="VerifyReadyDlgRepairTitle" Value="{\WixUI_Font_Title}FNWSi Scale の修復準備完了" />
+  <String Id="VerifyReadyDlgRepairText" Value="FNWSi Scale のインストールを修復するには［修復］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgInstallTitle" Value="{\WixUI_Font_Title}FNWSi Scale のインストール準備完了。" />
+  <String Id="VerifyReadyDlgInstallText" Value="FNWSi Scale をインストールするには［インストール］をクリックしてください。設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgInstallDescription" Value="FNWSi Scale をインストールするには［インストール］をクリックしてください。設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgChangeText" Value="FNWSi Scale の機能を変更するには［変更］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgUpdateText" Value="FNWSi Scale を更新するには［更新］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgRepairDescription" Value="FNWSi Scale のインストールを修復するには［修復］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgRemoveDescription" Value="FNWSi Scale をコンピュータから削除するには［削除］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgDescription" Value="FNWSi Scale のインストールを修復するには［修復］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgDescriptionInstall" Value="FNWSi Scale をインストールするには［インストール］をクリックしてください。設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgDescriptionRepair" Value="FNWSi Scale のインストールを修復するには［修復］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="VerifyReadyDlgDescriptionRemove" Value="FNWSi Scale をコンピュータから削除するには［削除］をクリックしてください。インストール設定を確認または変更するには［戻る］をクリックしてください。ウィザードを終了するには［キャンセル］をクリックしてください。" />
+  <String Id="ProgressDlgTextInstalling" Value="FNWSi Scale をインストールしています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleInstalling" Value="{\WixUI_Font_Title}FNWSi Scale のインストール中" />
+  <String Id="ProgressDlgTextChanging" Value="FNWSi Scale を変更しています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleChanging" Value="{\WixUI_Font_Title}FNWSi Scale を変更中" />
+  <String Id="ProgressDlgTextRepairing" Value="FNWSi Scale を修復しています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleRepairing" Value="{\WixUI_Font_Title}FNWSi Scale を修復中" />
+  <String Id="ProgressDlgTextRemoving" Value="FNWSi Scale を削除しています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleRemoving" Value="{\WixUI_Font_Title}FNWSi Scale を削除中" />
+  <String Id="ProgressDlgTextUninstalling" Value="FNWSi Scale を削除しています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleUninstalling" Value="{\WixUI_Font_Title}FNWSi Scale を削除中" />
+  <String Id="ProgressDlgTextUpdating" Value="FNWSi Scale を更新しています。しばらくお待ちください。" />
+  <String Id="ProgressDlgTitleUpdating" Value="{\WixUI_Font_Title}FNWSi Scale を更新中" />
+  <String Id="UserExitTitle" Value="{\WixUI_Font_Bigger}FNWSi Scale セットアップ ウィザードは中断されました" />
+  <String Id="UserExitDescription1" Value="FNWSi Scale のセットアップが中断されました。システムは変更されていません。このプログラムを後でインストールするには、インストールを再実行してください。セットアップ ウィザードを終了するには、［完了］ボタンをクリックします。" />
+  <String Id="ExitDialogTitle" Value="{\WixUI_Font_Title}FNWSi Scale セットアップ ウィザードが完了しました" />
+  <String Id="ExitDialogDescription" Value="セットアップ ウィザードを終了するには、完了ボタンをクリックします。" />
+
+</WixLocalization>

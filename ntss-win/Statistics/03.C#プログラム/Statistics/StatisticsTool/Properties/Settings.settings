@@ -1,0 +1,105 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Fnw.StatisticsTool.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="FacilityCd" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="ProcWait" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">100</Value>
+    </Setting>
+    <Setting Name="SearchExamStart" Type="System.DateTime" Scope="Application">
+      <Value Profile="(Default)">1950-01-01</Value>
+    </Setting>
+    <Setting Name="MaxPageRow" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">52</Value>
+    </Setting>
+    <Setting Name="IdPreCheckPat" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="PathExport" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">C:\FNWSiTools\Statistics\StatisticsExport</Value>
+    </Setting>
+    <Setting Name="PathCsv" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">C:\FNWSiTools\Statistics\StatisticsSetting</Value>
+    </Setting>
+    <Setting Name="PathTemplate" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">C:\FNWSiTools\Statistics\StatisticsSetting</Value>
+    </Setting>
+    <Setting Name="FileSheetSum" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">SheetSum.txt</Value>
+    </Setting>
+    <Setting Name="FileErrorNew" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">SheetErrorNew.txt</Value>
+    </Setting>
+    <Setting Name="FileErrorOld" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">SheetErrorOld.txt</Value>
+    </Setting>
+    <Setting Name="PathPatient" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">Patient.csv</Value>
+    </Setting>
+    <Setting Name="PathMatchMstTreatItem" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">MatchMstTreatItem.csv</Value>
+    </Setting>
+    <Setting Name="PathMatchMstFacility" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">MatchMstFacility.csv</Value>
+    </Setting>
+    <Setting Name="PathMatchMstExamItem" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">MatchMstExamItem.csv</Value>
+    </Setting>
+    <Setting Name="PathSelectMstDiseaseDiabetes" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">SelectMstDiseaseDiabetes.csv</Value>
+    </Setting>
+    <Setting Name="PathCustomizeSettings" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">CustomizeSettings.xml</Value>
+    </Setting>
+    <Setting Name="UsingOrderClass" Type="System.String" Scope="User">
+      <Value Profile="(Default)">2</Value>
+    </Setting>
+    <Setting Name="PathMatchPatient" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">MatchPatient2025.csv</Value>
+    </Setting>
+    <Setting Name="PathMatchMstDisease" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">MatchMstDisease.csv</Value>
+    </Setting>
+    <Setting Name="PathMatchMstDie" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">MatchMstDie.csv</Value>
+    </Setting>
+    <Setting Name="PathCompletionStatus" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">CompletionStatus_2025.xml</Value>
+    </Setting>
+    <Setting Name="PathMatchMstDieLastYear" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">MatchMstDie2024.csv</Value>
+    </Setting>
+    <Setting Name="PathMatchMstDiseaseLastYear" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">MatchMstDisease2024.csv</Value>
+    </Setting>
+    <Setting Name="PeriodEnd" Type="System.DateTime" Scope="Application">
+      <Value Profile="(Default)">2026-01-01</Value>
+    </Setting>
+    <Setting Name="PeriodStart" Type="System.DateTime" Scope="Application">
+      <Value Profile="(Default)">2025-01-01</Value>
+    </Setting>
+    <Setting Name="BaseName" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://fnwsi.nksfn.com</Value>
+    </Setting>
+    <Setting Name="FacilityHash" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="SessionTimeout" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">60</Value>
+    </Setting>
+    <Setting Name="PathMatchMstInfection" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">MatchMstInfection.csv</Value>
+    </Setting>
+    <Setting Name="PathMatchMstVa" Type="System.String" Scope="User">
+      <Value Profile="(Default)">MatchMstVa.csv</Value>
+    </Setting>
+    <Setting Name="FacilityName" Type="System.String" Scope="Application">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="FacilityCode" Type="System.String" Scope="Application">
+      <Value Profile="(Default)" />
+    </Setting>
+  </Settings>
+</SettingsFile>

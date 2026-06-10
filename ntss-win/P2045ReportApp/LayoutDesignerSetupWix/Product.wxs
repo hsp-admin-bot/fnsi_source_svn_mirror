@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  LayoutDesigner WiX v4 インストーラー
+  製品名   : LayoutDesigner（帳票レイアウトデザイナーアプリ）
+  バージョン: 2.0.0
+  メーカー : Nikkiso
+  インストール先: C:\FNWSiTools\FNWSiLayoutDesigner
+
+  画面フロー:
+    ようこそ → インストール先選択 → 確認 → 進捗 → [設定ダイアログ(CA)] → 完了
+
+  機能:
+    - 日本語 UI
+    - サイレントインストール(/quiet): 既存 config を使用、なければデフォルト値
+    - バージョンダウングレード警告（サイレント時は中止）
+    - 実行中の LayoutDesigner プロセスを自動終了（アップグレード/アンインストール時）
+-->
+<?include GeneratedProductCode.wxi?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package
+    Name="FNWSi 帳票レイアウトデザイナーアプリ"
+    Manufacturer="NIKKISO"
+    Version="$(var.ProductVersion)"
+    ProductCode="$(var.ProductCode)"
+    UpgradeCode="{29F50B52-E763-4F77-AA5E-DFE362DD19EB}"
+    Language="1041"
+    Codepage="932"
+    InstallerVersion="500"
+    Compressed="yes"
+    Scope="perMachine">
+
+    <SummaryInformation Description="帳票レイアウトデザイナー インストーラー" Keywords="インストーラー" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- ============================== アイコン ============================== -->
+    <Icon Id="LayoutDesignerIcon" SourceFile="$(var.SrcDesigner)Properties\LayoutDesigner.ico" />
+
+    <Property Id="ARPPRODUCTICON" Value="LayoutDesignerIcon" />
+    <Property Id="ARPCONTACT"     Value="Nikkiso" />
+    <Property Id="ARPCOMMENTS"    Value="帳票レイアウトデザイナーアプリ" />
+    <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
+
+    <!-- インストール後の「再起動してください」ダイアログを非表示にする -->
+    <Property Id="REBOOT" Value="ReallySuppress" />
+
+    <!-- Restart Manager を無効化（FilesInUse ダイアログ抑制） -->
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <Property Id="RUNNING_PROCESSES" Secure="yes" />
+
+    <!-- インストール先を常に C: ドライブに固定 -->
+    <Property Id="ROOTDRIVE" Value="C:\" />
+
+    <!-- ============================== .NET Framework 4.5 チェック ============================== -->
+    <Property Id="NETFRAMEWORK45" Secure="yes">
+      <RegistrySearch Id="NetFx45Search"
+                      Root="HKLM"
+                      Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"
+                      Name="Release"
+                      Type="raw" />
+    </Property>
+    <Launch Condition="NETFRAMEWORK45"
+            Message=".NET Framework 4.5 以上が必要です。インストールしてから再度実行してください。" />
+
+    <!-- ============================== バージョン管理 ============================== -->
+    <Upgrade Id="{29F50B52-E763-4F77-AA5E-DFE362DD19EB}">
+      <UpgradeVersion
+        Minimum="0.0.0"
+        Maximum="$(var.ProductVersion)"
+        IncludeMinimum="yes"
+        IncludeMaximum="no"
+        Property="OLDERVERSIONBEINGUPGRADED"
+        MigrateFeatures="yes" />
+      <UpgradeVersion
+        Minimum="$(var.ProductVersion)"
+        IncludeMinimum="no"
+        Property="NEWERVERSIONALREADYINSTALLED" />
+    </Upgrade>
+
+    <Launch Condition="NOT NEWERVERSIONALREADYINSTALLED"
+            Message="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
+
+    <!-- ============================== ディレクトリ構成 ============================== -->
+    <StandardDirectory Id="TARGETDIR">
+      <Directory Id="FNWSITOOLS" Name="FNWSiTools">
+        <Directory Id="INSTALLFOLDER" Name="FNWSiLayoutDesigner" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+    <StandardDirectory Id="WindowsFolder" />
+
+    <!-- ============================== コンポーネント ============================== -->
+
+    <!-- (1) メインアプリケーション -->
+    <Component Id="C_LayoutDesigner"
+               Guid="{E1A2B3C4-D5E6-4F78-9012-3456789ABCD1}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_LayoutDesignerExe"
+            Source="$(var.SrcBin)FNWSiLayoutDesigner.exe"
+            KeyPath="yes" />
+      <RemoveFile Id="RF_InstallState"
+                  Name="LayoutDesigner.InstallState"
+                  On="uninstall" />
+    </Component>
+
+    <!-- (2) FNWSiLayoutDesigner.exe.config -->
+    <Component Id="C_LayoutDesignerConfig"
+               Guid="{E2A2B3C4-D5E6-4F78-9012-3456789ABCD2}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_LayoutDesignerExeConfig"
+            Source="$(var.SrcBin)FNWSiLayoutDesigner.exe.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (3) データファイル（ソースディレクトリから） -->
+    <Component Id="C_DataVersionXml"
+               Guid="{E3A2B3C4-D5E6-4F78-9012-3456789ABCD3}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_DataVersionXml"
+            Source="$(var.SrcDesigner)DataVersion.xml"
+            KeyPath="yes" />
+    </Component>
+
+    <Component Id="C_DataListBaseXml"
+               Guid="{E4A2B3C4-D5E6-4F78-9012-3456789ABCD4}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_DataListBaseXml"
+            Source="$(var.SrcDesigner)DataListBase.xml"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (4) アプリ設定ファイル（既存設定を上書きしない・削除もしない） -->
+    <Component Id="C_ReportConfig"
+               Guid="{E5A2B3C4-D5E6-4F78-9012-3456789ABCD5}"
+               Directory="INSTALLFOLDER"
+               NeverOverwrite="yes"
+               Permanent="yes">
+      <File Id="F_ReportConfig"
+            Source="$(var.SrcBin)ReportLayoutDesigner.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (5) 共有 DLL 群 -->
+    <ComponentGroup Id="CG_SharedDlls" Directory="INSTALLFOLDER">
+      <Component Guid="{F1A2B3C4-D5E6-4F78-9012-3456789ABCD1}"><File Source="$(var.SrcBin)NKKCommon.dll" /></Component>
+      <Component Guid="{F2A2B3C4-D5E6-4F78-9012-3456789ABCD2}"><File Source="$(var.SrcBin)JsonDataSerializeHelp.dll" /></Component>
+      <Component Guid="{F3A2B3C4-D5E6-4F78-9012-3456789ABCD3}"><File Source="$(var.SrcBin)SignInLib.dll" /></Component>
+      <Component Guid="{F4A2B3C4-D5E6-4F78-9012-3456789ABCD4}"><File Source="$(var.SrcBin)LayoutDesignerUtilityLib.dll" /></Component>
+      <Component Guid="{F5A2B3C4-D5E6-4F78-9012-3456789ABCD5}"><File Source="$(var.SrcBin)Newtonsoft.Json.dll" /></Component>
+      <Component Guid="{F6A2B3C4-D5E6-4F78-9012-3456789ABCD6}"><File Source="$(var.SrcBin)System.ValueTuple.dll" /></Component>
+      <Component Guid="{F7A2B3C4-D5E6-4F78-9012-3456789ABCD7}"><File Source="$(var.SrcBin)Ionic.Zip.dll" /></Component>
+
+    </ComponentGroup>
+
+    <!-- (5) デスクトップショートカット -->
+    <Component Id="C_DesktopShortcut"
+               Guid="{D1A2B3C4-D5E6-4F78-9012-3456789ABCD1}"
+               Directory="INSTALLFOLDER">
+      <Shortcut Id="SC_LayoutDesigner"
+                Directory="DesktopFolder"
+                Name="帳票レイアウトデザイナーアプリ"
+                Target="[INSTALLFOLDER]FNWSiLayoutDesigner.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="LayoutDesignerIcon" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\Nikkiso\LayoutDesigner"
+                     Name="ShortcutsInstalled"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+      <RemoveRegistryKey Root="HKCU"
+                         Key="Software\Nikkiso\LayoutDesigner"
+                         Action="removeOnUninstall" />
+    </Component>
+
+    <!-- ============================== フィーチャー ============================== -->
+    <Feature Id="ProductFeature"
+             Title="FNWSi Layout Designer"
+             Level="1"
+             ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentRef Id="C_LayoutDesigner" />
+      <ComponentRef Id="C_LayoutDesignerConfig" />
+      <ComponentRef Id="C_DataVersionXml" />
+      <ComponentRef Id="C_DataListBaseXml" />
+      <ComponentRef Id="C_ReportConfig" />
+      <ComponentGroupRef Id="CG_SharedDlls" />
+      <ComponentGroupRef Id="CG_SampleFiles" />
+      <ComponentRef Id="C_DesktopShortcut" />
+    </Feature>
+
+    <!-- ============================== カスタムアクション ============================== -->
+
+    <!-- 実行中の LayoutDesigner プロセスを強制終了（ファイルロック解放） -->
+    <CustomAction Id="KillRunningInstances"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c taskkill /F /IM FNWSiLayoutDesigner.exe &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <CustomAction Id="CA_DetectRunningProcesses"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_DetectRunningProcesses.vbs" />
+
+    <CustomAction Id="CA_KillGUIApps"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_KillGUIApps.vbs" />
+
+    <!-- InstallUtil.exe 実行パスをプロパティに設定 -->
+    <CustomAction Id="SetInstallServiceProperty"
+                  Property="InstallServiceWithInstaller"
+                  Value="&quot;[INSTALLFOLDER]FNWSiLayoutDesigner.exe&quot;" />
+
+    <!-- サイレントインストール時: /silent=1 をアセンブリパスの前に配置 -->
+    <CustomAction Id="SetInstallServicePropertySilent"
+                  Property="InstallServiceWithInstaller"
+                  Value="/silent=1 &quot;[INSTALLFOLDER]FNWSiLayoutDesigner.exe&quot;" />
+
+    <!-- InstallUtil.exe で ProjectInstaller を実行（OnAfterInstall で設定画面表示） -->
+    <CustomAction Id="InstallServiceWithInstaller"
+                  Directory="WindowsFolder"
+                  ExeCommand="Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /LogToConsole=false /LogFile= [InstallServiceWithInstaller]"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check" />
+
+    <!-- ============================== シーケンス ============================== -->
+
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallInitialize" />
+
+      <!-- 実行中プロセスを終了してからファイル操作（アップグレード/修復/アンインストール共通） -->
+      <Custom Action="KillRunningInstances" Before="RemoveFiles" Condition="1" />
+
+      <!-- 新規インストール / 修復時: InstallFiles 後に ProjectInstaller 実行（設定画面） -->
+      <Custom Action="SetInstallServiceProperty" Before="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &gt;= 5" />
+      <Custom Action="SetInstallServicePropertySilent" Before="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &lt; 5" />
+      <Custom Action="InstallServiceWithInstaller" After="InstallFiles"
+              Condition="NOT REMOVE" />
+    </InstallExecuteSequence>
+
+    <!-- ============================== UI ============================== -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <UI>
+      <Dialog Id="RunningProcessesDlg" Width="370" Height="270" Title="FNWSi Layout Designer">
+        <Control Id="BannerBitmap" Type="Bitmap"
+                 X="0" Y="0" Width="370" Height="44"
+                 TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line"
+                 X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Title" Type="Text"
+                 X="15" Y="6" Width="340" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}実行中アプリケーションの検出" />
+        <Control Id="Description" Type="Text"
+                 X="25" Y="23" Width="340" Height="15"
+                 Text="インストール前にアプリケーションを終了してください。" />
+        <Control Id="RunningAppsLabel" Type="Text"
+                 X="20" Y="58" Width="330" Height="30"
+                 Text="以下のアプリケーションが実行中のため、インストールを継続できません。" />
+        <Control Id="RunningAppsList" Type="Text"
+                 X="30" Y="92" Width="310" Height="50"
+                 Text="[RUNNING_PROCESSES]" />
+        <Control Id="BottomLine" Type="Line"
+                 X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton"
+                 X="155" Y="243" Width="56" Height="17"
+                 Text="&lt; 戻る">
+          <Publish Event="NewDialog" Value="WelcomeDlg" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="MaintenanceTypeDlg" Condition="Installed" />
+        </Control>
+        <Control Id="CloseAndContinue" Type="PushButton"
+                 X="215" Y="243" Width="84" Height="17"
+                 Default="yes" Text="終了して続行">
+          <Publish Event="DoAction" Value="CA_KillGUIApps" Order="1" Condition="1" />
+          <Publish Event="NewDialog" Value="InstallDirDlg" Order="2" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="2" Condition="Installed" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton"
+                 X="307" Y="243" Width="56" Height="17"
+                 Cancel="yes" Text="キャンセル">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="DoAction" Value="CA_DetectRunningProcesses"
+               Order="1" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="NewDialog" Value="RunningProcessesDlg"
+               Order="2" Condition="NOT Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="3" Condition="NOT Installed AND NOT RUNNING_PROCESSES" />
+
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="DoAction" Value="CA_DetectRunningProcesses"
+               Order="1" Condition="Installed" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="NewDialog" Value="RunningProcessesDlg"
+               Order="2" Condition="Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="NewDialog" Value="VerifyReadyDlg"
+               Order="3" Condition="Installed AND NOT RUNNING_PROCESSES" />
+
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2" Condition="1" />
+    </UI>
+
+  </Package>
+
+</Wix>

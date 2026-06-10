@@ -1,0 +1,1 @@
+select * from V_ONL_RST_DIALYSIS where PATID = @patid;

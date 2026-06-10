@@ -1,0 +1,22 @@
+-- ----------------------------
+-- Table structure for V_RST_DIALYSIS_COND
+-- ----------------------------
+DROP TABLE "V_RST_DIALYSIS_COND";
+CREATE TABLE "V_RST_DIALYSIS_COND" (
+  "PATID" CHAR(12 BYTE) NOT NULL,
+  "DIALYSIS_DATE" VARCHAR2(20 BYTE),
+  "DIALYSIS_NO" NUMBER,
+  "CTL_NO" CHAR(3 BYTE),
+  "UP_DATE" DATE,
+  "DIALYSIS_ITEM_NAME" VARCHAR2(40 BYTE),
+  "VALUE" VARCHAR2(20 BYTE),
+  "VALUE_NAME" VARCHAR2(100 BYTE),
+  "UNIT" VARCHAR2(20 BYTE),
+  "VALUE_CD2" VARCHAR2(20 BYTE)
+)
+;
+
+-- ----------------------------
+-- Primary Key structure for table V_RST_DIALYSIS_COND
+-- ----------------------------
+ALTER TABLE "V_RST_DIALYSIS_COND" ADD CONSTRAINT "SYS_C007447" PRIMARY KEY ("PATID");

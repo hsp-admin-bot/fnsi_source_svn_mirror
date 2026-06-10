@@ -1,0 +1,1 @@
+select * from V_PAT_INFO where PATID = '@hospPatId';

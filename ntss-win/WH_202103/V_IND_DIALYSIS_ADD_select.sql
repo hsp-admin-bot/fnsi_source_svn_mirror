@@ -1,0 +1,1 @@
+select * from V_IND_DIALYSIS_ADD where PATID = @patid;

@@ -1,0 +1,154 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{CAD92B7B-E380-49EF-A542-BB41E8691729}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>LDT.SERVICE</RootNamespace>
+    <AssemblyName>LDT.SERVICE</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="CsvHelper, Version=15.0.0.0, Culture=neutral, PublicKeyToken=8c4959082be5c823, processorArchitecture=MSIL">
+      <HintPath>..\packages\CsvHelper.15.0.1\lib\net45\CsvHelper.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Linq.Expressions, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Linq.Expressions.4.3.0\lib\net463\System.Linq.Expressions.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.2\lib\netstandard1.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.2\lib\portable-net45+win8+wp8+wpa81\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ValueTuple, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.4.0\lib\net461\System.ValueTuple.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Configuration\AppSettingConfig.cs" />
+    <Compile Include="Cookies\CookieManager.cs" />
+    <Compile Include="Enums\Direction.cs" />
+    <Compile Include="Enums\Protocol.cs" />
+    <Compile Include="Enums\RequestMethod.cs" />
+    <Compile Include="Extendsions\Dictionnary.cs" />
+    <Compile Include="Extendsions\ResponseConvert.cs" />
+    <Compile Include="Handler\BaseHttpClientHandler.cs" />
+    <Compile Include="Implements\BaseHttpClient.cs" />
+    <Compile Include="Implements\BaseService.cs" />
+    <Compile Include="Implements\MasterService.cs" />
+    <Compile Include="Implements\MstCoopDistributeService.cs" />
+    <Compile Include="Implements\MstCoopFacilityService.cs" />
+    <Compile Include="Implements\MstCoopLayoutDetailService.cs" />
+    <Compile Include="Implements\MstCoopLayoutService.cs" />
+    <Compile Include="Implements\MstFacilityService.cs" />
+    <Compile Include="Implements\SettingService.cs" />
+    <Compile Include="Implements\SysDataSetService.cs" />
+    <Compile Include="Implements\UserService.cs" />
+    <Compile Include="Interfaces\IBaseHttpClient.cs" />
+    <Compile Include="Interfaces\IBaseService.cs" />
+    <Compile Include="Interfaces\IMasterService.cs" />
+    <Compile Include="Interfaces\IMstCoopDistributeService.cs" />
+    <Compile Include="Interfaces\IMstCoopFacilityService.cs" />
+    <Compile Include="Interfaces\IMstCoopLayoutDetailService.cs" />
+    <Compile Include="Interfaces\IMstFacilityService.cs" />
+    <Compile Include="Interfaces\ISettingService.cs" />
+    <Compile Include="Interfaces\ISysDataSetService.cs" />
+    <Compile Include="Interfaces\IUserService.cs" />
+    <Compile Include="Interfaces\IMstCoopLayoutService.cs" />
+    <Compile Include="Models\BaseEntity.cs" />
+    <Compile Include="Models\CoopCdTypeModel.cs" />
+    <Compile Include="Models\MstCoopDistributeEntity.cs" />
+    <Compile Include="Models\MstCoopFacilityEntity.cs" />
+    <Compile Include="Models\MstCoopLayoutDetailEntity.cs" />
+    <Compile Include="Models\MstCoopLayoutEntity.cs" />
+    <Compile Include="Models\MstFacilityEntity.cs" />
+    <Compile Include="Models\Requests\BaseRequest.cs" />
+    <Compile Include="Models\Requests\CreateOrUpdateCoopLayoutRequest.cs" />
+    <Compile Include="Models\Requests\CreateOrUpdateMstCoopLayotDetailRequest.cs" />
+    <Compile Include="Models\Requests\GetAllByFilterAsyncRequest.cs" />
+    <Compile Include="Models\Requests\GetAllFacilityRequest.cs" />
+    <Compile Include="Models\Requests\GetAllMstCoopLayoutRequest.cs" />
+    <Compile Include="Models\Requests\GetAllSysDataSetRequest.cs" />
+    <Compile Include="Models\Requests\GetByMstCoopDistributeRequest.cs" />
+    <Compile Include="Models\Requests\GetByMstCoopFacilityRequest.cs" />
+    <Compile Include="Models\Requests\GetByMstCoopLayoutDetailRequest.cs" />
+    <Compile Include="Models\Requests\GetByMstCoopLayoutRequest.cs" />
+    <Compile Include="Models\Requests\LoginRequest.cs" />
+    <Compile Include="Models\Responses\BaseResponse.cs" />
+    <Compile Include="Models\Responses\CreateOrUpdateCoopLayoutDetailResponse.cs" />
+    <Compile Include="Models\Responses\CreateOrUpdateCoopLayoutResponse.cs" />
+    <Compile Include="Models\Responses\GetAllFacilityResponse.cs" />
+    <Compile Include="Models\Responses\GetAllMstCoopLayoutResponse.cs" />
+    <Compile Include="Models\Responses\GetAllSysDataSetResponse.cs" />
+    <Compile Include="Models\Responses\GetByMstCoopDistributeResponse.cs" />
+    <Compile Include="Models\Responses\GetByMstCoopFacilityResponse.cs" />
+    <Compile Include="Models\Responses\GetByMstCoopLayoutDetailResponse.cs" />
+    <Compile Include="Models\Responses\GetByMstCoopLayoutResponse.cs" />
+    <Compile Include="Models\Responses\LoginResponse.cs" />
+    <Compile Include="Models\SettingEntity.cs" />
+    <Compile Include="Models\SettingModeReceiveModel.cs" />
+    <Compile Include="Models\SettingModeSendModel.cs" />
+    <Compile Include="Models\SubKeyModel.cs" />
+    <Compile Include="Models\SysDataSetEntity.cs" />
+    <Compile Include="Models\UserEntity.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ApplicationConfig.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="App.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LDT.LOG_HELPER\LDT.LOG_HELPER.csproj">
+      <Project>{4EAF75F7-D55A-488E-B928-EBB90FD11069}</Project>
+      <Name>LDT.LOG_HELPER</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

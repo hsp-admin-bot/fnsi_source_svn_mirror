@@ -1,0 +1,32 @@
+-- ----------------------------
+-- Table structure for V_PAT_DEVICE_SET
+-- ----------------------------
+DROP TABLE "V_PAT_DEVICE_SET";
+CREATE TABLE "V_PAT_DEVICE_SET" (
+  "PATID" CHAR(12 BYTE) NOT NULL,
+  "NAME" VARCHAR2(40 BYTE),
+  "CTL_NO" NUMBER(4,0),
+  "SET_NAME" VARCHAR2(50 BYTE),
+  "VALUE" NUMBER,
+  "UP_DATE" DATE,
+  "MON_VALUE" NUMBER,
+  "MON_UP_DATE" DATE,
+  "TUE_VALUE" NUMBER,
+  "TUE_UP_DATE" DATE,
+  "WED_VALUE" NUMBER,
+  "WED_UP_DATE" DATE,
+  "THU_VALUE" NUMBER,
+  "THU_UP_DATE" DATE,
+  "FRI_VALUE" NUMBER,
+  "FRI_UP_DATE" DATE,
+  "SAT_VALUE" NUMBER,
+  "SAT_UP_DATE" DATE,
+  "SUN_VALUE" NUMBER,
+  "SUN_UP_DATE" DATE
+)
+;
+
+-- ----------------------------
+-- Primary Key structure for table V_PAT_DEVICE_SET
+-- ----------------------------
+ALTER TABLE "V_PAT_DEVICE_SET" ADD CONSTRAINT "SYS_C007497" PRIMARY KEY ("PATID");

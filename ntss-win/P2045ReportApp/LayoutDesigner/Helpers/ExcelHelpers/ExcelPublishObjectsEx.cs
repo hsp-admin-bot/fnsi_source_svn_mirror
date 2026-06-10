@@ -1,0 +1,54 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+using Excel = Microsoft.Office.Interop.Excel;
+
+namespace LayoutDesigner
+{
+    /// <summary>
+    /// Microsoft.Office.Interop.Excel.PublishObjects 拡張クラス
+    /// </summary>
+    public class ExcelPublishObjectsEx : AbstructExcelComEx
+    {
+        #region 生成と破棄
+
+        /// <summary>
+        /// Microsoft.Office.Interop.Excel.PublishObjects インターフェースを指定して、Microsoft.Office.Interop.Excel.PublishObjects 拡張クラスの新しいインスタンスを初期化します。
+        /// </summary>
+        /// <param name="aXlShapes"></param>
+        private ExcelPublishObjectsEx(Excel.PublishObjects aXlPublishObjects) : base(aXlPublishObjects) { }
+
+        /// <summary>
+        /// Microsoft.Office.Interop.Excel.Workbook インターフェースを指定して、Microsoft.Office.Interop.Excel.PublishObjects 拡張クラスの新しいインスタンスを初期化します。
+        /// </summary>
+        /// <param name="aXlSheet"></param>
+        private ExcelPublishObjectsEx(Excel.Workbook aXlBook) : base(aXlBook.PublishObjects) { }
+
+        /// <summary>
+        /// Microsoft.Office.Interop.Excel.Workbook 拡張クラスのインスタンスを指定して、Microsoft.Office.Interop.Excel.PublishObjects 拡張クラスの新しいインスタンスを初期化します。
+        /// </summary>
+        /// <param name="aXlSheet"></param>
+        public ExcelPublishObjectsEx(ExcelWorkbookEx aXlbook) : base(aXlbook.Workbook.PublishObjects) { }
+
+        #endregion
+
+        #region メンバプロパティ定義
+
+        /// <summary>
+        /// Microsoft.Office.Interop.Excel.PublishObjects インターフェースへの参照の取得を行います。
+        /// 値の取得のみ可能です。
+        /// </summary>
+        public Excel.PublishObjects PublishObjects
+        {
+            [System.Diagnostics.DebuggerStepThrough()]
+            get {
+                return base.XlObject as Excel.PublishObjects;
+            }
+        }
+
+        #endregion
+    }
+}

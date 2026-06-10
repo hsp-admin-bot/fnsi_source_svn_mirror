@@ -1,0 +1,21 @@
+INSERT INTO V_PAT_STATUS  VALUES (
+'@patid',
+'@dialysisDate',
+'@dialysisTime',
+'@startPlanDate',
+'@enterFlg',
+to_date('@enterDate', 'YYYY-MM-DD hh24:mi:ss'),
+'@machineCheckFlg',
+to_date('@machineCheckDate', 'YYYY-MM-DD hh24:mi:ss'),
+'@dialsisStartFlg',
+to_date('@dialsisStartDate', 'YYYY-MM-DD hh24:mi:ss'),
+'@offwaterFlg',
+to_date('@offwaterDate', 'YYYY-MM-DD hh24:mi:ss'),
+'@wasteFluidFlg',
+to_date('@wasteFluidDate', 'YYYY-MM-DD hh24:mi:ss'),
+'@weightAfterFlg',
+to_date('@weightAfterDate', 'YYYY-MM-DD hh24:mi:ss'),
+'@recoveryBtnFlg',
+to_date('@recoveryBtnDate', 'YYYY-MM-DD hh24:mi:ss'),
+to_date('@upDate', 'YYYY-MM-DD hh24:mi:ss')
+);

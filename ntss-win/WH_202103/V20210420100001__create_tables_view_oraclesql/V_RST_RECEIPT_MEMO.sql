@@ -1,0 +1,25 @@
+-- ----------------------------
+-- Table structure for V_RST_RECEIPT_MEMO
+-- ----------------------------
+DROP TABLE "V_RST_RECEIPT_MEMO";
+CREATE TABLE "V_RST_RECEIPT_MEMO" (
+  "PATID" CHAR(12 BYTE) NOT NULL,
+  "DIALYSIS_DATE" VARCHAR2(8 BYTE),
+  "DIALYSIS_NO" NUMBER(12,0),
+  "CTL_NO" CHAR(7 BYTE),
+  "UP_DATE" DATE,
+  "DIVISION" CHAR(1 BYTE),
+  "CODE" CHAR(4 BYTE),
+  "CODE_UPDATE" DATE,
+  "ADD_FLG" CHAR(1 BYTE),
+  "ITEM_NAME" VARCHAR2(256 BYTE),
+  "MAIN_DIAL_DIFF" CHAR(1 BYTE),
+  "IN_HOSPITAL_CD" CHAR(20 BYTE),
+  "IN_HOSPITAL_CD2" CHAR(20 BYTE)
+)
+;
+
+-- ----------------------------
+-- Primary Key structure for table V_RST_RECEIPT_MEMO
+-- ----------------------------
+ALTER TABLE "V_RST_RECEIPT_MEMO" ADD CONSTRAINT "SYS_C007453" PRIMARY KEY ("PATID");

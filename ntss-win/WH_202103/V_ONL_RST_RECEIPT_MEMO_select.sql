@@ -1,0 +1,1 @@
+select * from V_ONL_RST_RECEIPT_MEMO where PATID = @patid;

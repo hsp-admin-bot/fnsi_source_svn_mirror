@@ -1,0 +1,24 @@
+-- ----------------------------
+-- Table structure for V_SCH_DIALYSIS_PLAN_CARD
+-- ----------------------------
+DROP TABLE "V_SCH_DIALYSIS_PLAN_CARD";
+CREATE TABLE "V_SCH_DIALYSIS_PLAN_CARD" (
+  "PATID" CHAR(12 BYTE) NOT NULL,
+  "DIALYSIS_DATE" VARCHAR2(8 BYTE),
+  "BED_NO" NUMBER(4,0),
+  "BED_NAME" VARCHAR2(40 BYTE),
+  "KUR_CD" VARCHAR2(6 BYTE),
+  "KUR_NAME" VARCHAR2(40 BYTE),
+  "PLURAL" NUMBER(1,0),
+  "UP_DATE" DATE,
+  "RESULT_DIALYSISNO" NUMBER(12,0),
+  "OPE_IND_PLAN" CHAR(1 BYTE),
+  "DUMMY_FLG" NUMBER(1,0),
+  "START_TIME" VARCHAR2(6 BYTE)
+)
+;
+
+-- ----------------------------
+-- Primary Key structure for table V_SCH_DIALYSIS_PLAN_CARD
+-- ----------------------------
+ALTER TABLE "V_SCH_DIALYSIS_PLAN_CARD" ADD CONSTRAINT "SYS_C007459" PRIMARY KEY ("PATID");

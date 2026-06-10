@@ -1,0 +1,1 @@
+select * from V_PAT_INOUT where PATID = @patid;

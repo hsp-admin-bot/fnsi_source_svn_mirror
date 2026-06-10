@@ -1,0 +1,1 @@
+select * from V_PAT_EXAMIN_SCH where PATID = @patid;

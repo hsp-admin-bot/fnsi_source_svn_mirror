@@ -1,0 +1,165 @@
+/*
+ ///////////////////////////////////////////////////////////////////////////////
+ //
+ // システム名：FutureNetⅢ
+ // 機能名	：FNW版標準WEB-IF　スタイルシート
+ // ファイル名：form.css
+ // 説明	  ：画面共通のスタイルシート
+ //
+ // Copyright(C) 2010 NIKKISO CO., LTD. All Rights Reserved 
+ //
+ // 更新履歴
+ // 日付        担当                理由
+ // 2020/05/20  TEX-SOL             新規作成
+ //
+ ///////////////////////////////////////////////////////////////////////////////
+*/
+
+/*---- 共通設定 ----*/
+html {
+	height: 100%;
+}
+body {
+	height: 100%;
+	margin: 0;
+}
+iframe {
+	border: none;
+	height: 100%;
+	width: 100%;
+}
+/*---- table設定 ----*/
+/* 罫線なし */
+table.no-border {
+	border: none;
+	border-collapse: collapse;
+}
+table.no-border td {
+	padding: 0;
+}
+/* 罫線あり */
+table.border {
+	border: 1px black solid;
+	border-collapse: collapse;
+}
+table.border td {
+	border: 1px black solid;
+	padding: 3px;
+}
+table.border th {
+	border: 1px black solid;
+	color: #fff;
+	background: #3366cc;
+	padding: 3px;
+}
+/* テーブルの中央寄せ */
+table.tbl-center {
+	margin: 0 auto;
+}
+/*---- コンテンツ ----*/
+.main-content {
+	display: table;
+	height: 100%;
+	width: 100%;
+}
+/*---- コンテンツ要素 ----*/
+.inner-content {
+	display: table-cell;
+	vertical-align: top;
+}
+.center {
+	text-align: center;
+}
+/*---- メニュー ----*/
+.menu {
+	width: 260px;
+}
+.header {
+	height: 50px;
+	width: 260px;
+}
+.search {
+	width: 260px;
+}
+table.search-info tr {
+	height: 25px;
+}
+table.search-info td {
+	width: 41px;
+}
+/*---- メイン ----*/
+.main {
+	width: 100%;
+	height: 100%;
+}
+.patient-main {
+	position: absolute;
+	width: 100%;
+	top: 0;
+	bottom: 55px;
+}
+.patient-cmd {
+	position: absolute;
+	bottom: 0px;
+	width: 100%;
+	height: 50px;
+}
+.button-area > input[type='button'] {
+	font-family: sans-serif;
+	width: 110px;
+	height: 2em;
+}
+/* 一覧の色(奇数行) */
+.odd {
+	background: #dadfea;
+}
+/* 透析情報 */
+.paitient-list {
+	width: 760px;
+}
+/* 患者情報 */
+.paitient-info {
+	width: 760px;
+	height: 60px;
+	text-align: left;
+}
+/* 透析情報 */
+.dialysis-info {
+	width: 760px;
+	height: 60px;
+}
+
+/* サイズ */
+.w80 {
+	width: 80px;
+}
+.w110 {
+	width: 110px;
+}
+.w120 {
+	width: 120px;
+}
+.w170 {
+	width: 170px;
+}
+.w240 {
+	width: 240px;
+}
+.w410 {
+	width: 410px;
+}
+/*-- PDF --*/
+.navi-area {
+	width: 260px
+}
+.preview-area {
+}
+/* プレビュー制御 */
+.control-info {
+	width: 100%;
+	background: #eee;
+	text-align: center;
+}
+table.control-info tr {
+	height: 80px;
+}

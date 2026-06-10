@@ -1,0 +1,26 @@
+-- ----------------------------
+-- Table structure for V_PAT_EXAMIN_SCH
+-- ----------------------------
+DROP TABLE "V_PAT_EXAMIN_SCH";
+CREATE TABLE "V_PAT_EXAMIN_SCH" (
+  "PATID" CHAR(12 BYTE) NOT NULL,
+  "UP_DATE" DATE,
+  "EXAM_DATE" CHAR(8 BYTE),
+  "EXAM_TIME" VARCHAR2(4 BYTE),
+  "EXAM_SET_CD" CHAR(20 BYTE),
+  "EXAM_SET_NAME" VARCHAR2(40 BYTE),
+  "EXAM_DIVISION" CHAR(1 BYTE),
+  "EXAM_PROC_CD" CHAR(1 BYTE),
+  "DOCTOR_CODE" CHAR(10 BYTE),
+  "DOCTOR_NAME" VARCHAR2(20 BYTE),
+  "ORDER_STAFF" CHAR(10 BYTE),
+  "ORDER_NAME" VARCHAR2(20 BYTE),
+  "UPDATE_CODE" CHAR(10 BYTE),
+  "UPDATE_NAME" VARCHAR2(20 BYTE)
+)
+;
+
+-- ----------------------------
+-- Primary Key structure for table V_PAT_EXAMIN_SCH
+-- ----------------------------
+ALTER TABLE "V_PAT_EXAMIN_SCH" ADD CONSTRAINT "SYS_C007472" PRIMARY KEY ("PATID");

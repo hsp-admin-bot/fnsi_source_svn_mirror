@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  NKKAccessCard WiX v4 インストーラー
+  製品名   : FNSiカードアプリ
+  バージョン: 2.0.2
+  メーカー : Nikkiso
+  インストール先: C:\FNWSiTools\FNWSiAccessCard
+
+  画面フロー:
+    ようこそ → インストール先選択 → 確認 → 進捗 → [設定ダイアログ(CA)] → 完了
+
+  機能:
+    - 日本語 UI
+    - サイレントインストール(/quiet): 既存 config を使用、なければデフォルト値
+    - バージョンダウングレード警告（サイレント時は中止）
+    - Windows サービス自動登録・起動・停止・削除
+    - アンインストール時に NKKAccessCard.config / card-config.json を保持
+-->
+<?include GeneratedProductCode.wxi?>
+
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package
+    Name="FNWSi カードアプリ"
+    Manufacturer="NIKKISO"
+    Version="$(var.ProductVersion)"
+    ProductCode="$(var.ProductCode)"
+    UpgradeCode="{27999E08-64F8-4FFE-9EBB-5A631EDDA549}"
+    Language="1041"
+    Codepage="932"
+    InstallerVersion="500"
+    Compressed="yes"
+    Scope="perMachine">
+
+    <SummaryInformation Description="FNSiカードアプリ インストーラー" Keywords="インストーラー" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- ============================== アイコン ============================== -->
+    <Icon Id="NKKAccessCardIcon" SourceFile="$(var.SrcSetup)NKKAccessCardService.ico" />
+
+	  
+    <Property Id="ARPPRODUCTICON" Value="NKKAccessCardIcon" />
+    <Property Id="ARPCONTACT"     Value="NIKKISO" />
+    <Property Id="ARPCOMMENTS"    Value="FNWSi Access Card" />
+    <SetProperty Id="ARPNOMODIFY" Value="1" Before="CostFinalize" Sequence="both" />
+
+    <!-- インストール後の「再起動してください」ダイアログを非表示にする -->
+    <Property Id="REBOOT" Value="ReallySuppress" />
+
+    <!-- Restart Manager を無効化（FilesInUse ダイアログ抑制） -->
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <Property Id="RUNNING_PROCESSES" Secure="yes" />
+
+    <!-- インストール先を常に C: ドライブに固定 -->
+    <Property Id="ROOTDRIVE" Value="C:\" />
+
+    <!-- ============================== .NET Framework 4.5 チェック ============================== -->
+    <Property Id="NETFRAMEWORK45" Secure="yes">
+      <RegistrySearch Id="NetFx45Search"
+                      Root="HKLM"
+                      Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"
+                      Name="Release"
+                      Type="raw" />
+    </Property>
+    <Launch Condition="NETFRAMEWORK45"
+            Message="!(loc.LaunchConditionNetFx45)" />
+
+    <!-- ============================== バージョン管理 ============================== -->
+    <Upgrade Id="{27999E08-64F8-4FFE-9EBB-5A631EDDA549}">
+      <!-- 旧バージョンをアップグレード対象として検出（現バージョン未満） -->
+      <UpgradeVersion
+        Minimum="0.0.0"
+        Maximum="$(var.ProductVersion)"
+        IncludeMinimum="yes"
+        IncludeMaximum="no"
+        Property="OLDERVERSIONBEINGUPGRADED"
+        MigrateFeatures="yes" />
+      <!-- 新バージョンが既インストールの場合（ダウングレード検出） -->
+      <UpgradeVersion
+        Minimum="$(var.ProductVersion)"
+        IncludeMinimum="no"
+        Property="NEWERVERSIONALREADYINSTALLED" />
+    </Upgrade>
+
+    <!-- ダウングレード禁止 -->
+    <Launch Condition="NOT NEWERVERSIONALREADYINSTALLED"
+            Message="より新しいバージョンがインストール済みです。アンインストールしてから再度インストールしてください。" />
+
+    <!-- ============================== ディレクトリ構成 ============================== -->
+    <!--
+      デフォルト: C:\FNWSiTools\FNWSiAccessCard
+      TARGETDIR(C:\) > FNWSITOOLS(FNWSiTools) > INSTALLFOLDER(FNWSiAccessCard)
+    -->
+    <StandardDirectory Id="TARGETDIR">
+      <Directory Id="FNWSITOOLS" Name="FNWSiTools">
+        <Directory Id="INSTALLFOLDER" Name="FNWSiAccessCard" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="WindowsFolder" />
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="FNWSiTools">
+        <Directory Id="AccessCardProgramsFolder" Name="FNWSiAccessCard" />
+      </Directory>
+    </StandardDirectory>
+
+    <!-- ============================== コンポーネント ============================== -->
+
+    <!-- (1) Windows サービス本体 -->
+    <Component Id="C_NKKAccessCardService"
+               Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560001}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKAccessCardServiceExe"
+            Source="$(var.SrcService)FNWSiAccessCard.exe"
+            KeyPath="yes" />
+      <RemoveFile Id="RF_InstallState"
+                  Name="NKKAccessCardService.InstallState"
+                  On="uninstall" />
+    </Component>
+
+    <!-- (2) カードツールアプリ (FNWSiAccessCardTool.exe) -->
+    <Component Id="C_NKKAccessCardTool"
+               Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560002}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKAccessCardToolExe"
+            Source="$(var.SrcTool)FNWSiAccessCardTool.exe"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- Start menu shortcut for pin-to-taskbar display name -->
+    <Component Id="C_AccessCardToolStartMenuShortcut"
+               Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560040}"
+               Directory="AccessCardProgramsFolder">
+      <Shortcut Id="S_AccessCardTool"
+                Name="FNWeb+Si カード保守ツール"
+                Target="[INSTALLFOLDER]FNWSiAccessCardTool.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="NKKAccessCardIcon"
+                IconIndex="0" />
+      <RemoveFolder Id="RF_AccessCardProgramsFolder" Directory="AccessCardProgramsFolder" On="uninstall" />
+      <RemoveFolder Id="RF_ApplicationProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\NIKKISO\FNWSiAccessCardTool"
+                     Name="StartMenuShortcut"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+
+    <!-- (3) カードアプリ (NKKAccessCardApp.exe) -->
+    <Component Id="C_NKKAccessCardApp"
+               Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560003}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKAccessCardAppExe"
+            Source="$(var.SrcApp)NKKAccessCardApp.exe"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (4) メイン設定ファイル NKKAccessCard.config
+             Permanent="yes"     : アンインストール時に削除しない
+             NeverOverwrite="yes": アップグレード時も上書きしない（ユーザー設定を保持） -->
+    <Component Id="C_NKKAccessCardConfig"
+               Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560004}"
+               Directory="INSTALLFOLDER"
+               Permanent="yes"
+               NeverOverwrite="yes">
+      <File Id="F_NKKAccessCardConfig"
+            Source="$(var.SrcCard)NKKAccessCard.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (5) 施設設定ファイル card-config.json
+             Permanent="yes"     : アンインストール時に削除しない
+             NeverOverwrite="yes": アップグレード時も上書きしない（施設固有設定を保持） -->
+    <Component Id="C_CardConfigJson"
+               Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560005}"
+               Directory="INSTALLFOLDER"
+               Permanent="yes"
+               NeverOverwrite="yes">
+      <File Id="F_CardConfigJson"
+            Source="$(var.SrcCard)card-config.json"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (6) 共有 DLL 群・依存ファイル -->
+    <ComponentGroup Id="CG_SharedDlls" Directory="INSTALLFOLDER">
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560010}"><File Source="$(var.SrcService)NKKAccessCard.dll" /></Component>
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560011}"><File Source="$(var.SrcService)SuperSocket.SocketBase.dll" /></Component>
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560012}"><File Source="$(var.SrcService)SuperSocket.SocketEngine.dll" /></Component>
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560013}"><File Source="$(var.SrcService)SuperSocket.Common.dll" /></Component>
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560014}"><File Source="$(var.SrcService)SuperSocket.Facility.dll" /></Component>
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560016}"><File Source="$(var.SrcService)SuperWebSocket.dll" /></Component>
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560019}"><File Source="$(var.SrcService)Newtonsoft.Json.dll" /></Component>
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560020}"><File Source="$(var.SrcService)log4net.dll" /></Component>
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560021}"><File Source="$(var.SrcService)NKKCommon.dll" /></Component>
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560022}"><File Source="$(var.SrcService)Ionic.Zip.dll" /></Component>
+      <!-- NKKAccessCard.dll の実行時依存（未収録だと Felica/WS 初期化で失敗し、サービス・トレイが不安定になる） -->
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560027}"><File Source="$(var.SrcService)websocket-sharp.dll" /></Component>
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560028}"><File Source="$(var.SrcService)WebSocket4Net.dll" /></Component>
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560029}"><File Source="$(var.SrcService)SuperSocket.ClientEngine.dll" /></Component>
+
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560025}"><File Source="$(var.SrcService)FNWSiAccessCard.exe.config" /></Component>
+      <Component Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560026}"><File Source="$(var.SrcTool)NKKAccessCardTool.config" /></Component>
+    </ComponentGroup>
+
+    <!-- (7) FNWSiAccessCardTool.exe.config（ツールアプリ設定ファイル） -->
+    <Component Id="C_NKKAccessCardToolConfig"
+               Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560030}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKAccessCardToolExeConfig"
+            Source="$(var.SrcTool)FNWSiAccessCardTool.exe.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- (8) NKKAccessCardApp.exe.config（カードアプリ設定ファイル） -->
+    <Component Id="C_NKKAccessCardAppConfig"
+               Guid="{A1F2E3D4-B5C6-7890-ABCD-EF1234560031}"
+               Directory="INSTALLFOLDER">
+      <File Id="F_NKKAccessCardAppExeConfig"
+            Source="$(var.SrcApp)NKKAccessCardApp.exe.config"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- ============================== フィーチャー ============================== -->
+    <Feature Id="ProductFeature"
+             Title="FNSiカードアプリ"
+             Level="1"
+             ConfigurableDirectory="INSTALLFOLDER">
+      <ComponentRef Id="C_NKKAccessCardService" />
+      <ComponentRef Id="C_NKKAccessCardTool" />
+      <ComponentRef Id="C_NKKAccessCardApp" />
+      <ComponentRef Id="C_AccessCardToolStartMenuShortcut" />
+      <ComponentRef Id="C_NKKAccessCardToolConfig" />
+      <ComponentRef Id="C_NKKAccessCardAppConfig" />
+      <ComponentRef Id="C_NKKAccessCardConfig" />
+      <ComponentRef Id="C_CardConfigJson" />
+      <ComponentGroupRef Id="CG_SharedDlls" />
+    </Feature>
+
+    <!-- ============================== カスタムアクション ============================== -->
+
+    <!-- インストール先を deferred CA に渡すためのデータセット -->
+    <CustomAction Id="SetInstallServiceProperty"
+                  Property="InstallServiceWithInstaller"
+                  Value="&quot;[INSTALLFOLDER]FNWSiAccessCard.exe&quot;" />
+
+    <!-- サイレントインストール時: /silent=1 をアセンブリパスの前に配置 -->
+    <CustomAction Id="SetInstallServicePropertySilent"
+                  Property="InstallServiceWithInstaller"
+                  Value="/silent=1 &quot;[INSTALLFOLDER]FNWSiAccessCard.exe&quot;" />
+
+    <!-- sc stop + sc delete でサービス停止・削除、taskkill /f で関連 GUI/EXE を終了してファイルロック解放（修復/削除で必須） -->
+    <CustomAction Id="UninstallServiceWithInstaller"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c sc stop NKKAccessCardService &gt; nul 2&gt;&amp;1 &amp; sc delete NKKAccessCardService &gt; nul 2&gt;&amp;1 &amp; taskkill /f /im FNWSiAccessCard.exe &gt; nul 2&gt;&amp;1 &amp; taskkill /f /im FNWSiAccessCardTool.exe &gt; nul 2&gt;&amp;1 &amp; taskkill /f /im NKKAccessCardTool.exe &gt; nul 2&gt;&amp;1 &amp; taskkill /f /im NKKAccessCardApp.exe &gt; nul 2&gt;&amp;1 &amp; timeout /t 2 /nobreak &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- InstallUtil.exe でサービスをインストール -->
+    <CustomAction Id="InstallServiceWithInstaller"
+                  Directory="WindowsFolder"
+                  ExeCommand="Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /LogToConsole=false /LogFile= [InstallServiceWithInstaller]"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="check" />
+
+    <!-- 交互安装用：起動中プロセス/サービス検出 -->
+    <CustomAction Id="CA_DetectRunningProcesses"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_DetectRunningProcesses.vbs" />
+
+    <!-- 交互安装用：「終了して続行」押下時にGUI終了 + サービス停止 -->
+    <CustomAction Id="CA_KillGUIApps"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_KillGUIApps.vbs" />
+
+    <!-- 静默インストール時のサービス起動兜底 -->
+    <CustomAction Id="StartServiceAfterInstallSilent"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c sc start NKKAccessCardService &gt; nul 2&gt;&amp;1"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- 交互安装完了后，自动起動工具 -->
+    <CustomAction Id="StartAccessCardToolAfterInstall"
+                  Directory="SystemFolder"
+                  ExeCommand="cmd.exe /c start &quot;&quot; &quot;[INSTALLFOLDER]FNWSiAccessCardTool.exe&quot;"
+                  Execute="immediate"
+                  Return="ignore" />
+
+    <!-- ============================== シーケンス ============================== -->
+
+    <InstallExecuteSequence>
+      <!-- InstallValidate を抑制: サービス稼働中の FilesInUse タイムアウトを回避 -->
+      <InstallValidate Condition="0" />
+
+      <!-- 旧バージョンを早期削除（InstallInitialize 直後） -->
+      <RemoveExistingProducts After="InstallInitialize" />
+
+      <!-- 常に sc stop + sc delete でサービス停止・削除（RemoveFiles 前） -->
+      <Custom Action="UninstallServiceWithInstaller" Before="RemoveFiles"
+              Condition="1" />
+
+      <!-- 交互安装分支（UILevel>=5） -->
+      <Custom Action="SetInstallServiceProperty" Before="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &gt;= 5" />
+
+      <!-- 静默安装分支（UILevel<5） -->
+      <Custom Action="SetInstallServicePropertySilent" Before="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &lt; 5" />
+      <Custom Action="InstallServiceWithInstaller" After="InstallFiles"
+              Condition="NOT REMOVE" />
+      <Custom Action="StartServiceAfterInstallSilent" After="InstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &lt; 5" />
+      <!-- 交互安装（用户会话）时才启动托盘。静默(/quiet)在 SYSTEM 会话执行该 CA 会导致托盘跑到 Session 0 看不见，
+           静默更新场景应依赖“托盘自身 watcher（用户会话）”来拉起新托盘。 -->
+      <Custom Action="StartAccessCardToolAfterInstall" After="InstallFinalize"
+              Condition="NOT REMOVE AND UILevel &gt;= 5" />
+    </InstallExecuteSequence>
+
+    <!-- ============================== UI ============================== -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <!-- ライセンス同意ダイアログをスキップ -->
+    <UI>
+      <Dialog Id="RunningProcessesDlg" Width="370" Height="270" Title="FNWSi Access Card">
+        <Control Id="BannerBitmap" Type="Bitmap"
+                 X="0" Y="0" Width="370" Height="44"
+                 TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line"
+                 X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Title" Type="Text"
+                 X="15" Y="6" Width="300" Height="15"
+                 Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}実行中アプリケーションの検出" />
+        <Control Id="Description" Type="Text"
+                 X="25" Y="23" Width="290" Height="15"
+                 Text="インストール前にアプリケーションを終了してください。" />
+        <Control Id="RunningAppsLabel" Type="Text"
+                 X="20" Y="58" Width="330" Height="30"
+                 Text="以下のアプリケーション/サービスが実行中のため、インストールを継続できません。" />
+        <Control Id="RunningAppsList" Type="Text"
+                 X="30" Y="92" Width="310" Height="50"
+                 Text="[RUNNING_PROCESSES]" />
+        <Control Id="NoteLabel" Type="Text"
+                 X="20" Y="152" Width="330" Height="60"
+                 Text="「終了して続行」をクリックすると、上記アプリケーションを自動的に終了してインストールを継続します。" />
+        <Control Id="BottomLine" Type="Line"
+                 X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton"
+                 X="155" Y="243" Width="56" Height="17"
+                 Text="&lt; 戻る">
+          <Publish Event="NewDialog" Value="WelcomeDlg" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="MaintenanceTypeDlg" Condition="Installed" />
+        </Control>
+        <Control Id="CloseAndContinue" Type="PushButton"
+                 X="215" Y="243" Width="84" Height="17"
+                 Default="yes" Text="終了して続行">
+          <Publish Event="DoAction" Value="CA_KillGUIApps" Order="1" Condition="1" />
+          <Publish Event="NewDialog" Value="InstallDirDlg" Order="2" Condition="NOT Installed" />
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" Order="2" Condition="Installed" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton"
+                 X="307" Y="243" Width="56" Height="17"
+                 Cancel="yes" Text="キャンセル">
+          <Publish Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+        </Control>
+      </Dialog>
+
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="DoAction" Value="CA_DetectRunningProcesses"
+               Order="1" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="NewDialog" Value="RunningProcessesDlg"
+               Order="2" Condition="NOT Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="WelcomeDlg"    Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="3" Condition="NOT Installed" />
+
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="DoAction" Value="CA_DetectRunningProcesses"
+               Order="1" Condition="Installed" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="NewDialog" Value="RunningProcessesDlg"
+               Order="2" Condition="Installed AND RUNNING_PROCESSES" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
+               Event="NewDialog" Value="VerifyReadyDlg"
+               Order="3" Condition="Installed AND NOT RUNNING_PROCESSES" />
+
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"    Order="2" Condition="1" />
+    </UI>
+
+  </Package>
+
+</Wix>

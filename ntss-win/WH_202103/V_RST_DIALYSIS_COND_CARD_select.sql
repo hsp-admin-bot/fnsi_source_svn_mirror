@@ -1,0 +1,1 @@
+select * from V_RST_DIALYSIS_COND_CARD where PATID = @patid;
