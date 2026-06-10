@@ -1,0 +1,1 @@
+{@OCCUR_DATETIME}に{@DEVICE_TYPE}で警報が発生しました。

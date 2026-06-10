@@ -1,0 +1,32 @@
+
+- name: add environment variables in sysconfig file
+  blockinfile:
+    dest: /etc/sysconfig/tomcat8
+    insertafter: '^# (i.e. LD_LIBRARY_PATH for some jdbc drivers)'
+    content: |
+      SPRING_PROFILES_ACTIVE=stg
+
+- name: service tomcat8 stopping
+  service:
+    name=tomcat8
+    state=stopped
+    enabled=yes
+
+- name: remove webapps/ROOT directory
+  file:
+    path: /var/lib/tomcat8/webapps/ROOT
+    state: absent
+
+- name: copy {{ app_name }}.war
+  copy:
+    src: ../ntss/{{ app_name }}/build/libs/{{ app_name }}-0.0.1-SNAPSHOT.war
+    dest: /var/lib/tomcat8/webapps/ROOT.war
+    mode: 0755
+    owner: tomcat
+    group: tomcat
+
+- name: service tomcat8 restart
+  service:
+    name=tomcat8
+    state=restarted
+    enabled=yes

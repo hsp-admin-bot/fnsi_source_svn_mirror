@@ -1,0 +1,187 @@
+:root {
+    --body-background-color: #fafafa;
+    --header-item-background-color: #cccccc;
+    --event-reg-time-header-sticky-background-color: #333333;
+    --col-sticky-background-color: #fafafa;
+    --condition-search-area-background-color: #ffffff;
+    --filterLabel-color: #333333;
+    --search-input-background-color: #ffffff;
+    --main-background-color: #fafafa;
+
+    --ntss-list-background-color: #fafafa;
+    --ntss-list-border-color: #cccccc;
+    --ntss-list-header-background-color: #333333;
+    --ntss-list-body-background-color: #cccccc;
+    --ntss-list-body-color: #050505;
+    --ntss-list-item-background-color: #fafafa;
+    --ntss-list-content-2nd-background-color: #ededed;
+    --ntss-list-content-3nd-background-color: #e2e2e2;
+    --ntss-list-content-rst-background-color: #90ee90;
+
+    --ntss-footer-background-color: #a6d5e6;
+    --ntss-footer-border-color: #cccccc;
+
+    --bread-crumbs-background-color: #fafafa;
+    --breadcrumb-area-color: #333333;
+
+    --emergency-background-color: #ff6666;
+    --emergency-color: #333333;
+    --emergency-border-color: #cccccc;
+    --emergency-checked-border-color: #333333;
+
+    --preventive-background-color: #ffff66;
+    --preventive-color: #333333;
+    --preventive-border-color: #cccccc;
+    --preventive-checked-border-color: #333333;
+
+    --com-problem-background-color: #808080;
+    --com-problem-color: #fafafa;
+    --com-problem-border-color: #cccccc;
+    --com-problem-checked-border-color: #333333;
+
+    --all-label-background-color: #b0c4de;
+    --all-label-color: #333333;
+    --all-label-border-color: #cccccc;
+    --all-label-checked-border-color: #333333;
+
+    --process-state-1-color: #333333;
+
+    --row-1-color: #050505;
+    --row-2-color: #050505;
+    --list-chart-icon-color: #333333;
+
+    --highcharts-title-fill: inherit;
+    --highcharts-legend-item-fill: inherit;
+
+    --machine-record-detail-base-border-color: #cccccc;
+    --machine-record-detail-base-color: #333333;
+    --machine-record-detail-background-color: #ffffff;
+
+    --table-header-check-all-background-color: #333333;
+    --table-header-check-all-border-color: #cccccc;
+
+    --denial-btn-area-background-color: #fafafa;
+    --registration-btn-area-background-color: #fafafa;
+
+    --monitoring-detail-info-label-color: #050505;
+    --ntss-monitoring-basepane-background-color: #f5f5f5;
+    --ntss-monitoring-basepane-box-shadow-color: #cccccc80;
+    --ntss-monitoring-basepane-info-background-color: #ffff66;
+    --ntss-monitoring-basepane-info-text-color: #c4b104;
+    --ntss-monitoring-basepane-alert-background-color: #ff6666;
+    --ntss-monitoring-basepane-alert-text-color: #ff6666;
+    --ntss-monitoring-basepane-text-color: #050505;
+    --ntss-monitoring-legend-style-color: #050505;
+    --ntss-monitoring-legend-hidden-style-color: #cccccc;
+    --ntss-monitoring-legend-hover-style-color: #000000;
+    --ntss-monitoring-select-machine-list-border-color: #ffa500;
+
+    --header-pat-info-label-color: #050505;
+
+    --highcharts-axis-line-stroke: #cccccc;
+    --highcharts-grid-line-stroke: #cccccc;
+    --highcharts-background-fill: #f5f5f5;
+    --ntss-monitoring-basepane-info-fill: #ffff66;
+    --ntss-monitoring-basepane-alert-fill: #ff6666;
+
+    --highcharts-axis-labels-color: #cccccc;
+    --highcharts-axis-labels-fill: #cccccc;
+    --highcharts-plot-lines-0-stroke: #cccccc;
+    --highcharts-plot-border-stroke: #cccccc;
+
+    --pat-viewer-title-border-color: #cccccc;
+    --pat-viewer-title-color: #fafafa;
+    --pat-viewer-title-background-color: #333333;
+    --pat-viewer-td-border-color: #cccccc;
+    --pat-viewer-td-color: #050505;
+    --pat-viewer-chart-legend-color: #050505;
+    --pat-viewer-ind-cond-info-disabled: #aaaaaa;
+
+    --obs-rec-font-color: #050505;
+    --send-cond-font-color: #050505;
+    --send-cond-font-color-warn: #c4b104;
+    --send-cond-font-color-alert: #ff6666;
+    --send-cond-basepane-background-color: #f5f5f5;
+    --mst-weight-font-color: #050505;
+    --treatment-status-font-color: #050505;
+
+    --ntss-base-background-color: #fafafa;
+    --ntss-base-color: #050505;
+    --ntss-header-background-color: #333333;
+    --ntss-header-background-disabled-color: #707070;
+    --ntss-header-color: #fafafa;
+    --ntss-btn-ok-background-color: #0000ff;
+    --ntss-btn-ok-color: #fafafa;
+    --ntss-btn-cancel-background-color: #add8e6;
+    --ntss-btn-cancel-color: #050505;
+    --ntss-border-color: #cccccc;
+    --ntss-saturday-color: #87ceeb;
+    --ntss-sunday-color: #ff6666;
+
+    --ntss-calendar-header-background-color: #f0f8ff;
+    --ntss-calendar-single-border-color: #6495ed;
+    --ntss-calendar-title-label-background-color: #6495ed;
+    --ntss-calendar-title-label-color: #fafafa;
+    --ntss-calendar-button-hover-background-color: #999999;
+    --ntss-calendar-button-is-disabled-background-color: #005da9;
+    --ntss-calendar-button-goto-today-border-color: #808080;
+    --ntss-calendar-button-goto-today-color: #666666;
+    --ntss-calendar-button-goto-today-background-color: #f5f5f5;
+    --ntss-calendar-button-footer-border-color: #808080;
+
+    --treatment-record-text-color: #050505;
+    --treatment-record-text-color-disabled: #cccccc;
+    --treatment-record-input-color: #050505;
+    --treatment-record-input-background-color: #fafafa;
+    --treatment-record-select-border-color: #ccc;
+    --treatment-record-dialysis-tr: #ff9966;
+    --treatment-record-medicine-bottle-invert: 0%;
+    --treatment-record-complaint-per-page-border: #06f;
+    --treatment-record-complaint-selected-color: #ffffff;
+    --treatment-record-complaint-selected-background-color: #0090ff;
+
+    --status-map-input-color: #050505;
+    --status-map-input-background-color: #fafafa;
+    --status-map-input-select-border-color: #ccc;
+    --status-map-bed-state-color-next-patient: #FFFFFF;
+    --status-map-bed-state-color-send: #e2f0d9;
+    --status-map-bed-state-color-treat: #00b050;
+    --status-map-bed-state-color-treat-end: #385723;
+    --status-map-bed-state-color-treat-unconfirmed:#568735;
+    --status-map-bed-state-color-treat-confirmed:#002600;
+    --status-map-bed-state-communication-error: #FF00FF;
+
+    --master-maintenance-kgrid-border-color: #cccccc;
+    --master-maintenance-kgrid-header-background-color: #333333;
+    --master-maintenance-kgrid-body-color: #050505;
+    --master-maintenance-kgrid-item-background-color: #fafafa;
+    --master-maintenance-kgrid-item-hover-background-color: #f5f5f5;
+    --master-maintenance-kgrid-item-color: #212529;
+    --master-maintenance-kgrid-selected-color: #212529;
+    --master-maintenance-kgrid-selected-background-color: rgba(0,123,255,0.25);
+
+    --kendo-input-color: #050505;
+    --kendo-input-background-color: #fafafa;
+
+    --master-maintenance-complaint-per-page-border: #06f;
+    --master-maintenance-complaint-treatment-border: #06f;
+    --master-maintenance-complaint-per-page-background-color: #6495ed;
+    --master-maintenance-complaint-select-border-color: #ccc;
+    --master-maintenance-complaint-dummy-row-background-color: #ededed;
+
+    --personal-setting-select-border-color: #ccc;
+
+    --notification-message-color: #000000;
+    --notification-message-background-color: #e8f9f0;
+    --notification-message-border-color: #d0f2e1;
+
+    --kendo-grid-style-odd-background-color:#fafafa;
+    --kendo-grid-style-even-background-color:#f1f2f3;
+    
+    --ntss-list-content-disable-background-color: #8080804d;
+
+    /*チェックリスト未完了色*/
+    --check-list-progress-incomplete: #ff69b44d;
+    /*チェックリスト完了色*/
+    --check-list-progress-complete: #8080804d;
+}

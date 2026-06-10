@@ -1,0 +1,20 @@
+Insert into client_cer_detail
+    (password_cl,
+    facility_cd,
+    many_facility_cd,
+    many_facility_name,
+    cur_download,
+    latest_issued_user,
+    reg_date,
+    up_date,
+    is_delete)
+values
+    (/*passwordCl*/NULL,
+    /*facilityCd*/null,
+    /*manyFacilityCd*/null,
+    /*manyFacilityName*/null,
+    '0',
+    /*latestIssuedUser*/null,
+    /*regDate*/null,
+    /*upDate*/null,
+    '0')

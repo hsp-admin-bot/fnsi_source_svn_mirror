@@ -1,0 +1,2 @@
+DELETE FROM ntss.mst_coop_layout_detail
+WHERE ctl_no IN (-407000025,-407000026,-407000027,-407000029);

@@ -1,0 +1,1 @@
+UPDATE pat_exam_main SET order_label_info = '[]' WHERE order_label_info != '[]' or order_label_info is null;

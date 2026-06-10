@@ -1,0 +1,14 @@
+[[update-personal-settings]]
+=== 共通設定タブ定義で入力した個人設定値の更新
+
+==== Request
+include::{snippets}/user_settings/personal_settings/put/ok/http-request.adoc[]
+
+==== Request Fields
+include::{snippets}/user_settings/personal_settings/put/ok/request-fields.adoc[]
+
+==== Response(成功)
+include::{snippets}/user_settings/personal_settings/put/ok/http-response.adoc[]
+
+==== Response(失敗：該当する利用者マスタが存在しない)
+include::{snippets}/user_settings/personal_settings/put/internal_server_error/http-response.adoc[]

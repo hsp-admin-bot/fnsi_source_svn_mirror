@@ -1,0 +1,595 @@
+/******************************************/
+/* 文字サイズ                              */
+/******************************************/
+
+/* 患者検索モーダルの文字サイズ：特大相当 */
+.send-condition-pat-modal-base .modal-wrapper {
+  font-size: 1.3em;
+}
+
+/******************************************/
+/* 体重計画面のスタイル                      */
+/******************************************/
+
+.main-content-area {
+  overflow-y: hidden;
+}
+
+.weight-mode-head-content {
+  margin-bottom: 25px;
+  margin-top: 10px;
+  margin-left: 10px;
+  margin-right: 10px;
+  font-size: 1.4em;
+}
+.weight-mode-main-content {
+  overflow-y: auto;
+  flex: 1;
+}
+.weight-mode-input-block {
+  text-align: center;
+  margin-top: 120px;
+}
+
+.weight-mode-footer-content {
+  flex: 0;
+}
+
+.weight-mode-mst-weight-button {
+  max-width: 10em;
+  font-size: 150%;
+}
+
+.weight-mode-mst-weight-button-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 車いすマスタ編集ボタン */
+/* 体重計モード測定記録ボタン */
+.weight-mode-wheelchair-button,
+.weight-mode-measure-history-button {
+  max-width: 11em;
+  display: block;
+  margin: 0 0 0 auto;
+  font-size: 2em;
+}
+
+/* 患者ID入力 */
+.weight-mode-pat-id-input {
+  width: 600px;
+  font-size: 39px !important;
+  margin-top: 15px;
+}
+
+/* カードを置いてくださいラベル */
+.weight-mode-title-label {
+  font-size: 55px;
+  font-weight: bold;
+}
+
+/* 患者検索ボタン */
+.weight-mode-pat-search-button {
+  max-width: 250px;
+  margin-top: -10px;
+  margin-left: 20px;
+  font-size: 250% !important;
+}
+
+/* 共通患者ヘッダ - ヘッダ全体１ */
+.weight-mode-header-content {
+  height: 12.5em !important;
+}
+
+/* 共通患者ヘッダ - ヘッダ全体２ */
+.event-area {
+  height: 12.5em !important;
+}
+
+/* 共通患者ヘッダ - サイドメニューエリア */
+.search-button-area {
+  width: 10px !important;
+}
+
+.search-button {
+  width: 8px !important;
+}
+
+/* 共通患者ヘッダ - 患者名エリア */
+.pat-name-area {
+  padding-top: 10px;
+}
+
+/* 共通患者ヘッダ - ID、同姓同名アイコン */
+.hosp-pat-id {
+  width: 410px !important;
+  font-size: 2.3em !important;
+}
+
+/* 共通患者ヘッダ - 患者名 */
+#pat-header-pat-name {
+  margin-top: -0.2em;
+}
+
+/* 共通患者ヘッダ - アイコンエリア */
+.pat-icon-area {
+  font-size: 3em;
+  width: 120px !important;
+  min-width: 120px !important;
+}
+
+/* 共通患者ヘッダ - 入外表示 */
+.in-out-area {
+  text-align: center;
+}
+
+/* 共通患者ヘッダ - アイコン部 */
+.icon-area {
+  transform: scale(1.5);
+  margin: 10px auto;
+  width: fit-content;
+}
+
+/* 共通患者ヘッダ - 詳細情報エリア */
+.patinfo-treattime-area-scroll {
+  font-size: 2.25em;
+}
+.patinfo-treattime-area-scroll > div {
+  padding-left: 10px !important;
+}
+
+/* 共通患者ヘッダ - 患者情報エリア */
+.pat-header-pat-info-area {
+  width: 8.5em !important;
+}
+
+/* 共通患者ヘッダ - 進捗バーエリア */
+.treatment-time-area {
+  margin-right: 0em !important;
+}
+
+/* 非活性ボタンの文字色可視化 */
+.btn3-normal[disabled] {
+  color: black !important;
+}
+
+/* 時刻表示のあるエリア */
+.weight-mode-time-content {
+  padding-bottom: 5px;
+}
+
+.ntss-send-condition-content-area input,
+.ntss-send-condition-content-area select,
+.ntss-send-condition-content-area button {
+  font-family: inherit;
+}
+.ntss-send-condition-content-area ons-input .text-input,
+.ntss-send-condition-content-area .selectbox {
+  color: var(--send-cond-font-color);
+  background-color: var(--ntss-base-background-color);
+}
+.ntss-send-condition-content-area ons-input .text-input {
+  height: 1.6em;
+}
+
+/******************************************/
+/* 体重計・条件送信画面フォントカラースタイル       */
+/******************************************/
+
+.ntss-send-condition-text {
+  /* フォント色 */
+  color: var(--send-cond-font-color);
+}
+
+.ntss-send-condition-text-warn {
+  /* フォント色 */
+  color: var(--send-cond-font-color-warn);
+}
+
+.ntss-send-condition-text-alert {
+  /* フォント色 */
+  color: var(--send-cond-font-color-alert);
+}
+
+
+/******************************************/
+/* 条件送信スタイル       */
+/******************************************/
+
+/*メイン領域*/
+.send-condition-main-content {
+  overflow-y: auto;
+}
+
+/*「送信」「キャンセル」ボタンのあるエリア*/
+.send-condition-footer-content {
+  bottom: 1.3em;
+}
+
+/* 時刻表示のあるエリア */
+.send-condtition-time-content {
+  bottom: 0em;
+}
+
+#segment .segment__item {
+  font-size: 30px;
+  height: 60px;
+}
+
+/* 測定モードボタン */
+.send-condition-scale-mode-segment .segment__button {
+  font-size: 1em;
+  height: 60px;
+  line-height: 60px;
+}
+
+/*「前」「後」表示*/
+#send-condition-scale-class-icon {
+  order: -1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  height: 5em;
+  width: 5em;
+  background-color: aqua;
+}
+#send-condition-scale-class-icon label {
+  font-size: 3.8em;
+  font-weight: bold;
+  margin-top: 0.1em;
+}
+
+/*スケジュール表示・変更ボタンの外部DIV*/
+#send-condition-schedule-btn-1,
+#send-condition-schedule-btn-2 {
+  font-size: 1.3em;
+}
+
+/*スケジュール表示・変更ボタン*/
+.send-condition-schedule-button {
+  font-size: 1.5em;
+}
+
+/*印刷ボタンエリア*/
+.send-condition-print-box {
+  display: flex;
+  margin-right: 5px;
+  align-items: center;
+}
+.send-condition-print-box label {
+  margin-left: 5px;
+  font-size: 2em;
+}
+
+/*測定履歴表示・簡易詳細切り替えボタン*/
+.send-condition-command-button {
+  font-size: 1.3em;
+}
+
+/*「測定値」ラベル*/
+.send-condition-title-label {
+  font-size: 2em;
+  font-weight: bold;
+}
+
+/* 単位[kg]のスタイル */
+.send-condition-unit {
+  vertical-align: bottom;
+  width: 20px;
+  font-size: 2em;
+  margin: auto;
+}
+
+/******************************************/
+/* 条件送信簡易画面スタイル       */
+/******************************************/
+
+.weight-row {
+  margin-top: -3.5em;
+}
+
+/* 風袋・除水補正 値*/
+.send-condition-simple-water-command-box label {
+  font-size: 1.5em;
+  line-height: 1.1em;
+}
+
+/*車いす重量のフォント*/
+.send-condition-simple-wheel-chair-value {
+  font-size: 1.5em;
+}
+
+.measure-value-row-wheel-chair {
+  margin-top: 4em;
+}
+
+.send-condition-control-wheel-chair {
+  top: 9em;
+}
+
+/*簡易画面の風袋、除水補正ボタン 縦並びdiv*/
+.send-condition-simple-vertical-div {
+  width: 7em;
+}
+
+/*I-HDF引き残しラベル*/
+.send-condition-ihdf-pull-leave {
+  width: 7em;
+  font-size: 1em !important;
+}
+
+/******************************************/
+/* 条件送信 前体重詳細画面スタイル       */
+/******************************************/
+
+/* 計算式領域の設定 */
+.send-condition-before-measure-value-block {
+  min-width: 84em;
+}
+.send-condition-before-measure-value-block.main-block {
+  margin-top: 30px;
+}
+.send-condition-before-measure-value-main-block {
+  font-size: 1.2em;
+}
+.send-condition-before-measure-value-sub-block.streaming-mode {
+  margin-left: 29em;
+}
+/* ボタン */
+.send-condition-before-detail-btn {
+  margin-bottom: 2px;
+  min-width: 2.5em;
+  font-size: 150%;
+}
+/* ラベル */
+.send-condition-before-detail-lbl {
+  font-size: 2em;
+  font-weight: bold;
+}
+/* 演算子のスタイル */
+.send-condition-before-symbol {
+  vertical-align: center;
+  width: 20px;
+  margin: auto;
+}
+/* 各項目の値のスタイル */
+.send-condition-before-value-label {
+  font-size: 2em;
+  /* add FNSI-redMine #4463対応  陳 start */
+  white-space: nowrap
+  /* add FNSI-redMine #4463対応  陳 end */
+}
+/* 測定値リストのスタイル */
+.send-condition-before-measure-list {
+  right: 70.3em;
+  transform: scale(0.9);
+}
+/******************************************/
+/* 条件送信 後体重詳細画面スタイル       */
+/******************************************/
+
+/* 計算式領域の設定 */
+.send-condition-after-measure-value-block {
+  min-width: 75.5em;
+}
+.send-condition-after-measure-value-block.main-block {
+  margin-top: 30px;
+}
+.send-condition-after-measure-value-block.streaming-mode {
+  min-width: 72em;
+}
+.send-condition-after-measure-value-main-block {
+  font-size: 1.2em;
+}
+.send-condition-after-measure-value-sub-block.streaming-mode {
+  margin-left: 30em;
+}
+/* ボタン */
+.send-condition-after-detail-btn {
+  margin-bottom: 2px;
+  min-width: 60px;
+  font-size: 150%;
+}
+/* ラベル */
+.send-condition-after-detail-lbl {
+  font-size: 2em;
+  font-weight: bold;
+}
+/* 演算子のスタイル */
+.send-condition-after-symbol {
+  vertical-align: center;
+  width: 20px;
+  margin: auto;
+}
+/* 各項目の値のスタイル */
+.send-condition-after-value-label {
+  font-size: 2em;
+}
+/* 測定値リストのスタイル */
+.send-condition-after-measure-list {
+  right: 58.2em;
+  transform: scale(0.9);
+}
+/******************************************/
+/* 条件送信画面風袋・除水補正モーダル領域スタイル       */
+/******************************************/
+/* 風袋除水モーダルg/kgボタンエリア */
+.send-condition-tare-water-edit-modal-mode-segment {
+  width: 100%;
+  margin-bottom: 5px;
+  margin-left: 2%;
+  margin-right: 2%;
+}
+/* g/kgラベル */
+.send-condition-tare-water-edit-modal-unit {
+  vertical-align: bottom;
+  width: 20px;
+  font-size: 2em;
+  margin: auto;
+}
+/* 値入力エリア */
+.send-condition-tare-water-edit-modal-input-area-value {
+  width: 77%;
+}
+@media screen and (max-width: 480px) {
+  .send-condition-tare-water-edit-modal-mode-segment {
+    margin-right: calc(1.2em + 25px);
+  }
+}
+
+/******************************************/
+/* 条件送信画面メッセージ領域スタイル       */
+/******************************************/
+
+.ntss-send-condition-main-message-area {
+  position: relative;
+  bottom: 0px;
+  font-size: 2em;
+  word-wrap: break-word;
+  background-color: var(--send-cond-basepane-background-color);
+}
+.message-list-body-tr {
+  color: var(--send-cond-font-color);
+}
+.message-list-body-td {
+  background-color: var(--send-cond-basepane-background-color);
+}
+.message-list-body-td-error {
+  background-color: var(--emergency-background-color);
+}
+.message-list-body-td-warn {
+  background-color: var(--preventive-background-color);
+}
+
+/* メッセージ表示エリア */
+.send-condition-message-content {
+  /* "1.3em + 5px"は、.send-condtition-time-contentのheightとpadding-bottom */
+  /* "60px"は、体重計モード時にコンポーネント側footerBtnFontSizeStyleで指定されているfont-size:30px×height:2em */
+  bottom: calc(1.3em + 5px + 60px);
+}
+/******************************************/
+/* 条件送信画面患者選択モーダル       */
+/******************************************/
+
+/*リスト部分*/
+.send-condition-pat-modal-list {
+  border-collapse: collapse;
+  margin: 0 auto;
+  width: -webkit-fill-available;
+  font-size: 1.5em;
+  position: absolute;
+  top: 0px;
+  background-color: var(--ntss-list-background-color) !important;
+  font-size: 1.5em;
+}
+.send-condition-pat-modal-list tr {
+  background-color: var(--ntss-list-item-background-color);
+  border-color: 1px solid var(--master-maintenance-kgrid-border-color);
+}
+.send-condition-pat-modal-list tr:hover {
+  background-color: var(--master-maintenance-kgrid-item-hover-background-color);
+}
+/*治療中（日またぎ）の開始時刻スタイル*/
+.send-condition-pat-modal-view-start-date {
+  font-size: 0.75em;
+}
+/*抽出条件部分の文字スタイル*/
+#send-condition-pat-modal-search-area label {
+  font-size: 1.25em;
+}
+
+/******************************************/
+/* モーダルは白いのでhighchartsの白い表示スタイル*/
+/******************************************/
+/* グラフ軸の色 */
+#send-condition-weight-chart-area .highcharts-axis-line {
+  stroke: #cccccc;
+}
+
+/* グラフグリッドの色 */
+#send-condition-weight-chart-area .highcharts-grid-line {
+  stroke: #cccccc;
+}
+
+/* グラフの背景色 */
+#send-condition-weight-chart-area .highcharts-background {
+  fill: #f5f5f5;
+}
+
+#send-condition-weight-chart-area .highcharts-legend-item text {
+  font-size: 9px !important;
+  font-weight: initial !important;
+  fill: var(--ntss-list-body-color) !important;
+}
+
+/* グラフ軸ラベルの色
+★★★使用時はグラフオプションでlabels.style.colorをinheritにする★★★
+*/
+#send-condition-weight-chart-area .highcharts-axis-labels {
+  color: #cccccc;
+  fill: #cccccc;
+}
+
+#send-condition-weight-chart-area .highcharts-plot-lines-0 {
+  stroke: #cccccc;
+}
+
+#send-condition-weight-chart-area .highcharts-plot-border {
+  stroke: #cccccc;
+}
+
+/******************************************/
+/* 体重計測定記録画面のスタイル           */
+/******************************************/
+/* 一覧エリアの高さ */
+.weight-mode-measure-history-scroll-area {
+  height: calc(100% - 4.5em);
+  margin-top: 5px;
+}
+/* フッターエリアのラッパー */
+#weight-mode-measure-history-footer {
+  position: absolute;
+  bottom: 0em;
+  width: 100%;
+  height: max-content;
+  z-index: 2;
+  background-color: var(--body-background-color);
+  color: var(--send-cond-font-color);
+  padding-bottom: 5px;
+}
+/* フッターエリアのボタンエリア */
+.weight-mode-measure-history-btn-area {
+  margin-left: 1em;
+  padding-bottom: 5px;
+}
+/* フッターエリアの体重計情報エリア */
+.weight-mode-measure-history-time-content {
+  height: 1.3em;
+}
+
+/******************************************/
+/* ヘッダから表示した患者情報画面のスタイル */
+/******************************************/
+/* 文字サイズ小 */
+.card-list.small {
+  top: 100px !important;
+  height: calc(100% - 100px) !important;
+}
+/* 文字サイズ中 */
+.card-list.medium {
+  top: 125px !important;
+  height: calc(100% - 125px) !important;
+}
+/* 文字サイズ大 */
+.card-list.big {
+  top: 137.5px !important;
+  height: calc(100% - 137.5px) !important;
+}
+/* 文字サイズ特大 */
+.card-list.xbig {
+  top: 162.5px !important;
+  height: calc(100% - 162.5px) !important;
+}
+

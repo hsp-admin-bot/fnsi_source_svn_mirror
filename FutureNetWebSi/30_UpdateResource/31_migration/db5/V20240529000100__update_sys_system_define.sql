@@ -1,0 +1,3 @@
+DELETE FROM "ntss"."sys_system_define" WHERE ctl_no = 28;
+
+INSERT INTO "ntss"."sys_system_define" ("ctl_no", "service_cd", "name", "value", "description", "is_enable", "up_date") VALUES ('28', '003', 'コンバータログ', '{"out_flg": "convert-server-side=1", "path_output": "/efs/{0}/today/コンバータ/{1}/{2}/{0}_{2}_{1}.log", "file_pattern": "/efs/{0}/%d''{''yyyyMMdd''}''/コンバータ/{1}/{2}/{0}_{2}_{1}_%d''{''yyyyMMdd''}_%i''.log.gz", "max_file_size": "100"}', 'コンバータログの出力パスとファイル命名規則の設定。', '1', CURRENT_TIMESTAMP);

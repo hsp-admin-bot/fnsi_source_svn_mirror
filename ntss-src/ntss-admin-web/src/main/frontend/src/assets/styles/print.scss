@@ -1,0 +1,42 @@
+/* 印刷時スタイル */
+@media print { 
+  .print-none {
+    display: none;
+  }
+  .modal-mask,
+  .sub-modal-mask {
+    position: absolute !important;
+    overflow: auto !important;
+    .modal-wrapper,
+    .sub-modal-wrapper {
+      display: block !important;
+      margin-top: 3vh !important;
+    }
+    .modal-header,
+    .modal-footer,
+    .sub-modal-header,
+    .sub-modal-footer {
+      position: relative !important;
+    }
+    .modal-search,
+    .sub-modal-search {
+      position: relative !important;
+    }
+    .modal-body,
+    .modal-body-no-footer,
+    .modal-body-search,
+    .sub-modal-body,
+    .sub-modal-body-no-footer,
+    .sub-modal-body-search {
+      top: 0 !important;
+      padding-top: 4px;
+      position: relative !important;
+      min-height: 74vh !important;
+    }
+    .modal-header .toolbar,
+    .sub-modal-header .toolbar {
+      position: relative !important;
+    }
+
+  }
+  }

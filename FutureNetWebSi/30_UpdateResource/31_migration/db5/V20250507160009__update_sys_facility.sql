@@ -1,0 +1,58 @@
+-- #11843 全施設マスタにて文字化け
+-- 施設名のみ更新
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E0DD', '恵'), up_date = now() WHERE facility_name LIKE '%' || U&'\E0DD' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E1ED', '宇'), up_date = now() WHERE facility_name LIKE '%' || U&'\E1ED' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E398', '辺'), up_date = now() WHERE facility_name LIKE '%' || U&'\E398' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E098', '鴎'), up_date = now() WHERE facility_name LIKE '%' || U&'\E098' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E0A1', '葛'), up_date = now() WHERE facility_name LIKE '%' || U&'\E0A1' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E148', 'ブナ'), up_date = now() WHERE facility_name LIKE '%' || U&'\E148' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E1B1', '芦'), up_date = now() WHERE facility_name LIKE '%' || U&'\E1B1' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E36F', '礼'), up_date = now() WHERE facility_name LIKE '%' || U&'\E36F' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E382', '廣'), up_date = now() WHERE facility_name LIKE '%' || U&'\E382' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E0C0', '蓮'), up_date = now() WHERE facility_name LIKE '%' || U&'\E0C0' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E0F4', '角'), up_date = now() WHERE facility_name LIKE '%' || U&'\E0F4' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E199', '土'), up_date = now() WHERE facility_name LIKE '%' || U&'\E199' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E18D', '榊'), up_date = now() WHERE facility_name LIKE '%' || U&'\E18D' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E37F', '辺'), up_date = now() WHERE facility_name LIKE '%' || U&'\E37F' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E196', '久'), up_date = now() WHERE facility_name LIKE '%' || U&'\E196' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E404', '真'), up_date = now() WHERE facility_name LIKE '%' || U&'\E404' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E08E', '尻'), up_date = now() WHERE facility_name LIKE '%' || U&'\E08E' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E37A', '泰'), up_date = now() WHERE facility_name LIKE '%' || U&'\E37A' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E1B4', '辻'), up_date = now() WHERE facility_name LIKE '%' || U&'\E1B4' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E0A3', '英'), up_date = now() WHERE facility_name LIKE '%' || U&'\E0A3' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E212', '海'), up_date = now() WHERE facility_name LIKE '%' || U&'\E212' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E1E6', '辻'), up_date = now() WHERE facility_name LIKE '%' || U&'\E1E6' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E2EA', '駒'), up_date = now() WHERE facility_name LIKE '%' || U&'\E2EA' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E380', '辺'), up_date = now() WHERE facility_name LIKE '%' || U&'\E380' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E0D0', '今'), up_date = now() WHERE facility_name LIKE '%' || U&'\E0D0' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E165', '鈴'), up_date = now() WHERE facility_name LIKE '%' || U&'\E165' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E3E9', '原'), up_date = now() WHERE facility_name LIKE '%' || U&'\E3E9' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E198', '柗'), up_date = now() WHERE facility_name LIKE '%' || U&'\E198' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E134', '西'), up_date = now() WHERE facility_name LIKE '%' || U&'\E134' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E089', '祐'), up_date = now() WHERE facility_name LIKE '%' || U&'\E089' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E405', '崎'), up_date = now() WHERE facility_name LIKE '%' || U&'\E405' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E3D6', '辺'), up_date = now() WHERE facility_name LIKE '%' || U&'\E3D6' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E0C7', '片'), up_date = now() WHERE facility_name LIKE '%' || U&'\E0C7' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E14C', '潟'), up_date = now() WHERE facility_name LIKE '%' || U&'\E14C' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E150', '祐'), up_date = now() WHERE facility_name LIKE '%' || U&'\E150' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E3E8', '藤'), up_date = now() WHERE facility_name LIKE '%' || U&'\E3E8' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E39A', '高'), up_date = now() WHERE facility_name LIKE '%' || U&'\E39A' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E3A1', '廣'), up_date = now() WHERE facility_name LIKE '%' || U&'\E3A1' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E171', '藤'), up_date = now() WHERE facility_name LIKE '%' || U&'\E171' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E1CE', '櫛'), up_date = now() WHERE facility_name LIKE '%' || U&'\E1CE' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E1E1', '吉'), up_date = now() WHERE facility_name LIKE '%' || U&'\E1E1' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E0CA', '真'), up_date = now() WHERE facility_name LIKE '%' || U&'\E0CA' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E0C5', '辺'), up_date = now() WHERE facility_name LIKE '%' || U&'\E0C5' || '%';
+-- 住所のみ更新
+UPDATE sys_facility SET address = REPLACE(address, U&'\E1DB', '第'), up_date = now() WHERE address LIKE '%' || U&'\E1DB' || '%';
+UPDATE sys_facility SET address = REPLACE(address, U&'\E3AE', 'XII'), up_date = now() WHERE address LIKE '%' || U&'\E3AE' || '%';
+UPDATE sys_facility SET address = REPLACE(address, U&'\E219', '葛'), up_date = now() WHERE address LIKE '%' || U&'\E219' || '%';
+UPDATE sys_facility SET address = REPLACE(address, U&'\E1D1', '逢'), up_date = now() WHERE address LIKE '%' || U&'\E1D1' || '%';
+UPDATE sys_facility SET address = REPLACE(address, U&'\E061', '土'), up_date = now() WHERE address LIKE '%' || U&'\E061' || '%';
+-- 施設名、住所の更新
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E38B', '吉'), address = REPLACE(address, U&'\E38B', '吉'), up_date = now() WHERE facility_name LIKE '%' || U&'\E38B' || '%' OR address LIKE '%' || U&'\E38B' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E0EA', '葛'), address = REPLACE(address, U&'\E0EA', '葛'), up_date = now() WHERE facility_name LIKE '%' || U&'\E0EA' || '%' OR address LIKE '%' || U&'\E0EA' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E192', '辻'), address = REPLACE(address, U&'\E192', '辻'), up_date = now() WHERE facility_name LIKE '%' || U&'\E192' || '%' OR address LIKE '%' || U&'\E192' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E0F5', '塚'), address = REPLACE(address, U&'\E0F5', '塚'), up_date = now() WHERE facility_name LIKE '%' || U&'\E0F5' || '%' OR address LIKE '%' || U&'\E0F5' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E0E9', '葛'), address = REPLACE(address, U&'\E0E9', '葛'), up_date = now() WHERE facility_name LIKE '%' || U&'\E0E9' || '%' OR address LIKE '%' || U&'\E0E9' || '%';
+UPDATE sys_facility SET facility_name = REPLACE(facility_name, U&'\E3CD', '祇'), address = REPLACE(address, U&'\E3CD', '祇'), up_date = now() WHERE facility_name LIKE '%' || U&'\E3CD' || '%' OR address LIKE '%' || U&'\E3CD' || '%';

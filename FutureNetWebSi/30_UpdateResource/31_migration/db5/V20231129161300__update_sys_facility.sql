@@ -1,0 +1,1 @@
+UPDATE sys_facility SET is_disp = '0', is_del = '0';

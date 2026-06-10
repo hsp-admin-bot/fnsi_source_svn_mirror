@@ -1,0 +1,65 @@
+spring:
+  main:
+    allow-circular-references: true
+  datasource:
+    certificate:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db7?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk7
+      password: nkk7
+    default:
+      jdbc-url: jdbc:postgresql://stg-ies-ntss-platform-service-cluster.cluster-clizq2mnnwjp.ap-northeast-1.rds.amazonaws.com:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkkcl
+      password: kuRpQeefaKKi
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+  application:
+    name: ntss-certificate-management
+  jmx:
+    default-domain: ntss-certificate-management
+
+
+doma:
+  dialect: postgres
+
+logging:
+  file: /var/log/ntss-certificate-management/ntss-certificate-management_system.log
+  level:
+    org.springframework.transaction.interceptor: TRACE
+    org.mongodb.driver: ERROR
+
+server:
+  port: 8081
+  servlet:
+    contextPath: /ntss-certificate-management
+
+securityporicy:
+  accesskeycheck: true
+
+ntss:
+  logging:
+    appender:
+      file-name: /var/log/ntss-certificate-management/{0}.log
+  cl-certificate:
+    # rootクライアント証明書のパス
+    certificate-path: "/nfs/certificate-path"
+    # 作成した.p12証明書のパス
+    p12-path: "/nfs/p12-path"
+    # 作成した証明書の失効リストファイルパス
+    ssl_crl-path: "/nfs/ssl_crl-path"
+    # openssl環境にopenssl.cnfを使わなくて、自分用意のopenssl.cnfを利用する場合設定
+    conf-path: "/var/lib/ntss-certificate-management/openssl.cnf"
+    # openssl環境変数（openssl.cnfのパス、環境依存）
+    env-name: "OPENSSL_CONF"
+    cl-facility:
+      password-min: 10
+      lock-count: 5
+    cl-user:
+      version: 1.0
+      password-min: 10
+      lock-count: 5
+  certificate:
+    sign-in:
+      restriction: false

@@ -1,0 +1,14 @@
+[[get-use-functions]]
+=== 使用可能機能取得
+
+==== Request
+include::{snippets}/facilities/use-functions/get/ok/http-request.adoc[]
+
+==== Path Parameters
+include::{snippets}/facilities/use-functions/get/ok/path-parameters.adoc[]
+
+==== Response(成功)
+include::{snippets}/facilities/use-functions/get/ok/http-response.adoc[]
+
+==== Response Fields
+include::{snippets}/facilities/use-functions/get/ok/response-fields.adoc[]

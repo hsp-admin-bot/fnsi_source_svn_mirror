@@ -1,0 +1,84 @@
+UPDATE "sys_data_set" SET "sql" = 'with om as(
+  select * from ord_main where is_del = ''0''
+)
+,dz as(
+  select * from mst_dialyzer where is_del = ''0'' and is_disp = ''1''
+)
+, kr as(
+  select * from mst_kur where is_del = ''0''
+)
+, bd as(
+  select * from mst_bed where is_del = ''0'' and is_disp = ''1''
+)
+, eq as(
+  select * from mst_equipment where is_del = ''0'' and is_disp = ''1''
+)
+, eqc as(
+  select * from mst_equipment_class where is_del = ''0'' and is_disp = ''1''
+)
+, md as(
+  select * from mst_medicine where is_del = ''0'' and is_disp = ''1''
+)
+, mdc as(
+  select * from mst_medicine_class where is_del = ''0'' and is_disp = ''1''
+)
+, rbg as(
+  select * from mst_room_bed_group where is_del = ''0'' and is_disp = ''1''
+), EquipmentList as (
+SELECT to_char(to_timestamp(treat_date,''YYYYMMDD''),''YYYY/MM/DD'') as treat_date, bed_cd, kind,Name,kur_cd,kur_name,SUM(Amount) as amount,unit,bed_name,pat_id,pat_id as pat_id1,in_hospital_cd_1,in_hospital_cd_2,in_hospital_cd_3,in_hospital_cd_4
+FROM (
+	SELECT 1 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,''ダイアライザ'' as kind,dz.model_number AS Name,1 AS Amount,COALESCE(om.ind_cond_info::json#>>''{5,unit}'','''') AS Unit,dz.in_hospital_cd_1,dz.in_hospital_cd_2,dz.in_hospital_cd_3,dz.in_hospital_cd_4 FROM om LEFT OUTER JOIN dz ON TO_NUMBER(om.ind_cond_info::json#>>''{5,value}'',''99999999'')=dz.dialyzer_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos) AND om.ind_cond_info::json#>>''{5,value}'' IS NOT NULL
+	UNION ALL
+	--吸着カラム
+	SELECT 2 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,COALESCE(eqc.class_name,'''') as kind,eq.equipment_name AS Name,1 AS Amount,COALESCE(eq.unit,'''') AS Unit,eq.in_hospital_cd_1,eq.in_hospital_cd_2,eq.in_hospital_cd_3,eq.in_hospital_cd_4 FROM om LEFT OUTER JOIN eq ON TO_NUMBER(om.ind_cond_info::json#>>''{6,value}'',''99999999'')=eq.equipment_cd LEFT OUTER JOIN eqc ON eq.class_cd=eqc.class_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos) AND om.ind_cond_info::json#>>''{6,value}'' IS NOT NULL
+	UNION ALL
+	--1次膜
+	SELECT 3 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,COALESCE(eqc.class_name,'''') as kind,eq.equipment_name AS Name,1 AS Amount,COALESCE(eq.unit,'''') AS Unit,eq.in_hospital_cd_1,eq.in_hospital_cd_2,eq.in_hospital_cd_3,eq.in_hospital_cd_4 FROM om LEFT OUTER JOIN eq ON TO_NUMBER(om.ind_cond_info::json#>>''{7,value}'',''99999999'')=eq.equipment_cd LEFT OUTER JOIN eqc ON eq.class_cd=eqc.class_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos) AND om.ind_cond_info::json#>>''{7,value}'' IS NOT NULL
+	UNION ALL
+	--2次膜
+	SELECT 4 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,COALESCE(eqc.class_name,'''') as kind,eq.equipment_name AS Name,1 AS Amount,COALESCE(eq.unit,'''') AS Unit,eq.in_hospital_cd_1,eq.in_hospital_cd_2,eq.in_hospital_cd_3,eq.in_hospital_cd_4 FROM om LEFT OUTER JOIN eq ON TO_NUMBER(om.ind_cond_info::json#>>''{8,value}'',''99999999'')=eq.equipment_cd LEFT OUTER JOIN eqc ON eq.class_cd=eqc.class_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos) AND om.ind_cond_info::json#>>''{8,value}'' IS NOT NULL
+	UNION ALL
+	--穿刺針(A針)
+	SELECT 5 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,COALESCE(eqc.class_name,'''') as kind,eq.equipment_name AS Name,1 AS Amount,COALESCE(eq.unit,'''') AS Unit,eq.in_hospital_cd_1,eq.in_hospital_cd_2,eq.in_hospital_cd_3,eq.in_hospital_cd_4 FROM om LEFT OUTER JOIN eq ON TO_NUMBER(om.ind_cond_info::json#>>''{9,value}'',''99999999'')=eq.equipment_cd LEFT OUTER JOIN eqc ON eq.class_cd=eqc.class_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos) AND om.ind_cond_info::json#>>''{9,value}'' IS NOT NULL
+	UNION ALL
+	--穿刺針(V針)
+	SELECT 5 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,COALESCE(eqc.class_name,'''') as kind,eq.equipment_name AS Name,1 AS Amount,COALESCE(eq.unit,'''') AS Unit,eq.in_hospital_cd_1,eq.in_hospital_cd_2,eq.in_hospital_cd_3,eq.in_hospital_cd_4 FROM om LEFT OUTER JOIN eq ON TO_NUMBER(om.ind_cond_info::json#>>''{10,value}'',''99999999'')=eq.equipment_cd LEFT OUTER JOIN eqc ON eq.class_cd=eqc.class_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos) AND om.ind_cond_info::json#>>''{10,value}'' IS NOT NULL
+	UNION ALL
+	--穿刺針(SN)
+	SELECT 6 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,COALESCE(eqc.class_name,'''') as kind,eq.equipment_name AS Name,1 AS Amount,COALESCE(eq.unit,'''') AS Unit,eq.in_hospital_cd_1,eq.in_hospital_cd_2,eq.in_hospital_cd_3,eq.in_hospital_cd_4 FROM om LEFT OUTER JOIN eq ON TO_NUMBER(om.ind_cond_info::json#>>''{11,value}'',''99999999'')=eq.equipment_cd LEFT OUTER JOIN eqc ON eq.class_cd=eqc.class_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos)  AND om.ind_cond_info::json#>>''{11,value}'' IS NOT NULL
+	UNION ALL
+	--血液回路
+	SELECT 7 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,COALESCE(eqc.class_name,'''') as kind,eq.equipment_name AS Name,1 AS Amount,COALESCE(eq.unit,'''') AS Unit,eq.in_hospital_cd_1,eq.in_hospital_cd_2,eq.in_hospital_cd_3,eq.in_hospital_cd_4 FROM om LEFT OUTER JOIN eq ON TO_NUMBER(om.ind_cond_info::json#>>''{13,value}'',''99999999'')=eq.equipment_cd LEFT OUTER JOIN eqc ON eq.class_cd=eqc.class_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos)  AND om.ind_cond_info::json#>>''{13,value}'' IS NOT NULL
+	UNION ALL
+	--透析液
+	SELECT 8 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,COALESCE(mdc.class_name,'''') as kind,md.medicine_name AS Name,TO_NUMBER(om.ind_cond_info::json#>>''{17,value}'',''99999999.99'') AS Amount,COALESCE(md.unit,'''') AS Unit,md.in_hospital_cd_1,md.in_hospital_cd_2,md.in_hospital_cd_3,md.in_hospital_cd_4 FROM om LEFT OUTER JOIN md ON TO_NUMBER(om.ind_cond_info::json#>>''{15,value}'',''99999999'')=md.medicine_cd LEFT OUTER JOIN mdc ON md.class_cd=mdc.class_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos)  AND om.ind_cond_info::json#>>''{15,value}'' IS NOT NULL
+	UNION ALL
+	--補液
+	SELECT 9 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,COALESCE(mdc.class_name,'''') as kind,md.medicine_name AS Name,TO_NUMBER(om.ind_cond_info::json#>>''{22,value}'',''99999999.99'') AS Amount,COALESCE(md.unit,'''') AS Unit,md.in_hospital_cd_1,md.in_hospital_cd_2,md.in_hospital_cd_3,md.in_hospital_cd_4 FROM om LEFT OUTER JOIN md ON TO_NUMBER(om.ind_cond_info::json#>>''{19,value}'',''99999999'')=md.medicine_cd LEFT OUTER JOIN mdc ON md.class_cd=mdc.class_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos)  AND om.ind_cond_info::json#>>''{19,value}'' IS NOT NULL
+	UNION ALL
+	--抗凝固剤
+	SELECT 10 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,COALESCE(mdc.class_name,'''') as kind,md.medicine_name AS Name,CEIL(((TO_NUMBER(om.ind_cond_info::json#>>''{26,value}'',''99999999.99'')+TO_NUMBER(om.ind_cond_info::json#>>''{28,value}'',''99999999.99''))/md.unit_converted_amount)*md.unit_converted_amount_second) AS Amount,COALESCE(md.unit,'''') AS Unit,md.in_hospital_cd_1,md.in_hospital_cd_2,md.in_hospital_cd_3,md.in_hospital_cd_4 FROM om LEFT OUTER JOIN md ON TO_NUMBER(om.ind_cond_info::json#>>''{25,value}'',''99999999'')=md.medicine_cd LEFT OUTER JOIN mdc ON md.class_cd=mdc.class_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos) AND om.ind_cond_info::json#>>''{25,value}'' IS NOT NULL
+	UNION ALL 
+	--投薬
+	SELECT 11 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,COALESCE(mdc.class_name,'''') as kind,md.medicine_name as Name,CEIL(((TO_NUMBER(medi ->> ''amount'' ,''99999999.99''))/md.unit_converted_amount)/md.unit_converted_amount_second) as Amount,COALESCE(md.unit_second,COALESCE(md.unit,'''')) AS Unit,md.in_hospital_cd_1,md.in_hospital_cd_2,md.in_hospital_cd_3,md.in_hospital_cd_4 FROM om CROSS JOIN LATERAL json_array_elements (om.ind_medi_info :: json) medi LEFT OUTER JOIN md ON TO_NUMBER(medi ->> ''cd'' ,''99999999'')=md.medicine_cd LEFT OUTER JOIN mdc ON md.class_cd=mdc.class_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos)
+	UNION ALL 
+	--医材
+	SELECT 12 as disp_order, bd.bed_cd ,om.treat_date,kr.kur_cd,COALESCE(kr.kur_name,''未登録'') as kur_name,COALESCE(bd.bed_name,''未登録'') as bed_name,om.pat_id,COALESCE(eqc.class_name,'''') as kind,eq.equipment_name as Name,(TO_NUMBER(eqi ->> ''amount'' ,''99999999.99'')) as Amount,COALESCE(eq.unit,'''') AS Unit,eq.in_hospital_cd_1,eq.in_hospital_cd_2,eq.in_hospital_cd_3,eq.in_hospital_cd_4 FROM om CROSS JOIN LATERAL json_array_elements (om.ind_equip_info :: json) eqi LEFT OUTER JOIN eq ON TO_NUMBER(eqi ->> ''cd'' ,''99999999'')=eq.equipment_cd LEFT OUTER JOIN eqc ON eq.class_cd=eqc.class_cd LEFT OUTER JOIN kr ON om.ind_kur_cd=kr.kur_cd LEFT OUTER JOIN bd ON om.ind_bed_cd=bd.bed_cd WHERE om.ord_no IN (@ordNos)  
+) as EquipmentListTmp
+GROUP BY treat_date,bed_cd,kind,Name,kur_cd,kur_name,Unit,bed_name,pat_id,disp_order,in_hospital_cd_1,in_hospital_cd_2,in_hospital_cd_3,in_hospital_cd_4
+ORDER BY kind,name,kur_cd,kur_name,bed_name,pat_id,disp_order
+)
+select bd.treat_date, bd.bed_cd, bd.kind, bd.Name,bd.kur_cd,bd.kur_name,bd.amount,bd.unit,bd.bed_name,bd.pat_id,bd.pat_id as pat_id1,bd.in_hospital_cd_1,bd.in_hospital_cd_2,bd.in_hospital_cd_3,bd.in_hospital_cd_4,
+case
+   when count(distinct rbg.room_bed_group_name) = 0 then ''グループ未登録''
+   when count(distinct rbg.room_bed_group_name) = 1 then (max(rbg.room_bed_group_name))
+   else ''グループ複数選択''
+ end as room_bed_group_name
+from EquipmentList as bd
+LEFT OUTER JOIN rbg ON
+rbg.bed_list::text like ''%'' || bd.bed_cd || ''%''
+GROUP BY bd.treat_date,bd.bed_cd,bd.kind,bd.name,bd.kur_cd,bd.kur_name,bd.Unit,bd.bed_name,bd.pat_id,bd.in_hospital_cd_1,bd.in_hospital_cd_2,bd.in_hospital_cd_3,bd.in_hospital_cd_4,bd.amount
+ORDER BY bd.kind,bd.name,bd.kur_cd,bd.kur_name,bd.bed_name,bd.pat_id
+;', "detail" = '[{"preview": "1", "can_calc": "", "data_code": "kur_cd", "data_name": "クールコード", "data_type": "decimal", "conv_table": [], "data_class": "ベッド情報", "field_name": "kur_cd", "disp_format": "", "data_category": "配布リスト(器材)", "facility_table": "", "facility_filter_type": ""}, {"preview": "午後", "can_calc": "", "data_code": "kur_name", "data_name": "クール名", "data_type": "string", "conv_table": [], "data_class": "ベッド情報", "field_name": "kur_name", "disp_format": "", "data_category": "配布リスト(器材)", "facility_table": "", "facility_filter_type": ""}, {"preview": "北1", "can_calc": "", "data_code": "bed_name", "data_name": "ベッド名", "data_type": "string", "conv_table": [], "data_class": "ベッド情報", "field_name": "bed_name", "disp_format": "", "data_category": "配布リスト(器材)", "facility_table": "", "facility_filter_type": ""}, {"preview": "テープ", "can_calc": "0", "data_code": "kind", "data_name": "分類名称", "data_type": "string", "conv_table": [], "data_class": "物品情報", "field_name": "kind", "disp_format": "", "data_category": "配布リスト(器材)", "facility_table": "", "facility_filter_type": "0"}, {"preview": "70%ブドウ糖注射液350ml", "can_calc": "0", "data_code": "name", "data_name": "型番･名称", "data_type": "string", "conv_table": [], "data_class": "物品情報", "field_name": "name", "disp_format": "", "data_category": "配布リスト(器材)", "facility_table": "", "facility_filter_type": "0"}, {"preview": "10", "can_calc": "1", "data_code": "amount", "data_name": "数量", "data_type": "decimal", "conv_table": [], "data_class": "物品情報", "field_name": "amount", "disp_format": "0.00", "data_category": "配布リスト(器材)", "facility_table": "", "facility_filter_type": "0"}, {"preview": "個", "can_calc": "0", "data_code": "unit", "data_name": "単位", "data_type": "string", "conv_table": [], "data_class": "物品情報", "field_name": "unit", "disp_format": "", "data_category": "配布リスト(器材)", "facility_table": "", "facility_filter_type": "0"}, {"preview": "20200101", "can_calc": "0", "data_code": "treat_date", "data_name": "透析日", "data_type": "DateTime", "conv_table": [], "data_class": "抽出条件", "field_name": "treat_date", "disp_format": "", "data_category": "印刷情報", "facility_table": "", "facility_filter_type": "0"}, {"preview": "123456789012", "can_calc": "0", "conv_sql": {"sql_cd": -1, "field_name": "hosp_pat_id", "target_var": "@patId"}, "data_code": "hosp_pat_id", "data_name": "患者ID", "data_type": "string", "conv_table": [], "data_class": "ベッド情報", "field_name": "pat_id", "disp_format": "", "data_category": "配布リスト(物品)", "facility_filter_type": "0"}, {"preview": "テスト患者1", "can_calc": "0", "conv_sql": {"sql_cd": -1, "field_name": "pat_name", "target_var": "@patId"}, "data_code": "pat_name", "data_name": "患者名", "data_type": "string", "conv_table": [], "data_class": "ベッド情報", "field_name": "pat_id1", "disp_format": "", "data_category": "配布リスト(物品)", "facility_filter_type": "0"}, {"preview": "01234567890123456789", "can_calc": "0", "data_code": "in_hospital_cd_1", "data_name": "院内コード", "data_type": "string", "conv_table": [], "data_class": "物品情報", "field_name": "in_hospital_cd_1", "disp_format": "", "data_category": "配布リスト(物品)", "facility_filter_type": "0"}, {"preview": "01234567890123456789", "can_calc": "0", "data_code": "in_hospital_cd_2", "data_name": "院内コード2", "data_type": "string", "conv_table": [], "data_class": "物品情報", "field_name": "in_hospital_cd_2", "disp_format": "", "data_category": "配布リスト(物品)", "facility_filter_type": "0"}, {"preview": "01234567890123456789", "can_calc": "0", "data_code": "in_hospital_cd_3", "data_name": "院内コード3", "data_type": "string", "conv_table": [], "data_class": "物品情報", "field_name": "in_hospital_cd_3", "disp_format": "", "data_category": "配布リスト(物品)", "facility_filter_type": "0"}, {"preview": "01234567890123456789", "can_calc": "0", "data_code": "in_hospital_cd_4", "data_name": "院内コード4", "data_type": "string", "conv_table": [], "data_class": "物品情報", "field_name": "in_hospital_cd_4", "disp_format": "", "data_category": "配布リスト(物品)", "facility_filter_type": "0"}, {"preview": "", "can_calc": "", "data_code": "room_bed_group_name", "data_name": "選択グループ名", "data_type": "string", "conv_table": [], "data_class": "選択グループ名", "field_name": "room_bed_group_name", "disp_format": "", "data_category": "配布リスト(物品)", "facility_table": "", "facility_filter_type": ""}, {"preview": "", "can_calc": "", "data_code": "treat_date", "data_name": "透析予定日", "data_type": "string", "conv_table": [], "data_class": "透析予定日", "field_name": "treat_date", "disp_format": "", "data_category": "配布リスト(物品)", "facility_table": "", "facility_filter_type": "0"}]'  
+WHERE 
+  "sql_cd" = 11;

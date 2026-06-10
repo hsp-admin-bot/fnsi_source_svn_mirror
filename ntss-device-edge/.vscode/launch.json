@@ -1,0 +1,87 @@
+{
+    // IntelliSense を使用して利用可能な属性を学べます。
+    // 既存の属性の説明をホバーして表示します。
+    // 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "main",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/source/ntss_aws/ntss_main.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/source/ntss_aws",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+            "name": "sock",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/source/ntss_sock/ntss_sock.exe",
+            "args": ["30000"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/source/ntss_sock",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+            "name": "updater",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/source/ntss_updater/ntss_updater.exe",
+            "args": ["30000"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/source/ntss_updater",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "pcap",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/source/ntss_updater/ntss_pcap.exe",
+            "args": ["123"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/source/ntss_pcap",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,17 @@
+[[get-personal-settings]]
+=== 共通設定タブ定義で入力した個人設定値の取得
+
+==== Request
+include::{snippets}/user_settings/personal_settings/get/ok/http-request.adoc[]
+
+==== Path Parameters
+include::{snippets}/user_settings/personal_settings/get/ok/path-parameters.adoc[]
+
+==== Response(成功)
+include::{snippets}/user_settings/personal_settings/get/ok/http-response.adoc[]
+
+==== Response(失敗：該当する利用者マスタが存在しない)
+include::{snippets}/user_settings/personal_settings/get/internal_server_error/http-response.adoc[]
+
+==== Response Fields
+include::{snippets}/user_settings/personal_settings/get/ok/response-fields.adoc[]

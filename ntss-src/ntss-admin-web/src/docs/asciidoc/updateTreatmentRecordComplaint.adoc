@@ -1,0 +1,17 @@
+[[put-treatment-record-complaint]]
+=== 治療記録(愁訴処置)更新
+
+==== Request
+include::{snippets}/treatment_record/complaint/put/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/treatment_record/complaint/put/ok/http-response.adoc[]
+
+==== Response(失敗:該当治療記録なし)
+include::{snippets}/treatment_record/complaint/put/not-found/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/treatment_record/complaint/put/ok/path-parameters.adoc[]
+
+==== Request Fields
+include::{snippets}/treatment_record/complaint/put/ok/request-fields.adoc[]

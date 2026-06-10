@@ -1,0 +1,2 @@
+-- アプリケーションログ、gzを変更
+update sys_system_define set value='{"path_output": "/efs/{0}/サーバー/{0}.log", "file_pattern": "/efs/{0}/サーバー/%d''{''yyyyMMdd''}''/{0}_%d''{''yyyyMMdd''}_%i''.log.gz", "max_file_size": "1024"}' where ctl_no = 27

@@ -1,0 +1,14 @@
+[[get-gathering-status]]
+=== データ収集ステータス取得
+
+==== Request
+include::{snippets}/motion_record/gathering_status/ok/http-request.adoc[]
+
+==== Path Parameters
+include::{snippets}/motion_record/gathering_status/ok/path-parameters.adoc[]
+
+==== Response(成功)
+include::{snippets}/motion_record/gathering_status/ok/http-response.adoc[]
+
+==== Response Fields
+include::{snippets}/motion_record/gathering_status/ok/response-fields.adoc[]

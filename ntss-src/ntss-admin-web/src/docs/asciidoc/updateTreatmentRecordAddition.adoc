@@ -1,0 +1,20 @@
+[[put-treatment-record-addition]]
+=== 治療記録(指示コメント)更新
+
+==== Request
+include::{snippets}/treatment_record/addition/put/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/treatment_record/addition/put/ok/http-response.adoc[]
+
+==== Response(失敗:該当治療記録なし)
+include::{snippets}/treatment_record/addition/put/not-found/http-response.adoc[]
+
+==== Response(失敗:必須項目チェックエラー)
+include::{snippets}/treatment_record/addition/put/required-be-empty/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/treatment_record/addition/put/ok/path-parameters.adoc[]
+
+==== Request Fields
+include::{snippets}/treatment_record/addition/put/ok/request-fields.adoc[]

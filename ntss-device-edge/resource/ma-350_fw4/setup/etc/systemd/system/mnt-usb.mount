@@ -1,0 +1,11 @@
+[Unit]
+Description=USB automount
+
+[Mount]
+What=/dev/disk/by-path/platform-musb-hdrc.0-usb-0:1:1.0-scsi-0:0:0:0-part1
+Where=/mnt/usb
+Type=vfat
+Options=defaults
+
+[Install]
+WantedBy=multi-user.target

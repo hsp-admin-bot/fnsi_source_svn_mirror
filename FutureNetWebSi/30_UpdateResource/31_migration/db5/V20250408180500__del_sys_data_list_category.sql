@@ -1,0 +1,1 @@
+DELETE FROM "ntss"."sys_data_list_category" WHERE "category_cd" = 140;

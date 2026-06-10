@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX unq_sys_data_list_category_02
+ON sys_data_list_category(template_cd, disp_order)

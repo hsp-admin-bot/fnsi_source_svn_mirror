@@ -1,0 +1,17 @@
+[[get-report]]
+=== 帳票種別と帳票区分を指定してレポートを出力
+
+==== Request
+include::{snippets}/report/creating-report/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/report/creating-report/get/ok/http-response.adoc[]
+
+==== Response(失敗:該当データなし)
+include::{snippets}/report/creating-report/get/not-found/http-response.adoc[]
+
+==== Request Fields
+include::{snippets}/report/creating-report/get/ok/request-fields.adoc[]
+
+==== Response Fields
+include::{snippets}/report/creating-report/get/ok/response-fields.adoc[]

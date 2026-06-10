@@ -1,0 +1,1 @@
+ALTER TABLE client_cer_detail ADD COLUMN is_delete character varying(1) NOT NULL;

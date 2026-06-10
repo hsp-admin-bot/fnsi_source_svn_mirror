@@ -1,0 +1,8 @@
+source/.vscode/*
+*.o
+*.a
+*.exe
+*.log
+*.LOG
+source/ntss_backup*
+source/DL

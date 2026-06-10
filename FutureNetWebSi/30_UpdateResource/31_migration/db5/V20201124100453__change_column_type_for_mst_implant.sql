@@ -1,0 +1,1 @@
+ALTER TABLE ntss.mst_implant ALTER COLUMN standard_implant_cd TYPE varchar USING standard_implant_cd::varchar;

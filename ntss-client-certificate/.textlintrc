@@ -1,0 +1,7 @@
+{
+  "rules": {
+    "preset-jtf-style": true,
+    "spellcheck-tech-word": true,
+    "no-mix-dearu-desumasu": true
+  }
+}

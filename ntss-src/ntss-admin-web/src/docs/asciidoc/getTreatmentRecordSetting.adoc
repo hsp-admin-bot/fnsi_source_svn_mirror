@@ -1,0 +1,14 @@
+[[get-ord-treat-condition]]
+=== 治療記録(設定値読み込み履歴)取得
+
+==== Request
+include::{snippets}/treatment_record/setting/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/treatment_record/setting/get/ok/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/treatment_record/setting/get/ok/path-parameters.adoc[]
+
+==== Response Fields
+include::{snippets}/treatment_record/setting/get/ok/response-fields.adoc[]

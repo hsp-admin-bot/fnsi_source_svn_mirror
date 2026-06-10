@@ -1,0 +1,226 @@
+DELETE FROM ntss.sys_data_set
+WHERE sql_cd IN (-2130,-2221,-2051)
+;
+
+INSERT INTO ntss.sys_data_set
+(sql_cd, "sql", db_class, detail, can_repeat, use_application, report_class, memo, reg_date, up_date, pre_sql_info)
+VALUES(-2051, 'SELECT
+	hosp_pat_id AS hosppatid,
+	pat_id AS patid
+FROM
+	pat_personal_main 
+WHERE facility_cd = @facilityCd;', 3, '[]'::jsonb, '1', '{"applications": [5]}'::jsonb, '{"classes": []}'::jsonb, '患者病歴情報　@facilityCd使用 {"Mergekey": ["patid"]}', '2021-02-26 17:51:54.726', CURRENT_TIMESTAMP, NULL);
+
+INSERT INTO ntss.sys_data_set
+(sql_cd, "sql", db_class, detail, can_repeat, use_application, report_class, memo, reg_date, up_date, pre_sql_info)
+VALUES(-2221, 'SELECT
+	cast(user_id as varchar) AS userid
+	,facility_cd AS facilitycd
+	,disp_user_id AS indicatorcd --指示者
+FROM
+	mst_user_authentication
+WHERE facility_cd = @facilityCd;', 1, '[]'::jsonb, '1', '{"applications": [5]}'::jsonb, '{"classes": []}'::jsonb, '患者病歴情報　@facilityCd使用 {"Mergekey": ["userid"]}', '2021-02-26 17:51:54.726', CURRENT_TIMESTAMP, NULL);
+
+INSERT INTO ntss.sys_data_set
+(sql_cd, "sql", db_class, detail, can_repeat, use_application, report_class, memo, reg_date, up_date, pre_sql_info)
+VALUES(-2130, 'WITH ntss_db5_om_temp AS (
+    SELECT
+        ntss_db5_om.ord_no
+        , CAST(ntss_db5_om.treat_date as DATE) as treat_date
+        , ROW_NUMBER() OVER (PARTITION BY ntss_db5_om.ord_no ORDER BY CAST(ntss_db5_om_rmi_json ->> ''no'' AS int) ASC) AS ctlno
+        , ntss_db5_om_rmi_json ->> ''cd'' ::char (10) AS cd
+        , ntss_db5_om_rmi_json ->> ''medicine_type'' AS medicine_type
+        , ntss_db5_om_rmi_json ->> ''name'' AS medicinename --薬剤名
+        , ntss_db5_om_rmi_json ->> ''class_name'' AS medicineclassname --薬剤分類名
+        , ntss_db5_om_rmi_json ->> ''amount'' AS amount --数量
+        , ntss_db5_om_rmi_json ->> ''unit'' AS unit --単位
+        , ntss_db5_om_rmi_json ->> ''effect_flg'' AS effectflg --実施フラグ
+        , CASE
+            WHEN POSITION(
+                ''T'' IN cast(
+                    ntss_db5_om_rmi_json ->> ''effect_date'' AS char (20)
+                )
+            ) != 0
+                THEN to_char(
+                to_timestamp(
+                    ntss_db5_om_rmi_json ->> ''effect_date''
+                    , ''YYYY-MM-DDThh24:mi:ss''
+                )
+                , ''YYYY-MM-DD hh24:mi:ss''
+                )
+            ELSE ''''
+            END AS effectdate                   --実施日時
+        , ntss_db5_om_rmi_json ->> ''timing_name'' AS timingname --投与時間帯名
+        , ntss_db5_om_rmi_json ->> ''procedure_cd'' AS procedure_cd
+        , ntss_db5_om_rmi_json ->> ''procedure_name'' AS procedurename --手技名
+        , ntss_db5_om_rmi_json ->> ''effect_user_id'' AS userid
+        , cast(
+            ntss_db5_om_rmi_json ->> ''effect_user_last_name'' AS char (20)
+        )
+        || ''　''
+        || cast(
+            ntss_db5_om_rmi_json ->> ''effect_user_first_name'' AS char (20)
+        ) AS staffname                          --実施者名
+        , ntss_db5_om_rmi_json ->> ''comment'' AS comments --コメント
+    FROM
+        ord_main ntss_db5_om
+        CROSS JOIN LATERAL json_array_elements(ntss_db5_om.rst_medi_info ::json) ntss_db5_om_rmi_json
+    WHERE
+        ntss_db5_om.facility_cd = @facilityCd
+        AND ntss_db5_om.is_del = ''0''
+        AND ntss_db5_om.pat_id IS NOT NULL
+),
+ntss_db5_mst_m AS (
+    SELECT
+        medicine_cd
+        , in_hospital_cd_1 AS medicinecd1
+        , in_hospital_cd_2 AS medicinecd2
+        , up_date
+    FROM
+        mst_medicine
+    WHERE
+        facility_cd = @facilityCd
+),
+ntss_db5_mst_m_mix AS (
+    SELECT
+        medicine_mix_cd
+        , in_hospital_cd_1 AS medicinecd1
+        , in_hospital_cd_2 AS medicinecd2
+        , up_date
+    FROM
+        mst_medicine_mix
+    WHERE
+        facility_cd = @facilityCd
+),
+ntss_db5_mst_p AS (
+    SELECT
+        procedure_cd
+        , CAST(in_hosp_a_startdate as date) as in_hosp_a_startdate
+        , in_hospital_cd_a1
+        , in_hospital_cd_a2
+        , CAST(in_hosp_b_startdate as date) as in_hosp_b_startdate
+        , in_hospital_cd_b1
+        , in_hospital_cd_b2
+        , up_date
+    FROM
+        mst_procedure
+    WHERE
+        facility_cd = @facilityCd
+)
+SELECT
+    '''' AS hosppatid                             --患者ID
+    , ntss_db5_om.pat_id AS patid
+    , ntss_db5_om.treat_date AS dialysisdate    --透析日
+    , ntss_db5_om.ord_no AS dialysisno          --透析番号
+    , ntss_db5_om_temp.ctlno AS ctlno --項目番号
+    , to_char(ntss_db5_om.up_date, ''YYYY-MM-DD hh24:mi:ss'') AS update --更新日時
+    , CASE
+        WHEN ntss_db5_om_temp.medicine_type = ''1''
+            THEN ntss_db5_mst_m.medicinecd1
+        WHEN ntss_db5_om_temp.medicine_type = ''2''
+            THEN ntss_db5_mst_m_mix.medicinecd1
+        ELSE NULL
+        END AS medicinecd1 --薬剤コード(院内コード1)
+    , CASE
+        WHEN ntss_db5_om_temp.medicine_type = ''1''
+            THEN ntss_db5_mst_m.medicinecd2
+        WHEN ntss_db5_om_temp.medicine_type = ''2''
+            THEN ntss_db5_mst_m_mix.medicinecd2
+        ELSE NULL
+        END AS medicinecd2 --薬剤コード(院内コード2)
+    , ntss_db5_om_temp.medicinename AS medicinename --薬剤名
+    , ntss_db5_om_temp.medicineclassname AS medicineclassname --薬剤分類名
+    , ntss_db5_om_temp.amount AS amount         --数量
+    , ntss_db5_om_temp.unit AS unit             --単位
+    , CASE
+        WHEN ntss_db5_om_temp.effectflg = ''0''
+            THEN ''未実施''
+        WHEN ntss_db5_om_temp.effectflg = ''1''
+            THEN ''実施済み''
+        ELSE NULL
+        END AS effectflg   --実施フラグ
+    , ntss_db5_om_temp.effectdate AS effectdate --実施日時
+    , ntss_db5_om_temp.timingname AS timingname --投与時間帯名
+    , CASE
+        WHEN ntss_db5_om_temp.treat_date >= ntss_db5_mst_p.in_hosp_a_startdate
+        AND ntss_db5_om_temp.treat_date >= ntss_db5_mst_p.in_hosp_b_startdate
+        THEN CASE
+            WHEN ntss_db5_mst_p.in_hosp_a_startdate >= ntss_db5_mst_p.in_hosp_b_startdate
+                THEN ntss_db5_mst_p.in_hospital_cd_a1
+            WHEN ntss_db5_mst_p.in_hosp_a_startdate < ntss_db5_mst_p.in_hosp_b_startdate
+                THEN ntss_db5_mst_p.in_hospital_cd_b1
+            END
+        WHEN ntss_db5_om_temp.treat_date >= ntss_db5_mst_p.in_hosp_a_startdate
+        AND (ntss_db5_om_temp.treat_date < ntss_db5_mst_p.in_hosp_b_startdate
+            OR ntss_db5_mst_p.in_hosp_b_startdate IS NULL)
+            THEN ntss_db5_mst_p.in_hospital_cd_a1
+        WHEN (ntss_db5_om_temp.treat_date < ntss_db5_mst_p.in_hosp_a_startdate
+            OR ntss_db5_mst_p.in_hosp_a_startdate IS NULL)
+        AND ntss_db5_om_temp.treat_date >= ntss_db5_mst_p.in_hosp_b_startdate
+            THEN ntss_db5_mst_p.in_hospital_cd_b1
+        ELSE NULL
+        END AS procedurecd --手技コード(院内コード1)
+    , CASE
+        WHEN ntss_db5_om_temp.treat_date >= ntss_db5_mst_p.in_hosp_a_startdate
+        AND ntss_db5_om_temp.treat_date >= ntss_db5_mst_p.in_hosp_b_startdate
+        THEN CASE
+            WHEN ntss_db5_mst_p.in_hosp_a_startdate >= ntss_db5_mst_p.in_hosp_b_startdate
+                THEN ntss_db5_mst_p.in_hospital_cd_a2
+            WHEN ntss_db5_mst_p.in_hosp_a_startdate < ntss_db5_mst_p.in_hosp_b_startdate
+                THEN ntss_db5_mst_p.in_hospital_cd_b2
+            END
+        WHEN ntss_db5_om_temp.treat_date >= ntss_db5_mst_p.in_hosp_a_startdate
+        AND (ntss_db5_om_temp.treat_date < ntss_db5_mst_p.in_hosp_b_startdate
+            OR ntss_db5_mst_p.in_hosp_b_startdate IS NULL)
+            THEN ntss_db5_mst_p.in_hospital_cd_a2
+        WHEN (ntss_db5_om_temp.treat_date < ntss_db5_mst_p.in_hosp_a_startdate
+            OR ntss_db5_mst_p.in_hosp_a_startdate IS NULL)
+        AND ntss_db5_om_temp.treat_date >= ntss_db5_mst_p.in_hosp_b_startdate
+            THEN ntss_db5_mst_p.in_hospital_cd_b2
+        ELSE NULL
+        END AS procedurecd2 --手技コード(院内コード2)
+    , ntss_db5_om_temp.procedurename AS procedurename --手技名
+    , '''' AS indicatorcd                         --実施者コード
+    , ntss_db5_om_temp.userid AS userid
+    , ntss_db5_om_temp.staffname AS staffname   --実施者名
+    , ntss_db5_om_temp.comments AS comments     --コメント
+FROM
+    ord_main ntss_db5_om
+    INNER JOIN ntss_db5_om_temp
+        ON ntss_db5_om_temp.ord_no = ntss_db5_om.ord_no
+    LEFT JOIN ntss_db5_mst_m
+        ON ntss_db5_mst_m.medicine_cd ::char (10) = ntss_db5_om_temp.cd
+    LEFT JOIN ntss_db5_mst_m_mix
+        ON ntss_db5_mst_m_mix.medicine_mix_cd ::char (10) = ntss_db5_om_temp.cd
+    LEFT JOIN ntss_db5_mst_p
+        ON ntss_db5_mst_p.procedure_cd ::char (10) = ntss_db5_om_temp.procedure_cd
+WHERE
+    ntss_db5_om.facility_cd = @facilityCd
+    AND ntss_db5_om.is_del = ''0''
+    AND (
+        CASE
+            WHEN @syncMode = ''update''
+                THEN (
+                (
+                    ntss_db5_om.up_date BETWEEN to_timestamp(@fromDate, ''YYYYMMDDHH24MISS'') AND to_timestamp(@toDate, ''YYYYMMDDHH24MISS'')
+                )
+                OR (
+                    ntss_db5_mst_m.up_date BETWEEN to_timestamp(@fromDate, ''YYYYMMDDHH24MISS'') AND to_timestamp(@toDate, ''YYYYMMDDHH24MISS'')
+                )
+                OR (
+                    ntss_db5_mst_m_mix.up_date BETWEEN to_timestamp(@fromDate, ''YYYYMMDDHH24MISS'') AND to_timestamp(@toDate, ''YYYYMMDDHH24MISS'')
+                )
+                OR (
+                    ntss_db5_mst_p.up_date BETWEEN to_timestamp(@fromDate, ''YYYYMMDDHH24MISS'') AND to_timestamp(@toDate, ''YYYYMMDDHH24MISS'')
+                )
+            )
+            ELSE (CURRENT_DATE - INTERVAL ''1 YEAR'') < ntss_db5_om_temp.treat_date
+            AND ntss_db5_om_temp.treat_date <= CURRENT_DATE
+            END
+    )
+    AND ntss_db5_om.pat_id IS NOT NULL
+ORDER BY ntss_db5_om.pat_id ASC
+    , ntss_db5_om.treat_date ASC
+    , ntss_db5_om.ord_no ASC
+    , ntss_db5_om_temp.ctlno ASC;
+', 2, '[]'::jsonb, '1', '{"applications": [5]}'::jsonb, '{"classes": []}'::jsonb, '患者病歴情報　@facilityCd @fromDate @toDate使用 {"Mergekey": ["patid,userid"]}', '2021-02-26 17:51:54.726', CURRENT_TIMESTAMP, NULL);

@@ -1,0 +1,2 @@
+--ALTER TABLE mst_pat_event_data_template ADD COLUMN fn_template_cd int8 DEFAULT NULL;
+--comment on column mst_pat_event_data_template.fn_template_cd is 'FNW+で管理する施設内の一意な職種コード';

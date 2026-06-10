@@ -1,0 +1,2 @@
+--ALTER TABLE mst_trend_graph_monitor_set ADD COLUMN fn_monitor_set_cd int8 DEFAULT NULL;
+--comment on column mst_trend_graph_monitor_set.fn_monitor_set_cd is 'FNW+で管理する施設内の一意なコード';

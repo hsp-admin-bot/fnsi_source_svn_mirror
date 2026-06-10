@@ -1,0 +1,12 @@
+; 書式フォーマット：{通信方式(1：新通信/2：NX通信)[1]}{通信フォーマット/機種[1桁]}{装置型式[3桁]}
+1IDCS
+1JDBB
+1MDCG
+1NDBG
+1PDCS
+1QDBB
+2ADAB
+2DDAD
+2RDRO
+2IDRY
+2JDRY

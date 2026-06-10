@@ -1,0 +1,59 @@
+spring:
+  datasource:
+    certificate:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db7?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk7
+      password: nkk7
+    default:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkkcl
+      password: kuRpQeefaKKi
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+  application:
+    name: ntss-certificate-management
+  jmx:
+    default-domain: ntss-certificate-management
+
+
+doma:
+  dialect: postgres
+
+logging:
+  config: classpath:logback-spring.xml
+  file: /tmp/ntss-certificate-management_system.log
+  level:
+    org.springframework.transaction.interceptor: TRACE
+    org.mongodb.driver: ERROR
+
+server:
+  port: 8081
+  servlet:
+    contextPath: /ntss-certificate-management
+
+securityporicy:
+  accesskeycheck: true
+
+ntss:
+  logging:
+    appender:
+      file-name: /var/log/ntss-certificate-management/{0}.log
+  cl-certificate:
+    certificate-path: "/nfs/certificate-path"
+    p12-path: "/nfs/p12-path"
+    ssl_crl-path: "/nfs/ssl_crl-path"
+    conf-path: "/tmp/conf/openssl.cnf"
+    env-name: "OPENSSL_CONF"
+    cl-facility:
+      password-min: 10
+      lock-count: 5
+    cl-user:
+      version: 1.0
+      password-min: 10
+      lock-count: 5
+  certificate:
+    sign-in:
+      restriction: false

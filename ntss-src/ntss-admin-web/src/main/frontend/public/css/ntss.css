@@ -1,0 +1,4672 @@
+/**************************/
+/*   グラデーション         */
+/**************************/
+.gradient {
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  background-image:         linear-gradient(rgba(255,255,255,.2) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+}
+
+/*********************************************/
+/* 4.サイドコンテンツエリア 展開/折畳切替          */
+/*********************************************/
+.route-view-frame-style {
+  /*mod NO.4153	 画面上部に空白が生じている  吉 start*/
+  /*display: inline-flex;*/
+  display: flex;
+  /*mod NO.4153 画面上部に空白が生じている  吉 end*/
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+}
+
+.sidebar-transition {
+  transition: all 0.2s cubic-bezier(0.1, 0.1, 1, 1) 0s;
+}
+
+.sidebar-show-button {
+  width: 4em;
+  height: 6.2em;
+  position: absolute;
+  z-index: 101;
+}
+
+/*add FNSI-画面部品デザイン じょはく start*/
+.arrow {
+  color: white;
+  float: right;
+  margin-top: 50%;
+  margin-right: 12%;
+}
+
+.arrow-click{
+  color: white;
+  float: left;
+  margin-top: 50%;
+  margin-left: 31%;
+}
+/*add FNSI-画面部品デザイン じょはく end*/
+
+.pat-create-btn {
+  height: 2em;
+}
+/*FNSI - mod-画面部品デザイン-じょはく start*/
+.menu-btn {
+  margin-left: -12px;
+  margin-top: 30vh;
+  /* width: 30px;bug:4122 modify maxuqiang */
+  width: 15px;
+  height: 75px;
+  position: relative;
+  opacity: 0.5;
+}
+/*FNSI - mod-画面部品デザイン-じょはく end*/
+/*mod FNSI-画面部品デザイン じょはく start*/
+.head-menu-btn {
+  left: 121px;
+  top: -493px;
+  width: 30px;
+  height: 75px;
+  position: relative;
+}
+/*mod FNSI-画面部品デザイン じょはく end*/
+
+.item-row-checked {
+  outline: 3px solid #2ca06f;
+  outline-offset: -3px;
+}
+
+.pat-display.selected {
+  color: #fff;
+  background-color: #0076ff;
+}
+
+
+ons-modal .modal-mask {
+  background-color: transparent;
+}
+
+ons-modal.custom-modal .modal__content {
+  font-size: 1.5em;
+}
+
+ons-modal.custom-modal .modal__content *{
+  font-size: inherit !important;
+}
+
+ons-card {
+  margin: 0.1em;
+  padding: 0.1em;
+}
+
+.custom-modal .modal-header,
+.custom-modal .modal-container * {
+  font-size: inherit !important;
+}
+.custom-modal .select-input {
+  line-height: 2;
+}
+
+ons-list {
+  height: 100%;
+  background-color: #fafafa;
+}
+
+/* ヘッダを立体的にする */
+ons-list .list-header {
+  color: #ffffff;
+  background-color: var(--ntss-list-header-background-color);
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  box-shadow: 0 2px 2px 0 rgba(255,255,255,.2) inset, 0 2px 20px 0 rgba(255,255,255,.5) inset, 0 -2px 2px 0 rgba(0,0,0,.1);
+  height: 2em;
+}
+ons-list .center table th {
+  background-image: none !important;
+}
+
+ons-row {
+  width: 100%;
+  height: 100%;
+}
+
+ons-button {
+  height: 2.4em;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0;
+  font-size: 1em;
+  text-align: center;
+  vertical-align: middle;
+  background-color: darkgoldenrod;
+}
+
+/* add bug 7185 修正 chen start */
+button[hidden]{
+  display: none !important;
+}
+/* add bug 7185 修正 chen end */
+
+ons-input {
+  border: 0;
+  padding: 0;
+  color: #aaa;
+  border: solid 1px #ccc;
+  margin: 0;
+  width: 100%;
+  -webkit-border-radius: 5px;
+  -moz-box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2);
+  -moz-border-radius: 5px;
+  -webkit-box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  box-shadow: inner 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+/* 丸いv-ons-radioのスタイル定義(modifier="round") */
+.radio-button--round__checkmark {
+  font-weight: 400;
+  height: 22px;
+  width: 22px;
+}
+.radio-button--round__checkmark:before {
+  border: 1px solid #c7c7cd;
+}
+.radio-button--round__checkmark:after {
+  top: 7px;
+  left: 5px;
+  width: 11px;
+  height: 5px;
+  border: 2px solid #fff;
+  border-width: 1px;
+  border-top: none;
+  border-right: none;
+}
+:checked + .radio-button--round__checkmark:before {
+  background-color: #0076ff;
+}
+
+.div-self-diagnosis-type-area label {
+  display: block;
+  margin: 0;
+  text-align: center;
+  transition: 0.2s;
+}
+
+/* v-ons-iconを使用してアイコン表示すためのスタイル定義 */
+.ons-icon {
+  font-weight: bolder;
+}
+
+.list-item__center {
+  /* padding: 0px; */
+  background-position: unset;
+}
+
+/******************************************/
+/* NTSS共通スタイル                        */
+/******************************************/
+body {
+  /* フォントサイズ */
+  font-size: 10px;
+  /* 青色の時の背景色 */
+  background-color: var(--body-background-color);
+  /* フォント色 */
+  color: #333333;
+  /* メニュー固定 */
+  position: fixed;
+  /* フォント */
+  font-family:Helvetica Neue,Helvetica,Arial,Osaka,Meiryo,sans-serif;
+  /* touchAction属性 */
+  touch-action: auto !important;
+  overscroll-behavior-y: none;
+}
+
+/******************************************/
+/* NTSS-Headerの共通スタイル               */
+/******************************************/
+/* ヘッダ全体の共通スタイル */
+.header {
+  position: relative;
+  width: 100%;
+  z-index: 3;
+}
+
+/* 最左表示ヘッダのmargin用スタイル */
+.leftmost-header {
+  margin-left: 2em;
+}
+
+/* ヘッダの各項目毎のスタイル */
+.header-item {
+  /* ヘッダの高さ */
+  height: 6.2em;
+  /* ヘッダ部の背景色 */
+  background-color: var(--header-item-background-color);
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  background-image:         linear-gradient(rgba(210, 210, 210, 0.2) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+}
+
+/* TODO 装置記録詳細から撤収できたら、消す */
+/* ヘッダ固定用のスタイル */
+.header-sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+}
+
+/* 日時ヘッダ固定用のスタイル */
+.event-reg-time-header-sticky {
+  background-color: var(--event-reg-time-header-sticky-background-color);
+  position: -webkit-sticky;
+  position: sticky;
+  left: 0;
+  z-index:2;
+}
+
+/* 列固定用のスタイル */
+.col-sticky {
+  background-color: var(--col-sticky-background-color);
+  position: -webkit-sticky;
+  position: sticky;
+  left: 0;
+}
+
+/* 抽出条件エリアのスタイル */
+.condition-area {
+  margin: 5px;
+}
+
+.condition-row {
+  margin-bottom: 15px;
+}
+.k-multiselect-wrap li.k-button span {
+  word-break: break-word;
+  text-align: left;
+}
+
+.k-multiselect-wrap li.k-button {
+  font-size: 1em;
+}
+
+.condition-search-col {
+  vertical-align: center;
+  width: 60%;
+  height: 100%;
+}
+
+/* Headerの検索条件エリアのスタイル定義 */
+.condition-search-area {
+  margin: 4px;
+  height: calc(100% - 10px);
+  border: solid 1px lightgray;
+  background-color: var(--condition-search-area-background-color);
+  border-radius: 10px;
+  padding-right: 6px;
+}
+
+/* Headerの検索アイコン表示エリアのスタイル定義 */
+.condition-search-icon-area {
+  float: left;
+  position: absolute;
+  line-height: 5em;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+/* Headerの検索条件（検索アイコン以外）の外枠のスタイル定義 */
+.condition-items-area {
+  /* mod 横展開管理台帳_日機装FNSI NO.5 劉全航 start */
+  /*mod layoutデフォルト値の判断が必要です 吉 start*/
+  margin-left: 2.5em;
+  /*margin-left: 7.0em;*/
+  /*mod layoutデフォルト値の判断が必要です 吉 end*/
+  /* mod 横展開管理台帳_日機装FNSI NO.5 劉全航 end */
+  padding: 0.4em;
+  font-size: 1em;
+  display: flex;
+  flex-wrap: wrap;
+  word-break: break-all;
+}
+
+/* 検索条件の項目毎のスタイル定義 */
+/*mod FNSI-画面部品デザイン じょはく start*/
+.condition-label {
+  height: auto;
+  border: solid 0.01em lightgray;
+  /* 枠線のスタイル */
+  border-radius: 1em;
+  /* フォントサイズ */
+  font-size: 1.2em;
+  /* 枠線の角 */
+  padding: 0px 10px 0px 10px;
+  /* 外枠と内枠のスペース */
+  margin-left: 0.5em;
+}
+/*mod FNSI-画面部品デザイン じょはく end*/
+
+/* TODO：ボタン1～4の box-shadow: unset;、importantは、競合がなくなったら削除してください */
+/* ボタン1：保存・実行使用するボタンの共通スタイル */
+.btn1-kendo-execute > .k-button,
+.btn1-execute {
+  color: #ffffff !important;
+  background-color: var(--btn1-execute-color);
+  /* ボタン押下時の色表示対応 */
+  background-image: linear-gradient(var(--btn1-execute-color), var(--btn1-execute-color)) !important;
+  border-bottom: solid 3px var(--btn-common-border-color) !important;
+  box-shadow: unset;
+}
+/*add FNSI-画面部品デザイン  張岩 start*/
+.btn1-execute[disabled] {
+  color: #bfbfbf !important;
+  background-color: #dfdfdf;
+  /* ボタン押下時の色表示対応 */
+  background-image: none !important;
+  border-bottom: solid 3px var(--btn-common-border-color) !important;
+  box-shadow: unset;
+}
+/*add FNSI-画面部品デザイン  張岩 end*/
+/* ボタン2：キャンセルやクリアに使用されるボタンの共通スタイル */
+.btn2-cancel {
+  color: #ffffff !important;
+  background-color: var(--btn2-cancel-color);
+  background-image: linear-gradient(var(--btn2-cancel-color), var(--btn2-cancel-color)) !important;
+  border-bottom: solid 3px var(--btn-common-border-color) !important;
+  box-shadow: unset;
+}
+/*add FNSI-画面部品デザイン  張岩 start*/
+.btn2-cancel[disabled] {
+  color: #bfbfbf !important;
+  background-color: #dfdfdf;
+  background-image: none !important;
+  border-bottom: solid 3px var(--btn-common-border-color) !important;
+  box-shadow: unset;
+}
+/*add FNSI-画面部品デザイン  張岩end*/
+/* ボタン3：通常のボタンの共通スタイル */
+.btn3-kendo-normal > .k-button,
+.btn3-normal {
+  color: #ffffff !important;
+  background-color: var(--btn3-normal-color);
+  background-image: linear-gradient(var(--btn3-normal-color), var(--btn3-normal-color)) !important;
+  border-bottom: solid 3px var(--btn-common-border-color) !important;
+  box-shadow: unset;
+}
+/*add FNSI-画面部品デザイン  張岩 start*/
+.btn3-normal[disabled] {
+  color: #bfbfbf !important;
+  background-color: #dfdfdf;
+  background-image: none !important;
+  border-bottom: solid 3px var(--btn-common-border-color) !important;
+  box-shadow: unset;
+}
+/*add FNSI-画面部品デザイン  張岩 end*/
+/* ボタン4：削除や警告が必要な処理に使うボタンの共通スタイル */
+.btn4-kendo-alert > .k-button,
+.btn4-alert {
+  color: #ffffff !important;
+  background-color: var(--btn4-alert-color);
+  background-image: linear-gradient(var(--btn4-alert-color), var(--btn4-alert-color)) !important;
+  border-bottom: solid 3px var(--btn-common-border-color) !important;
+  box-shadow: unset;
+}
+/*add FNSI-画面部品デザイン  張岩 start*/
+.btn4-alert[disabled] {
+  color: #ffffff !important;
+  background-color: #FF3366 !important;
+  background-image: none !important;
+  border-bottom: solid 3px var(--btn-common-border-color) !important;
+  box-shadow: unset;
+  /*color: #ffffff !important;*/
+  /*background-color: none;*/
+  /*background-image: -webkit-linear-gradient(top, #B4012E 0%,#B2012E 50%,#a7062f 50%,#9A203F 100%) !important;*/
+  /*background-image: linear-gradient(to bottom,#B4012E 0%,#B2012E 50%,#a7062f 50%,#9A203F 100%) !important;*/
+  /*border-bottom: solid 3px var(--btn-common-border-color) !important;*/
+  /*box-shadow: unset;*/
+}
+/*add FNSI-画面部品デザイン  張岩 end*/
+/* k-button用css：marginを初期化し、上下の幅を均一化する */
+.btn1-kendo-execute > .k-button,
+.btn3-kendo-normal > .k-button,
+.btn4-kendo-alert > .k-button {
+  margin-top: 0;
+  margin-bottom: 0;
+  /* kendo-grid上で編集する際に height: auto が割り当てられる為の対処 */
+  height: 2em !important;
+}
+/* グループボタン用css */
+.label.last-of-type,
+.label.middle-of-type,
+.label.first-of-type {
+  /* 非選択時のスタイル */
+  background-color: #72a8de;
+  border-bottom: solid 3px #72a8de;
+}
+.identification:checked + label {
+  /* 選択時のスタイル */
+  background-color: var(--btn1-execute-color);
+  border-bottom: solid 3px var(--btn-common-border-color);
+}
+.identification + label:hover {
+  /* マウスオーバー時の背景色を指定する */
+  background-color: var(--btn1-execute-color);
+  border-bottom: solid 3px var(--btn-common-border-color);
+}
+
+/* ポップアップ画面のクリアボタンのスタイル定義 */
+.clear {
+  width: 80px;
+}
+
+/* ポップアップ画面のOKボタンのスタイル定義 */
+.ok {
+  width: 80px;
+}
+
+/* 部署符号、都道府県が指定されている場合のスタイル定義 */
+.input_search {
+  line-height: 25px;
+}
+
+/* ヘッダ部の緊急発報、予防保守、緊急発報のフィルタリング用ラベルのスタイル定義 */
+.filter-area {
+  display: flex;
+  margin-top: 2px;
+}
+
+.filter-button {
+  margin-right: 4px;
+}
+
+.filterLabel {
+  /* ブロックレベル要素化する */
+  display: block;
+  /* テキストのセンタリングを指定する */
+  text-align: center;
+  /* 行の高さを指定する */
+  line-height: 2.1em;
+  margin: 3px 0px 0px 0px;
+  width: 2.2em;
+  /* フォント色 */
+  color: var(--filterLabel-color);
+}
+
+/* ヘッダの検索テキストエリアのスタイル定義 */
+ons-input .text-input,
+ons-search-input .search-input {
+  background-color: var(--search-input-background-color);
+  font-size: 1em;
+}
+
+/* 装置記録一覧画面のポップオーバーのinputタグのスタイル */
+ons-input.motionRecordPopover .text-input {
+  -webkit-appearance: none;
+  display: flex;
+  align-items: center;
+}
+
+ons-input.ons-element-edited .text-input,
+ons-select.ons-element-edited .select-input {
+  color: green;
+  border: 2px green solid !important;
+}
+
+ons-row.custom-element-input-area .select-input:disabled {
+  opacity: 1 !important;
+}
+
+/* 初回ログイン時のアカウント登録画面のポップオーバーのcontentのスタイル */
+ons-popover.popoverProvisional .popover__content {
+  min-height: 50px;
+}
+
+.main-area {
+  border: 5px;
+  height: 100%;
+  overflow-x: auto;
+  padding: 5px;
+}
+
+.list-item {
+  padding: 0 5px 0 5px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+/* メインエリアのスタイル定義 */
+.main {
+  --height: 200px;
+  position: relative;
+  width: 100%;
+  height: var(--height);
+  background-color: var(--main-background-color);
+  z-index: 2;
+}
+
+.main-font {
+  font-size: 1.5em;
+}
+
+/* メインエリア直下のスタイル定義 */
+.main-content-area {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  overflow-y: auto;
+  margin: 5px;
+  margin-top: 0;
+  height: inherit;
+}
+
+/* 通知表示のアニメーション定義 */
+.notification-animation-enter-active,
+.notification-animation-leave-active,
+.notification-animation-move {
+  transition: all 0.2s;
+}
+.notification-animation-enter,
+.notification-animation-leave-to {
+  opacity: 0;
+  transform: translateX(400px) scale(0.2);
+}
+
+/******************************************/
+/* リスト表示時のスタイル定義               */
+/******************************************/
+.ntss-list-item {
+  padding: 0 5px 1px 5px;
+  height: -webkit-fill-available;
+  height: 100%;
+  overflow-x: auto;
+  background-color: var(--ntss-list-item-background-color);
+  margin-bottom: 0px;
+  border-color: #151515;
+}
+
+.ntss-list {
+  border-collapse: collapse;
+  margin: 0 auto;
+  /* width: calc(100vw - 0.8rem); */
+  width: -webkit-fill-available;
+  position: absolute;
+  top: 0px;
+  background-color: var(--ntss-list-background-color);
+}
+
+.modal-container .ntss-list,
+.modal-container .modal-container,
+.sub-modal-container .ntss-list {
+  font-size: 1em;
+}
+
+.ntss-list tr:nth-child(2n) {
+  background-color: var(--ntss-list-content-2nd-background-color);
+}
+.ntss-list tr {
+  background-color: var(--ntss-list-item-background-color);
+  border-color: 1px solid var(--master-maintenance-kgrid-border-color);
+}
+.ntss-list tr:hover {
+  background-color: var(--master-maintenance-kgrid-item-hover-background-color);
+}
+
+/* TODO 装置記録詳細から撤収できたら、消す */
+.ntss-list-header-tr {
+  /* 一覧のヘッダ */
+  background-color: var(--ntss-list-header-background-color) !important;
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+}
+
+/* TODO 装置記録詳細から撤収できたら、消す */
+.ntss-list-header-th {
+  color: #fff;
+  font-weight: 100;
+  padding: 4px;
+  /* 一覧のボーダーライン */
+  border: solid 1px var(--ntss-list-border-color);
+  /* 上のボーダーラインは非表示 */
+  border-top: none;
+  white-space: pre;
+  text-align: left;
+}
+
+/* TODO 装置記録詳細から既存を撤収できたら、名前修正する */
+.ntss-list-header-th-sticky {
+  color: #fff;
+  background-color: var(--ntss-list-header-background-color);
+  /* mod 文字の太さを修正 張 start */
+  /* font-weight: 100; */
+  font-weight: unset;
+  /* mod 文字の太さを修正 張 start */
+  padding: 4px;
+  /* 一覧のボーダーライン */
+  border: solid 1px var(--ntss-list-border-color);
+  /* 上のボーダーラインは非表示 */
+  border-top: none;
+  white-space: pre;
+  text-align: left;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0px;
+}
+
+.ntss-list-body-tr {
+  /* 一覧のボーダーライン */
+  border: solid 1px var(--ntss-list-border-color);
+  /* 一覧の文字色 */
+  color: var(--ntss-list-body-color);
+  background-color: var(--ntss-list-item-background-color);
+}
+
+.ntss-list-body-td {
+  /* 一覧のボーダーライン */
+  border: solid 1px var(--ntss-list-border-color);
+  padding: 8px;
+  color: var(--ntss-list-body-color);
+}
+
+.ntss-list-body-td-header {
+  background-color: var(--ntss-list-body-background-color);
+}
+
+.ntss-list-body-td-text-center {
+  text-align: center;
+}
+
+.sorted-asc:after {
+  display: inline-block;
+  content: "▼";
+}
+
+.sorted-desc:after {
+  display: inline-block;
+  content: "▲";
+}
+
+/* 入力値に対するエラーメッセージのスタイル */
+.error-message {
+  color: #ff6666;
+}
+
+/* 一覧のヘッダー部分の土曜日の文字色 */
+.list-header-saturday {
+  color: var(--ntss-saturday-color) !important;
+}
+
+/* 一覧のヘッダー部分の日曜日の文字色 */
+.list-header-sunday {
+  color: var(--ntss-sunday-color) !important;
+}
+
+/* 一覧のヘッダー部分の休日の文字色 */
+.list-header-holiday {
+  color: var(--ntss-holiday-color) !important;
+}
+
+/* 通常背景の土曜日の文字色(通常背景) */
+.normal-background-saturday {
+  color: var(--ntss-saturday-color-n) !important;
+}
+
+/******************************************/
+/* fabアイコンのスタイル定義                */
+/******************************************/
+.fab-top-right {
+  top: 5px;
+  bottom: auto;
+  right: 5px;
+  left: auto;
+  position: absolute;
+  /* fabアイコンの背景色(男性用) */
+  background-color: #0072c6;
+  /* fabアイコンの背景色(女性用) */
+  /* TODO:アカウント画面で選択 */
+  /* background-color: #FF69B4; */
+}
+
+/******************************************/
+/* NTSS-Footerの共通スタイル               */
+/******************************************/
+.ntss-footer {
+  /* フッターメニューの背景色 */
+  background-color: var(--ntss-footer-background-color);
+  text-align: center;
+  border-top: solid 1px var(--ntss-footer-border-color);
+  z-index: 4;
+}
+
+.ntss-footer-item-label {
+  font-size: 0.1em;
+  vertical-align: text-top;
+}
+
+.ntss-footer-item {
+  width: 25%;
+}
+
+.ntss-footer-item-row {
+  background-color: inherit;
+  height: 100%;
+}
+
+/* テーマが青の場合のスタイル */
+.theme-icon {
+  color: #ffffff;
+}
+
+/* フッターメニューのアイコンのスタイル定義 */
+.ntss-footer-icon {
+  vertical-align: middle;
+  height: 40px;
+  width: 40px;
+}
+
+/******************************************/
+/* ポップアップ表示に関するスタイル          */
+/******************************************/
+.popover--top {
+  width: 300px;
+}
+
+.popover--top__content {
+  width: 100%;
+}
+/* 外枠は削除 */
+.popover-style .popover__content,
+.popover-style .popover__arrow {
+  border: none !important;
+}
+.popover-style label.label-style {
+  line-height: 1.7;
+}
+/* add スタッフ選択モーダルの表示不正 5672 shan　start */
+.popover .popover__content {
+  font-size: 1.5em;
+  background-color: var(--popover-area-background-color);
+  /* color: var(--all-label-color); */
+  color:var(--ntss-list-body-color);
+}
+/* add スタッフ選択モーダルの表示不正 5672 shan　end */
+/* ▲マークの背景色の設定 */
+.popover .popover__arrow {
+  background-image: linear-gradient(
+    45deg,
+    var(--popover-area-background-color),
+    var(--popover-area-background-color),
+    50%,
+    transparent 50%);
+  /* ▲マークが吹き出しの裏になるように調整 */
+  z-index: -1;
+}
+
+.popover__content * {
+  font-size: inherit !important;
+}
+
+.popover__content ons-list-header {
+  line-height: 2;
+}
+
+.popover__content ons-button.ok {
+  float: right;
+}
+
+.popover__content ons-button.ok,
+.popover__content ons-button.clear {
+  margin: 8px 0;
+}
+
+.popover__content ons-select > .select-input {
+  line-height: 21px;
+}
+
+.master-search .popover__content {
+  min-height: 75px;
+}
+
+.master-search .condition-row {
+  margin-bottom: 5px;
+}
+
+/******************************************/
+/* パンくずリストに関するスタイル           */
+/******************************************/
+.bread-crumbs {
+  background-color: var(--bread-crumbs-background-color);
+  font-size: 130%;
+}
+
+/* パンくずリストエリアのスタイル定義 */
+.breadcrumb-area {
+  height: 35px;
+  line-height: 27px;
+  margin-left: 5px;
+  margin-right: 5px;
+  font-size: 1em;
+  white-space: nowrap;
+  overflow-y: hidden;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+  color: var(--breadcrumb-area-color);
+}
+
+/* パンくずリストのスタイル定義 */
+.breadcrumb-content {
+  padding-left: 0;
+  margin-left: 0;
+  margin-top: 3px;
+  overflow-x: auto;
+}
+
+.breadcrumb-content li {
+  position: relative;
+  display: inline-block;
+  list-style: none;
+  margin-right: 15px;
+}
+
+.breadcrumb-content li:after {
+  /* 三角の部分 */
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: -10px;
+  width: 20px;
+  height: 20px;
+  transform: rotate(45deg);
+  background-color: #999999;
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 75%,transparent 50%,rgba(0,0,0,.1) 100%);
+  border-radius: 0 0px 0 25px;
+}
+
+.breadcrumb-content li:last-child:after {
+  content: "";
+}
+
+.breadcrumb-content li a {
+  text-decoration: none;
+  padding: 0 6px 0 7px;
+  display: inline-block;
+  height: 28px;
+  /* フォント・背景色 */
+  color: #fafafa;
+  background-color: #999999;
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+}
+
+.breadcrumb-content li a:hover {
+  text-decoration: underline;
+}
+
+/* 緊急発報が1件以上の行スタイル */
+.emergency-row {
+  /* 背景色 */
+  background-color: var(--emergency-background-color) !important;
+  /* フォント色 */
+  color: var(--emergency-color);
+  /* 枠線 */
+  border: solid 1px var(--emergency-border-color);
+}
+/* 緊急発報件数のチェックボックスのスタイル */
+.emergency + label {
+  background-color: var(--emergency-background-color);
+  color: var(--emergency-color);
+  /* 枠線 */
+  outline: solid 1px var(--emergency-border-color);
+  outline-offset: -1px;
+  position: relative;
+}
+/* 緊急発報のチェックボックスが選択された時のスタイル定義 */
+.emergency:checked + label {
+  /* 枠線 */
+  outline: solid 2px var(--emergency-checked-border-color);
+}
+
+/* 予防保守が1件以上の行スタイル */
+.preventive-row {
+  /* 背景色 */
+  background-color: var(--preventive-background-color) !important;
+  /* フォント色 */
+  color: var(--preventive-color);
+  /* 枠線 */
+  border: solid 1px var(--preventive-border-color);
+}
+/* 予防保守件数のチェックボックスのスタイル */
+.prophylaxis + label {
+  background-color: var(--preventive-background-color);
+  color: var(--preventive-color);
+  /* 枠線 */
+  outline: solid 1px var(--preventive-border-color);
+  outline-offset: -1px;
+  position: relative;
+}
+/* 予防保守のチェックボックスが選択された時のスタイル */
+.prophylaxis:checked + label {
+  /* 枠線 */
+  outline: solid 2px var(--preventive-checked-border-color);
+}
+
+/* 通信不良が1件以上の行スタイル */
+.com-problem-row {
+  /* 背景色 */
+  background-color: var(--com-problem-background-color) !important;
+  /* フォント色 */
+  color: var(--com-problem-color);
+  /* 枠線 */
+  border: solid 1px var(--com-problem-border-color);
+}
+/* 通信不良件数のチェックボックスのスタイル */
+.defect + label {
+  background-color: var(--com-problem-background-color);
+  color: var(--com-problem-color);
+  /* 枠線 */
+  outline: solid 1px var(--com-problem-border-color);
+  outline-offset: -1px;
+  position: relative;
+}
+/* 通信不良のチェックボックスが選択された時のスタイル */
+.defect:checked + label {
+  /* 枠線 */
+  outline: solid 2px var(--com-problem-checked-border-color);
+}
+
+/* 「全て」のラジオボタンのスタイル */
+.all + label {
+  /* 背景色 */
+  background-color: var(--all-label-background-color);
+  /* フォント色 */
+  color: var(--all-label-color);
+  /* 枠線 */
+  outline: solid 1px var(--all-label-border-colo);
+  outline-offset: -1px;
+  position: relative;
+}
+/* 「全て」のラジオボタンが選択された時のスタイル */
+.all:checked + label {
+  /* 枠線 */
+  outline: solid 2px var(--all-label-checked-border-color);
+}
+
+/* 緊急発報/予防保守/通信不良/「全て」のラジオボタン：未選択状態の時は表示を暗くする */
+.emergency + label::before,
+.prophylaxis + label::before,
+.defect + label::before,
+.all + label::before {
+  /*del FNSI-画面部品デザイン じょはく start*/
+  /*background-color: black;*/
+  /*del FNSI-画面部品デザイン じょはく end*/
+  opacity: 0.3;
+  content: ' ';
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  left: 1px;
+  bottom: 1px;
+}
+/* 緊急発報/予防保守/通信不良/「全て」のラジオボタン：選択時は暗くするのを解除 */
+.emergency:checked + label::before,
+.prophylaxis:checked + label::before,
+.defect:checked + label::before,
+.all:checked + label::before {
+  opacity: 0 !important;
+}
+
+/******************************************/
+/* 装置記録及び装置記録詳細のスタイル定義    */
+/******************************************/
+/* 工程文字の共通のスタイル定義 */
+.processState {
+  margin-left: 10px;
+  font-size: 4em;
+  /* フォントサイズ */
+  float: center;
+  padding-top: 5px;
+}
+
+/* 工程毎のフォント色のスタイル */
+.process-state-1 {
+  color: var(--process-state-1-color);
+}
+
+.process-state-2 {
+  color: #00ffff;
+}
+
+.process-state-3 {
+  color: #008000;
+}
+
+.process-state-4 {
+  color: var(--process-state-1-color);
+}
+
+.process-state-default {
+  color: #000000;
+}
+
+/* 自己診断結果毎のフォント色のスタイル */
+.self-measure-result-default {
+  color: var(self-measure-result-1-color);
+}
+
+/******************************************/
+/* 装置記録詳細の基本スタイル               */
+/******************************************/
+/* 1行目のスタイル定義 */
+.row-1 {
+  margin-left: 5px;
+  font-size: 1em;
+  color: var(--row-3-color);
+}
+
+/* 2行目、3行目のスタイル定義 */
+.row-2,
+.row-3 {
+  margin-left: 10px;
+  font-size: 1.5em;
+  /* フォントサイズ */
+  font-weight: bold;
+  /* 太文字 */
+  white-space: nowrap;
+  /* 折り返さない対応 */
+  overflow: hidden;
+  /* 見切れた分を隠す */
+  color: var(--row-3-color);
+}
+
+/* 装置記録詳細の自己診断及び溶解記録のリストとグラフを切り替えるアイコンのスタイル定義 */
+.list-chart-icon {
+  color: var(--list-chart-icon-color);
+}
+
+/* グラフタイトルのスタイル */
+.highcharts-title {
+  font-size: 12px !important;
+  font-weight: initial !important;
+  fill: var(--highcharts-title-fill) !important;
+}
+
+.highcharts-legend-item text {
+  font-size: 9px !important;
+  font-weight: initial !important;
+  fill: var(--highcharts-legend-item-fill) !important;
+}
+
+.machine-record-detail-base {
+  border: solid 1px var(--machine-record-detail-base-border-color);
+  color: var(--machine-record-detail-base-color);
+}
+
+/* 装置記録のヘッダをクリックした時に表示する詳細画面のスタイル定義 */
+.machine-record-detail {
+  width: 100%;
+  height: 100%;
+  background-color: var(--machine-record-detail-background-color);
+}
+
+/* 装置記録、緊急発報、データ収集のスタイル */
+.data-type {
+  padding: 5px;
+  /* 上下のパディング(5px + 5px)とボーダ(1px) を減算 */
+  height: calc(100% - 12px);
+}
+
+/******************************************/
+/* アカウント編集画面の基本スタイル定義      */
+/******************************************/
+/* アカウント編集TOP */
+.account-edit {
+  position: relative;
+  padding: 10px;
+  text-align: center;
+  overflow-y: auto;
+}
+
+/* アカウント入力部 */
+.account-edit-input {
+  color: var(--ntss-base-color);
+  height: calc(100% - 42px);
+  right: 17px;
+}
+
+/****************************************/
+/* 担当施設設定画面の基本スタイル定義      */
+/****************************************/
+/* 表エリア */
+.table-staff-facilities {
+  height: calc(100% - 42px);
+}
+.table-header-check-all {
+  background-color: var(--table-header-check-all-background-color);
+  border: solid 1px var(--table-header-check-all-border-color);
+}
+
+/* 否定系ボタンエリア */
+.denial-btn-area {
+  margin-left: 1em;
+  background-color: var(--denial-btn-area-background-color);
+}
+
+/* 否定系ボタン */
+.denial-btn {
+  padding: 0.2em 1em 0em 1em;
+  line-height: 2em;
+  min-width: 5em;
+}
+
+/* 肯定系ボタンエリア */
+.registration-btn-area {
+  margin-right: 1em;
+  background-color: var(--registration-btn-area-background-color);
+}
+
+/* 肯定系ボタン */
+.registration-btn {
+  line-height: 2em;
+  min-width: 5em;
+}
+
+.flex-container {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: row;
+  align-items: center;
+  height: 100%;
+}
+
+.modal-footer .flex-container,
+.sub-modal-footer .flex-container {
+  margin: 10px;
+}
+
+.modal-container .select-btn,
+.sub-modal-container .select-btn {
+  font-size: 1em;
+}
+
+/****************************************/
+/* 治療記録画面の基本スタイル定義       */
+/****************************************/
+.single-button-area {
+  justify-content: flex-end !important;
+}
+/* 共通部品 グループボタン */
+.treatment-record-common-group-button :checked + .segment__button {
+  background-color: var(--btn1-execute-color);
+  border-bottom: solid 3px var(--btn-common-border-color);
+}
+
+/******************************************/
+/* 治療状況                                */
+/******************************************/
+
+.bed-layout-main .result_ord .select-input,
+.bed-layout-main ons-input .text-input,
+.bed-layout-main textarea,
+.bed-layout-main select,
+.bed-layout-main .selectbox {
+  color: var(--status-map-input-color);
+  background-color: var(--status-map-input-background-color);
+}
+.bed-layout-main ons-select:not(.select-has-size) .select-input {
+  color: var(--status-map-input-color);
+  background-color: var(--status-map-input-background-color);
+  border: solid 1px var(--status-map-input-select-border-color);
+}
+
+.trend-graph-accordion {
+  background-color: inherit;
+  background-image: none;
+  font-family: inherit;
+}
+.trend-graph-accordion .list-item {
+  margin-bottom: 2px;
+  background-image: none;
+}
+.trend-graph-accordion label {
+  font-size: 1.5em;
+}
+.content-container .trend-graph-accordion  {
+  background-color: var(--body-background-color);
+}
+.trend-graph-accordion div.list-item__top {
+  font-size: 1.0em;
+  color: #ffffff;
+  background-color: var(--ntss-list-header-background-color);
+}
+.trend-graph-accordion div.list-item__top {
+  padding-inline-start: 0.5em;
+}
+.trend-graph-list {
+  border-collapse: collapse;
+  width: calc(100vw - 10rem);
+  margin: 0 auto;
+  background-color: var(--ntss-list-background-color);
+}
+.status-list-grid-button {
+  font-size: 1em;
+  margin: 1px;
+  padding: 2px;
+  min-width: 4em;
+}
+.status-list-unknown-delete-button {
+  background-color: #FF3366 !important;
+}
+.status-list-page .kendo-grid-toolbar-style {
+  background-color: var(--main-background-color);
+}
+.status-list-page .k-grid {
+  background-color: var(--main-background-color);
+}
+.status-list-page .k-grid tr {
+  height: 2.2em;
+  border-color: var(--master-maintenance-kgrid-border-color);
+  color: var(--master-maintenance-kgrid-body-color);
+  background-color: var(--master-maintenance-kgrid-item-background-color);
+}
+.status-list-page .k-grid tr:nth-child(2n) {
+  background-color: var(--ntss-list-content-2nd-background-color);
+}
+.status-list-page .k-grid a {
+  color: var(--master-maintenance-kgrid-item-color);
+}
+.status-list-page .k-grid tr:hover {
+  background-color: var(--master-maintenance-kgrid-item-hover-background-color);
+  color: var(--master-maintenance-kgrid-body-color);
+}
+.status-list-page .k-grid th {
+  color: #fff;
+  background-color: var(--master-maintenance-kgrid-header-background-color);
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%) !important;
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%) !important;
+}
+.status-list-page .k-grid th a {
+  color: #fff;
+}
+.status-list-page .k-grid td {
+  vertical-align: middle !important;
+  border-color: var(--master-maintenance-kgrid-border-color);
+  border-bottom-width: 1px;
+}
+.status-list-page .k-grid table {
+  border-right: 1px solid #fafafa;
+}
+.status-list-page .k-widget,
+.status-list-page .k-button,
+.status-list-page .k-dropdown {
+  font-size: 1.0em;
+}
+.status-list-page .k-input {
+  font-size: 1.0em;
+  color: var(--kendo-input-color);
+  background-color: var(--kendo-input-background-color);
+}
+.status-list-page .k-grid th.k-state-selected,
+.status-list-page .k-grid td.k-state-selected,
+.status-list-page .k-grid tr.k-state-selected>td {
+  color: var(--master-maintenance-kgrid-selected-color);
+  background-color: var(--master-maintenance-kgrid-selected-background-color);
+}
+
+/* 列ヘッダ */
+.status-list-page .k-header {
+  border: solid 1px var(--ntss-list-border-color);
+  color: #fff;
+  background-color: var(--ntss-list-header-background-color) !important;
+}
+/* 行ヘッダ */
+.status-list-page .locked-td {
+  border-color: var(--master-maintenance-kgrid-border-color);
+  color: var(--master-maintenance-kgrid-body-color);
+  background-color: var(--master-maintenance-kgrid-item-background-color) !important;
+}
+.status-list-page .k-alt > .locked-td {
+  border-color: var(--master-maintenance-kgrid-border-color);
+  color: var(--master-maintenance-kgrid-body-color);
+  /* mod #6488 黒系レイアウトの際に装置名が読みにくい dou start */
+  /*background-color: var(--master-maintenance-kgrid-item-background-color) !important;*/
+  background-color: var(--master-maintenance-kgrid-item-background-color);
+  /* mod #6488 黒系レイアウトの際に装置名が読みにくい dou end */
+}
+
+.large-display-label {
+  color: var(--ntss-base-color);
+}
+.large-display-footer-content {
+  background-color: var(--status-list-large-display-footer-color);
+}
+.large-display-row-content td {
+  background-color: var(--status-list-large-display-row-color);
+}
+.status-map-pat-ind-modal-list {
+  border-collapse: collapse;
+  margin: 0 auto;
+  /* width: calc(100vw - 0.8rem); */
+  width: -webkit-fill-available;
+  font-size: 1.5em;
+  position: absolute;
+  top: 0px;
+  background-color: var(--ntss-list-background-color);
+}
+
+/******************************************/
+/* デバイスエッジ保守                                */
+/******************************************/
+.main-device-edge-manage-label {
+  color: var(--ntss-base-color);
+}
+.main-device-edge-manage-alert-label {
+  color: var(--send-cond-font-color-alert);
+}
+.header-device-edge-manage-label {
+  color: var(--ntss-header-color);
+}
+.device-edge-manage-list {
+  border-collapse: collapse;
+  width: fit-content;
+  background-color: var(--ntss-list-background-color);
+}
+/* 列ヘッダ */
+.device-edge-manage-list-header {
+  border: solid 1px var(--ntss-list-border-color);
+  color: #fff;
+  background-color: var(--ntss-list-header-background-color) !important;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+/******************************************/
+/* 生体モニタリングのパネルスタイル          */
+/******************************************/
+.monitoring-detail-info-label {
+  color: var(--monitoring-detail-info-label-color);
+}
+
+.ntss-monitoring-basepane {
+  background-color: var(--ntss-monitoring-basepane-background-color);
+  box-shadow: 1px 1px var(--ntss-monitoring-basepane-box-shadow-color);
+}
+
+.ntss-monitoring-basepane-info {
+  background-color: var(--ntss-monitoring-basepane-info-background-color);
+}
+
+.ntss-monitoring-basepane-alert {
+  background-color: var(--ntss-monitoring-basepane-alert-background-color);
+}
+
+.ntss-monitoring-basepane-info-text {
+  color: var(--ntss-monitoring-basepane-info-text-color);
+}
+
+.ntss-monitoring-basepane-alert-text {
+  color: var(--ntss-monitoring-basepane-alert-text-color);
+}
+
+.ntss-monitoring-basepane-text {
+  color: var(--ntss-monitoring-basepane-text-color);
+}
+
+.ntss-monitoring-highlight-text-1 {
+  color: #ff8000;
+}
+
+.ntss-monitoring-highlight-text-2 {
+  color: #04b4ae;
+}
+
+.ntss-monitoring-highlight-text-3 {
+  color: #2e64fe;
+}
+
+/* 凡例文字色を無理やり設定するためのスタイル */
+.ntss-monitoring-legend-style {
+  color: var(--ntss-monitoring-legend-style-color);
+}
+
+.ntss-monitoring-legend-hidden-style {
+  color: var(--ntss-monitoring-legend-hidden-style-color);
+}
+
+.ntss-monitoring-legend-hover-style {
+  color: var(--ntss-monitoring-legend-hover-style-color);
+}
+
+/* 一覧画面：装置選択 */
+.ntss-monitoring-select-machine-list {
+  border: solid 2px var(--ntss-monitoring-select-machine-list-border-color);
+}
+
+/***** 装置状態 *****/
+/* プリセット */
+.ntss-monitoring-state01 {
+  color: black;
+}
+
+/* 洗浄 */
+.ntss-monitoring-state02 {
+  color: skyblue;
+}
+
+/* 酸浄 */
+.ntss-monitoring-state03 {
+  color: skyblue;
+}
+
+/* 消毒 */
+.ntss-monitoring-state04 {
+  color: skyblue;
+}
+
+/* 滞留 */
+.ntss-monitoring-state05 {
+  color: skyblue;
+}
+
+/* 液置換 */
+.ntss-monitoring-state06 {
+  color: skyblue;
+}
+
+/* 準備回収 */
+.ntss-monitoring-state07 {
+  color: black;
+}
+
+/* ガスパージ */
+.ntss-monitoring-state08 {
+  color: black;
+}
+
+/* 排液 */
+.ntss-monitoring-state09 {
+  color: black;
+}
+
+/* 停止 */
+.ntss-monitoring-state10 {
+  color: green;
+}
+
+/* 運転 */
+.ntss-monitoring-state11 {
+  color: green;
+}
+
+/* フレーム分割：一覧画面側 */
+.ntss-monitoring-split-frame-list {
+  width: 394px;
+}
+
+/* フレーム分割：詳細画面側 */
+.ntss-monitoring-split-frame-detail {
+  right: 0px;
+  left: 395px;
+  width: calc(100% - 395px);
+}
+
+/******************************************/
+/* 患者情報ヘッダーのパネルスタイル          */
+/******************************************/
+.header-pat-info-label {
+  color: var(--header-pat-info-label-color);
+}
+
+.physical-edit-area .custom-input-number input[type="text"] {
+  width: auto;
+}
+/*add FNSI-横展開 入院患者名の配布 周 start*/
+/******************************************/
+/* 患者名スタイル                          */
+/******************************************/
+.pat-name-in-hospital {
+  color: rgb(163, 86, 163);
+}
+.pat-name-same-icon {
+  position: relative;
+  top: 0.25em;
+  height: 1.3em;
+  margin-left: 0.2em;
+}
+/*add FNSI-横展開 入院患者名の配布 周 end*/
+/******************************************/
+/* highchartsの表示スタイル               */
+/******************************************/
+/* グラフ軸の色 */
+.highcharts-axis-line {
+  stroke: var(--highcharts-axis-line-stroke);
+}
+
+/* グラフグリッドの色 */
+.highcharts-grid-line {
+  stroke: var(--highcharts-grid-line-stroke);
+}
+
+/* グラフの背景色 */
+.highcharts-background {
+  fill: var(--highcharts-background-fill) !important;
+}
+
+/* 警報・報知時の背景色 */
+.ntss-monitoring-basepane-info .highcharts-background {
+  fill: var(--ntss-monitoring-basepane-info-fill);
+}
+
+.ntss-monitoring-basepane-alert .highcharts-background {
+  fill: var(--ntss-monitoring-basepane-alert-fill);
+}
+
+/* グラフ軸ラベルの色
+★★★使用時はグラフオプションでlabels.style.colorをinheritにする★★★
+*/
+.highcharts-axis-labels {
+  color: var(--highcharts-axis-labels-color);
+  fill: var(--highcharts-axis-labels-fill);
+}
+
+.highcharts-plot-lines-0 {
+  stroke: var(--highcharts-plot-lines-0-stroke);
+}
+
+.highcharts-plot-border {
+  stroke: var(--highcharts-plot-border-stroke);
+}
+
+@-webkit-keyframes switchtext {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@-moz-keyframes switchtext {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes switchtext {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+/******************************************/
+/* 患者経過総合ビューア色系スタイル       */
+/******************************************/
+/* 一覧タイトル(上・左)の色 */
+.pat-viewer-title-color {
+  border-right: 1px solid var(--pat-viewer-title-border-color);
+  border-bottom: 1px solid var(--pat-viewer-title-border-color);
+  color: var(--pat-viewer-title-color);
+  background-color: var(--pat-viewer-title-background-color);
+}
+
+/* 一覧ヘッダ行の土曜日の色 */
+.pat-viewer-day-saturday-th {
+  background-color: var(--ntss-saturday-color);
+}
+
+/* 一覧ヘッダ行の日曜日の色 */
+.pat-viewer-day-sunday-th {
+  background-color: var(--ntss-sunday-color);
+}
+
+/* 一覧項目行の土曜日の色 */
+.pat-viewer-day-saturday-td {
+  background-color: rgba(0, 0, 255, 0.07) !important;
+}
+
+/* 一覧項目行の日曜日の色 */
+.pat-viewer-day-sunday-td {
+  background-color: rgba(255, 0, 0, 0.07) !important;
+}
+
+/* 一覧項目行の色 */
+.pat-viewer-td-color {
+  border-right: 1px solid var(--pat-viewer-td-border-color);
+  border-bottom: 1px solid var(--pat-viewer-td-border-color);
+  color: var(--pat-viewer-td-color);
+}
+
+/* 上限値超過の色 */
+.pat-viewer-upper-color {
+  color: #fa5858;
+}
+
+/* 上限値超過の色 */
+.pat-viewer-lower-color {
+  color: #2e2efe;
+}
+
+/* グラフの目盛の色 */
+.pat-viewer-y-axis-style span {
+  color: #fafafa !important;
+}
+
+/* グラフの凡例のスタイル */
+.pat-viewer-chart-legend {
+  color: var(--pat-viewer-chart-legend-color);
+  font-size: 0.7em;
+}
+
+/* 文字サイズセット（小） */
+.font-size-set-small {
+  font-size: 0.8em;
+}
+
+/* 文字サイズセット（中） */
+.font-size-set-medium {
+  font-size: 1em;
+}
+
+/* 文字サイズセット（大） */
+.font-size-set-large {
+  font-size: 1.1em;
+}
+
+/* 文字サイズセット（特大） */
+.font-size-set-x-large {
+  font-size: 1.3em;
+}
+
+/* 文字サイズ(XXS) */
+.font-size-xxs {
+  font-size: 100%;
+}
+
+/* 文字サイズ(XS) */
+.font-size-xs {
+  font-size: 120%;
+}
+
+/* 文字サイズ(S) */
+.font-size-s {
+  font-size: 140%;
+}
+
+/* 文字サイズ(M) */
+.font-size-m {
+  font-size: 150%;
+}
+
+/* 文字サイズ(L) */
+.font-size-l {
+  font-size: 170%;
+}
+
+/* 文字サイズ(XL) */
+.font-size-xl {
+  font-size: 200%;
+}
+
+.menu-bar-edit-btn-th {
+  width: 10%;
+  white-space: pre;
+}
+
+/* TODO モーダルのブラックテーマ適用時に以下のスタイルを削除する */
+.text-input--AccountEditFacilityName {
+  background-color: #ffffff !important;
+}
+
+.k-grid-add {
+  display: none;
+}
+.k-header.k-grid-toolbar {
+  padding-top: 0px;
+  padding-bottom: 0px;
+  border-bottom: none;
+}
+
+/******************************************/
+/* チェックリストスタイル                     */
+/******************************************/
+
+/*リスト部分*/
+.check-list-main-content-list thead {
+  top: 0;
+  z-index: 2;
+}
+.check-list-main-content-list thead th {
+  height: 2em;
+  font-weight: 400;
+  padding: 0px 8px;;
+}
+.check-list-main-content-list thead th.bed-header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 3;
+}
+.check-list-main-content-list tbody {
+  /* 一覧の文字色 */
+  color: var(--ntss-list-body-color);
+  background-color: var(--ntss-list-item-background-color);
+}
+.check-list-main-content-list tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  font-weight: 400;
+  background-image: none;
+  padding: 0px 8px;
+}
+.check-list-main-content-list tbody th::before {
+  content: "";
+  position: absolute;
+  top : 0 ;
+  left : 0 ;
+  width : 100% ;
+  height : 100% ;
+  border-right: solid 1px var(--ntss-list-border-color);
+  border-left: solid 1px var(--ntss-list-border-color);
+}
+.check-list-main-content-list tbody td:hover {
+  background-color: var(--ntss-list-body-background-color) !important;    /* マウスオーバー時のセルの背景色 */
+  color: var(--ntss-list-body-color);
+}
+.check-list-main-content-list tbody tr td{
+  height: 2em;
+  font-weight: 400;
+  padding: 0px 8px;
+}
+.check-list-main-content-list-row-header {
+  /* 一覧のボーダーライン */
+  border: solid 1px var(--ntss-list-border-color);
+  /* 一覧の文字色 */
+  color: var(--ntss-list-body-color);
+  background-color: var(--ntss-list-item-background-color);
+}
+.check-list-main-content-list .td-not-send-condition {
+  /* 条件未送信*/
+  color: #050505;
+  background-color: white;
+}
+.check-list-main-content-list .td-send-condition {
+  /* 条件送信済 */
+  color: white;
+  background-color: #42CB92;
+}
+.check-list-main-content-list .td-dialysis {
+  /* 治療中 */
+  color: white;
+  background-color: #2CA06F;
+}
+.check-list-main-content-list .td-after-dialysis {
+  /* 排液後(後体重入力待ち) */
+  color: white;
+  background-color: #557769;
+}
+.check-list-main-content-list .td-after-record {
+  /* 実績確定待ち */
+  color: white;
+  background-color: #808080;
+}
+
+/******************************************/
+/* チェックリストのモーダルスタイル                     */
+/******************************************/
+
+/*リスト部分*/
+.checklist-modal-list {
+  border-collapse: collapse;
+  margin: 0 auto;
+  width: -webkit-fill-available;
+  font-size: 1.5em;
+  position: absolute;
+  top: 0px;
+  background-color: var(--ntss-list-background-color);
+}
+.checklist-modal-list tr {
+  background-color: var(--ntss-list-item-background-color);
+  border-color: 1px solid var(--master-maintenance-kgrid-border-color);
+}
+.checklist-modal-list tr:hover {
+  background-color: var(--master-maintenance-kgrid-item-hover-background-color);
+}
+
+/******************************************/
+/* 観察記録スタイル       */
+/******************************************/
+
+.obs-rec-label {
+  /* フォント色 */
+  color: var(--obs-rec-font-color);
+}
+
+.obs-rec-det-main-content-area .result_ord .select-input,
+.obs-rec-det-main-content-area ons-input .text-input,
+.obs-rec-det-main-content-area textarea,
+.obs-rec-det-main-content-area .selectbox {
+  color: var(--obs-rec-font-color);
+  background-color: var(--ntss-base-background-color);
+}
+
+/******************************************/
+/* 体重計画面のスタイル                      */
+/******************************************/
+
+.weight-mode-main-content {
+  overflow-y: auto;
+  flex: 1;
+}
+.weight-mode-input-block {
+  text-align: center;
+}
+
+.weight-mode-footer-content {
+  flex: 0;
+}
+
+.weight-mode-mst-weight-button {
+  max-width: 10em;
+  font-size: 150% !important;
+}
+
+.weight-mode-mst-weight-button-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 車いすマスタ編集ボタン */
+/* 体重計モード測定記録ボタン */
+.weight-mode-wheelchair-button,
+.weight-mode-measure-history-button {
+  max-width: 11em;
+  display: flex !important;
+  margin: 0 0 0 auto;
+  padding: 4px;
+  font-size: 150% !important;
+}
+
+/* 患者ID入力 */
+.weight-mode-pat-id-input {
+  width: 300px;
+  font-size: 150% !important;
+}
+
+/* カードを置いてくださいラベル */
+.weight-mode-title-label {
+  font-size: 2em;
+  font-weight: bold;
+}
+
+/* 患者検索ボタン */
+.weight-mode-pat-search-button {
+  max-width: 200px;
+  margin-top: 15px;
+  margin-left: 20px;
+  font-size: 150% !important;
+}
+
+/* 時刻表示のあるエリア */
+.weight-mode-time-content {
+  position: absolute;
+  bottom: 0em;
+  width: 100%;
+  height: 1.3em;
+  z-index: 2;
+  background-color: var(--body-background-color);
+  color: var(--send-cond-font-color);
+  margin-left: -5px;
+  /* margin-bottom: -5px; */
+}
+
+.ntss-send-condition-content-area input,
+.ntss-send-condition-content-area select,
+.ntss-send-condition-content-area button {
+  font-family: inherit;
+}
+.ntss-send-condition-content-area ons-input .text-input,
+.ntss-send-condition-content-area .selectbox {
+  color: var(--send-cond-font-color);
+  background-color: var(--ntss-base-background-color);
+}
+
+body > ons-popover.zoom-popover > div.popover.popover--top > div.popover__content.popover--top__content {
+  height: fit-content;
+  min-height: unset;
+}
+
+/******************************************/
+/* 体重計・条件送信画面フォントカラースタイル       */
+/******************************************/
+
+.ntss-send-condition-text {
+  /* フォント色 */
+  color: var(--send-cond-font-color);
+}
+
+.ntss-send-condition-text-warn {
+  /* フォント色 */
+  color: var(--send-cond-font-color-warn);
+}
+
+.ntss-send-condition-text-alert {
+  /* フォント色 */
+  color: var(--send-cond-font-color-alert);
+}
+
+
+/******************************************/
+/* 条件送信スタイル       */
+/******************************************/
+
+/*パンくず直下のエリア*/
+.send-condition-head-content {
+  padding: 0px 10px 10px 10px;
+  position: absolute;
+  width: calc(100% - 20px);
+  pointer-events: none;
+}
+
+.send-condition-head-segment {
+  background-color: var(--body-background-color);
+  margin: 0;
+  padding-left: 10px;
+  padding-right: 10px;
+  z-index: 2;
+}
+
+/*「履歴」「詳細(簡易)」ボタンのあるエリア*/
+#send-condition-head-button-area {
+  width: 100%;
+}
+
+/*メイン領域*/
+.send-condition-main-content {
+  overflow: auto;
+  width: 100%;
+  height: 100%;
+}
+
+/*「送信」「キャンセル」ボタンのあるエリア*/
+.send-condition-footer-content {
+  bottom: 1em;
+  height: max-content;
+  z-index: 2;
+  min-width: 100%;
+  width: max-content;
+  position: absolute;
+  padding-bottom: 5px;
+  background-color: var(--body-background-color);
+}
+
+/* 時刻表示のあるエリア */
+.send-condtition-time-content {
+  position: absolute;
+  bottom: -0.4em;
+  width: 100%;
+  height: 1.3em;
+  z-index: 2;
+  padding-bottom: 5px;
+  background-color: var(--body-background-color);
+  color: var(--send-cond-font-color);
+}
+
+/*測定モードセグメント*/
+.send-condition-scale-mode-segment {
+  width: 100%;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  font-size: 150%;
+}
+
+/* 測定モードボタン */
+.send-condition-scale-mode-segment .segment__button {
+  font-size: 1em;
+  height: 2em;
+  line-height: 2em;
+  background-color: #72a8de;
+  color: #ffffff;
+  border: none;
+}
+.send-condition-scale-mode-segment :checked + .segment__button {
+  background-color: var(--btn1-execute-color);
+}
+
+/*「前」「後」表示*/
+#send-condition-scale-class-icon {
+  font-size: 2.1em;
+  order: -1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  height: 4em;
+  width: 4em;
+  background-color: aqua;
+  z-index: 3;
+}
+
+#send-condition-scale-class-icon label {
+  font-size: 3.4em;
+  font-weight: bold;
+}
+
+/* スケジュールボタン表示エリア */
+#send-condition-control-1 {
+  margin-left: 0.3em;
+  z-index: 3;
+}
+
+/*スケジュール表示・変更ボタンの外部DIV*/
+#send-condition-schedule-btn-1,
+#send-condition-schedule-btn-2 {
+  font-size: 1.5em;
+  margin-bottom: 0.3em;
+  pointer-events: auto;
+}
+
+/*スケジュール表示・変更ボタン*/
+.send-condition-schedule-button {
+  font-size: 1.5em;
+}
+
+/*印刷ボタンエリア*/
+.send-condition-print-box {
+  display: flex;
+  margin-right: 5px;
+  align-items: center;
+}
+.send-condition-print-box label {
+  margin-left: 5px;
+  font-size: 1.25em;
+}
+
+/*測定履歴表示・簡易詳細切り替えボタン*/
+.send-condition-command-button {
+  margin-left: 2px;
+  margin-bottom: 2px;
+  width: 5em;
+  pointer-events: auto;
+}
+
+/*「測定値」ラベル*/
+.send-condition-title-label {
+  font-size: 2em;
+  /*font-weight: bold;*/
+}
+
+/* 単位[kg]のスタイル */
+.send-condition-unit {
+  vertical-align: bottom;
+  width: 20px;
+  font-size: 2em;
+  margin: auto;
+}
+
+/* スマホ表示 */
+@media screen and (max-width: 480px) {
+  .send-condition-core-content {
+    width: max-content;
+    height: max-content !important;
+  }
+  /*
+  #send-condition-head-button-area {
+    width: 234vw;
+  } */
+  .send-condition-main-content {
+    width: max-content;
+    height: max-content !important;
+  }
+}
+
+/******************************************/
+/* 条件送信簡易画面スタイル       */
+/******************************************/
+
+/*簡易画面の測定値行*/
+#measure-value-row {
+  font-size: 2.0em;
+  width: fit-content;
+}
+#measure-value-row-d {
+  font-size: 2.0em;
+  width: fit-content;
+}
+
+/*簡易画面の測定値エリア*/
+#value-block {
+  text-align: center;
+  justify-content: space-evenly;
+  margin-top: 2em;
+  margin-bottom: 5px;
+  width: 17em;
+}
+
+/*簡易画面の体重値行*/
+#weight-value-row {
+  font-size: 2.0em;
+  width: fit-content;
+}
+#weight-value-row-d {
+  font-size: 2.0em;
+  width: fit-content;
+  margin-left: 1em;
+}
+
+.weight-row {
+  margin-top: -1.5em;
+}
+
+/*簡易画面の測定値*/
+.send-condition-measure-value-simple {
+  font-size: 2em;
+  width: 3.5em;
+}
+.send-condition-measure-value-simple .text-input {
+  height: 1.6em;
+}
+
+/*簡易画面の風袋、除水補正表示部*/
+#command-button-block {
+  font-size: 1.5em;
+  margin: auto;
+  margin-left: 10px;
+  margin-right: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+/*簡易画面の風袋、除水補正ボタン 縦並びdiv*/
+.send-condition-simple-vertical-div {
+  display: flex;
+  flex-direction: column;
+  align-content: flex-start;
+  width: 10em;
+}
+
+/* 風袋・除水補正 モーダル呼び出しボタンエリア*/
+.send-condition-simple-water-command-box {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  margin-right: 3px;
+}
+/* 風袋・除水補正 値*/
+.send-condition-simple-water-command-box label {
+  font-size: 2em;
+  line-height: 1.1em;
+  margin-bottom: 0.6em;
+}
+/*風袋・除水補正ボタン*/
+.send-condition-simple-water-command-button {
+  margin-bottom: 2px;
+  font-size: 1.5em;
+}
+/*車いすボタン*/
+.send-condition-simple-wheelchair-button {
+  font-size: 1.5em;
+  padding-top: 4px;
+  padding-right: 10px;
+  padding-bottom: 4px;
+  padding-left: 10px;
+}
+
+/* 体重値フォント */
+.send-condition-simple-weight-value {
+  font-size: 2em;
+  line-height: 1.5em;
+  float: right;
+  margin-right: calc(0.2em + 15px);
+}
+/*治療中で測定値変更不可時にラベル表示するためのフォント*/
+.send-condition-simple-measured-weight-value {
+  font-size: 2.5em;
+}
+/*車いす重量のフォント*/
+.send-condition-simple-wheel-chair-value {
+  font-size: 2em;
+  margin-bottom: 0.3em;
+}
+
+/*I-HDF引き残しラベル*/
+.send-condition-ihdf-pull-leave {
+  font-size: 1.3em !important;
+  width: 100%;
+  text-align: center;
+  margin-bottom: 0.2em !important;
+}
+
+/******************************************/
+/* 条件送信 前体重詳細画面スタイル       */
+/******************************************/
+
+/*計算式領域の設定*/
+/* add FNSI-詳細時の画面レイアウトの修正 徐 start */
+/* .send-condition-before-measure-value-block {
+  min-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 30px;
+} */
+.send-condition-before-measure-value-block {
+  min-width: 76em;
+}
+.send-condition-before-measure-value-block.streaming-mode {
+  min-width: 70em;
+}
+/*下側の計算式領域内要素*/
+/* .send-condition-before-measure-value-sub-block {
+  width: 430px;
+} */
+.send-condition-before-measure-value-main-block {
+  margin-top: 1.4em;
+}
+.send-condition-before-measure-value-sub-block {
+  font-size: 1.0em;
+  width: 44.5em;
+}
+.send-condition-before-measure-value-sub-block.streaming-mode {
+  margin-left: 23em;
+}
+/* add FNSI-詳細時の画面レイアウトの修正 徐 end */
+/* ボタン */
+.send-condition-before-detail-btn {
+  margin-bottom: 2px;
+  min-width: 2.5em;
+  font-size: 1.5em !important;
+  width: 9em;
+}
+/* ラベル */
+.send-condition-before-detail-lbl {
+  width: 6.1em;
+  font-size: 2em;
+  font-weight: bold;
+  margin-bottom: 2px;
+  height: 1.6em;
+  line-height: 2em;
+}
+/* 演算子のスタイル */
+.send-condition-before-symbol {
+  vertical-align: center;
+  width: 20px;
+  margin: auto;
+  font-size: 1.5em;
+}
+/* 各項目の値のスタイル */
+.send-condition-before-value-label {
+  font-size: 2em;
+  /* add FNSI-redMine #4463対応  陳 start */
+  white-space: nowrap;
+  /* add FNSI-redMine #4463対応  陳 end */
+  width: 6.7em;
+  height: 1.7em;
+  line-height: 1.6em;
+}
+/* 測定値 入力エリア*/
+.send-condition-before-input {
+  /* mod #8160 2022/12/06 体重測定の測定値が見切れる dou start */
+  /*width: 3.5em;*/
+  width: 4em;
+  /* mod #8160 2022/12/06 体重測定の測定値が見切れる dou end */
+  font-size: 2em;
+  margin-bottom: 0px;
+}
+.send-condition-before-input .text-input {
+  height: 1.6em;
+}
+/* 単位[kg]のスタイル */
+.send-condition-before-unit {
+  line-height: 1.6em;
+}
+.send-condition-before-measure-list {
+  width: 17em;
+  position: absolute;
+  bottom: -50px;
+  right: 57.6em;
+  transform: scale(0.7);
+  padding-right: 1em;
+}
+/******************************************/
+/* 条件送信 後体重詳細画面スタイル       */
+/******************************************/
+/* add FNSI-詳細時の画面レイアウトの修正 徐 start */
+/*計算式領域の設定*/
+/* .send-condition-after-measure-value-block {
+  min-width: 685px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 30px;
+} */
+.send-condition-after-measure-value-block {
+  min-width: 75.5em;
+}
+.send-condition-after-measure-value-block.streaming-mode {
+  min-width: 66em;
+}
+/*下側の計算式領域内要素*/
+/* .send-condition-after-measure-value-sub-block {
+  width: 550px;
+} */
+.send-condition-after-measure-value-main-block {
+  margin-top: 1.4em;
+}
+.send-condition-after-measure-value-sub-block {
+  font-size: 1.0em;
+}
+.send-condition-after-measure-value-sub-block.streaming-mode {
+  margin-left: 23em;
+}
+/* add FNSI-詳細時の画面レイアウトの修正 徐 end */
+/* ボタン */
+.send-condition-after-detail-btn {
+  margin-bottom: 2px;
+  min-width: 60px;
+  font-size: 1.5em !important;
+  width: 9em;
+}
+/* ラベル */
+.send-condition-after-detail-lbl {
+  width: 6.1em;
+  font-size: 2em;
+  font-weight: bold;
+  margin-bottom: 2px;
+  height: 1.6em;
+  line-height: 2em;
+}
+/* 演算子のスタイル */
+.send-condition-after-symbol {
+  vertical-align: center;
+  width: 20px;
+  margin: auto;
+  font-size: 1.5em;
+}
+/* 各項目の値のスタイル */
+.send-condition-after-value-label {
+  font-size: 2em;
+  white-space: nowrap;
+  width: 6.7em;
+  height: 1.7em;
+  line-height: 1.6em;
+}
+/* 測定値 入力エリア*/
+.send-condition-after-input {
+  /* mod #8160 2022/12/06 体重測定の測定値が見切れる dou start */
+  /*width: 3.7em;*/
+  width: 4em;
+  /* mod #8160 2022/12/06 体重測定の測定値が見切れる dou end */
+  font-size: 2em;
+  margin-bottom: 0px;
+}
+.send-condition-after-input .text-input {
+  height: 1.6em;
+}
+/* 単位[kg]のスタイル */
+.send-condition-after-unit {
+  line-height: 1.6em;
+}
+.send-condition-after-measure-list {
+  width: 17em;
+  --topmrgn: calc(12em - 45px);
+  margin-top: var(--topmrgn);
+  position: absolute;
+  bottom: -50px;
+  right: 53.6em;
+  transform: scale(0.7);
+  padding-right: 1em;
+}
+/******************************************/
+/* 条件送信画面風袋・除水補正モーダル領域スタイル */
+/******************************************/
+
+/* 風袋除水モーダルg/kgボタンエリア */
+.send-condition-tare-water-edit-modal-mode-segment {
+  width: 100%;
+  margin-bottom: 5px;
+  margin-left: 2%;
+  margin-right: 2%;
+  font-size: 150%;
+}
+/* 風袋除水モーダルg/kgボタンエリア */
+.send-condition-tare-water-edit-modal-mode-segment .segment__item {
+  font-size: 1.0em;
+}
+/* 風袋除水モーダルg/kgボタン */
+.send-condition-tare-water-edit-modal-mode-segment .segment__button {
+  font-size: 1em;
+  height: 2em;
+  line-height: 2em;
+  font-weight: bold;
+  background-color: #72a8de;
+  color: #ffffff;
+}
+.send-condition-tare-water-edit-modal-mode-segment :checked + .segment__button {
+  background-color: var(--btn1-execute-color);
+}
+/* g/kgラベル */
+.send-condition-tare-water-edit-modal-unit {
+  vertical-align: bottom;
+  width: 20px;
+  font-size: 2em;
+  margin: auto;
+}
+/* 名称入力エリア */
+.send-condition-tare-water-edit-modal-input-area-name {
+  margin-left: 3%;
+  width: 95%;
+  margin-bottom: 3px;
+}
+.send-condition-tare-water-edit-modal-input-area-name .text-input {
+  font-size: 2em;
+  height: 1.6em;
+}
+/* 値入力エリア */
+.send-condition-tare-water-edit-modal-input-area-value {
+  margin-left: 2%;
+  margin-right: 1%;
+  width: 80%;
+  margin-bottom: 3px;
+}
+.send-condition-tare-water-edit-modal-input-area-value .text-input {
+  font-size: 2em;
+  height: 1.6em;
+}
+@media screen and (max-width: 480px) {
+  .send-condition-tare-water-edit-modal-input-area-value {
+    width: 8em;
+  }
+  .send-condition-tare-water-edit-modal-input-area-value.unitmode-g {
+    width: 9em;
+  }
+}
+
+/******************************************/
+/* 条件送信画面メッセージ領域スタイル       */
+/******************************************/
+
+.ntss-send-condition-main-message-area {
+  position: relative;
+  bottom: 0px;
+  font-size: 2em;
+  word-wrap: break-word;
+  background-color: var(--send-cond-basepane-background-color);
+}
+.message-list-body-tr {
+  color: var(--send-cond-font-color);
+}
+.message-list-body-td {
+  background-color: var(--send-cond-basepane-background-color);
+}
+.message-list-body-td-error {
+  background-color: var(--emergency-background-color);
+}
+.message-list-body-td-warn {
+  background-color: var(--preventive-background-color);
+}
+
+/* メッセージ表示エリア */
+.send-condition-message-content {
+  bottom: 4.3em;
+  z-index: 2;
+  width: 100%;
+  position: absolute;
+  max-height: 9em;
+  overflow-y: auto;
+}
+
+/* メッセージボタン */
+.send-condition-toggle-message {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  height: 40px;
+}
+
+/******************************************/
+/* 条件送信画面患者選択モーダル       */
+/******************************************/
+
+/*リスト部分*/
+.modal-container .send-condition-pat-modal-list,
+.sub-modal-container .send-condition-pat-modal-list {
+  font-size: 1em;
+}
+
+.send-condition-pat-modal-list {
+  border-collapse: collapse;
+  margin: 0 auto;
+  /* width: calc(100vw - 0.8rem); */
+  width: -webkit-fill-available;
+  font-size: 2em;
+  position: absolute;
+  top: 0px;
+  background-color: var(--ntss-list-background-color);
+}
+.send-condition-pat-modal-list tr {
+  background-color: var(--ntss-list-item-background-color);
+  border-color: 1px solid var(--master-maintenance-kgrid-border-color);
+}
+.send-condition-pat-modal-list tr:hover {
+  background-color: var(--master-maintenance-kgrid-item-hover-background-color);
+}
+/*治療中（日またぎ）の開始時刻スタイル*/
+.send-condition-pat-modal-view-start-date {
+  font-size: 0.75em;
+}
+/*抽出条件部分の文字スタイル*/
+#send-condition-pat-modal-search-area label {
+  font-size: 1.25em;
+}
+
+/******************************************/
+/* モーダルは白いのでhighchartsの白い表示スタイル*/
+/******************************************/
+/* グラフ軸の色 */
+#send-condition-weight-chart-area .highcharts-axis-line {
+  stroke: #cccccc;
+}
+
+/* グラフグリッドの色 */
+#send-condition-weight-chart-area .highcharts-grid-line {
+  stroke: #cccccc;
+}
+
+/* グラフの背景色 */
+#send-condition-weight-chart-area .highcharts-background {
+  fill: #f5f5f5;
+}
+
+#send-condition-weight-chart-area .highcharts-legend-item text {
+  font-size: 9px !important;
+  font-weight: initial !important;
+  fill: var(--ntss-list-body-color) !important;
+}
+
+/* グラフ軸ラベルの色
+★★★使用時はグラフオプションでlabels.style.colorをinheritにする★★★
+*/
+#send-condition-weight-chart-area .highcharts-axis-labels {
+  color: #cccccc;
+  fill: #cccccc;
+}
+
+#send-condition-weight-chart-area .highcharts-plot-lines-0 {
+  stroke: #cccccc;
+}
+
+#send-condition-weight-chart-area .highcharts-plot-border {
+  stroke: #cccccc;
+}
+
+/******************************************/
+/* 配色定義                                 */
+/******************************************/
+
+/* OKボタンの色スタイル */
+.color-btn-ok {
+  background-color: var(--ntss-btn-ok-background-color);
+  color: var(--ntss-btn-ok-color);
+}
+
+/* キャンセルボタンの色スタイル */
+.color-btn-cancel {
+  background-color: var(--ntss-btn-cancel-background-color);
+  color: var(--ntss-btn-cancel-color);
+}
+
+/* ヘッダーの色スタイル */
+.color-header {
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+}
+
+/*add FNSI-画面部品デザイン じょはく start*/
+/* ヘッダーの色スタイル */
+.color-header-selected {
+  background-color: #2ca06f;
+  color: var(--ntss-header-color);
+  padding: 2px;
+  border: 1px solid;
+  line-height: 2em;
+  position: relative;
+}
+/*add FNSI-画面部品デザイン じょはく end*/
+
+
+/******************************************/
+/* 画面共通                               */
+/******************************************/
+
+/* OKボタン(保存ボタン) */
+.common-style-ok-button {
+  padding: 0;
+  width: 100px;
+}
+
+/* キャンセルボタン */
+.common-style-cancel-button {
+  padding: 0;
+  width: 100px;
+}
+
+/* inputタグ */
+.common-style-input {
+  font-size: 1em;
+}
+
+/* ラベル */
+.common-style-label {
+  font-size: 1em;
+}
+
+/* ヘッダー */
+.common-style-header {
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+}
+
+.btn{
+  font-size: inherit !important;
+}
+
+.common-style-select-button {
+  padding: 0.2em 1em 0em 1em !important;
+  width: auto !important;
+  vertical-align: bottom;
+}
+/*mod FNSI-画面部品デザイン じょはく start*/
+.common-style-select-button,
+.common-style-ok-button,
+.common-style-cancel-button {
+  /*min-width: 5em !important;*/
+  font-size: inherit !important;
+}
+/*mod FNSI-画面部品デザイン じょはく end*/
+/******************************************/
+/* 指示機能                                 */
+/******************************************/
+
+/* モーダル全体 */
+.indInfo-style-modal-container {
+  margin: auto;
+  background-color: var(--ntss-base-background-color);
+  color: var(--ntss-base-color);
+  margin: auto;
+  text-align: left;
+  white-space: nowrap;
+  overflow-y: overlay;
+  overflow-x: hidden;
+  max-height: 100%;
+}
+
+.indInfo-style-modal-container .segment__item {
+  display: inline-block;
+  border-radius: 0;
+}
+
+/* ヘッダー */
+.indInfo-style-header {
+  text-align: left;
+  padding: 3px;
+}
+
+/* IndEditBaseのラベル位置 */
+.indInfo-style-label-position {
+  flex: 0 0 10em;
+  /* flex: 0 0 26%;
+  max-width: 26%;
+  text-align: start; */
+}
+
+@media screen and (max-width: 480px) {
+  .indInfo-style-label-position {
+    flex: 0 0 100%;
+  }
+}
+
+/* 曜日ボタン */
+.indInfo-style-week-button {
+  /* mod FNSI redmine #4542修正 鄧シン start */
+  /* padding: 5px 10px; */
+  padding: 5px 8px;
+  /* mod FNSI redmine #4542修正 鄧シン end */
+  float: left;
+  border: solid 1px var(--ntss-border-color);
+}
+
+
+/******************************************/
+/* 装置設定                                 */
+/******************************************/
+
+/* モーダル */
+.deviceSetInfo-modal-container	{
+  margin: auto;
+  max-width: 550px;
+  text-align: left;
+  white-space: nowrap;
+  padding: 5px;
+  background-color: var(--ntss-base-background-color);
+  color: var(--ntss-base-color);
+}
+
+/* モーダルの中身 */
+.deviceSetInfo-content	{
+  max-height: 600px;
+  overflow: auto;
+  border: solid 1px var(--ntss-border-color);
+}
+
+/* モーダルヘッダー */
+.deviceSetInfo-modal-header {
+  text-align: left;
+  padding: 3px;
+}
+
+/* テーブル内のセル */
+.deviceSetInfo-cell	{
+  padding: 3px 5px;
+  border-right: solid 1px var(--ntss-border-color);
+}
+
+/* テーブル内のセル(最終行) */
+.deviceSetInfo-last-cell	{
+  padding: 3px 5px;
+}
+
+/* テーブル内行 */
+.deviceSetInfo-row {
+  border-bottom: solid 1px var(--ntss-border-color);
+}
+
+/* inputタグ */
+.deviceSetInfo-input	{
+  width: 70px;
+}
+
+/* チャート系モーダル */
+.deviceSetInfo-chart-modal-container {
+  margin: auto;
+  width: 100vw;
+  max-width: 550px;
+  background-color: var(--ntss-base-background-color);;
+  color: var(--ntss-base-color);
+}
+
+/* チャート系モーダル中身 */
+.deviceSetInfo-chart-modal-content {
+  padding: 0px 25px;
+  width: 100vw;
+  max-width: 500px;
+  height: 100%;
+}
+
+/* inputスタイル(チャート使用) */
+.deviceSetInfo-input-step {
+  margin: 0px 1px;
+  width: 44px;
+}
+
+/* 治療方法選択ボタン */
+.deviceSetInfo-button-treatment {
+  padding: 0px;
+  margin: 0px 1px;
+  width: 48px;
+}
+
+/* チャート系行スタイル */
+.deviceSetInfo-chart-row {
+  margin: 10px 0px;
+}
+
+/* 閉じるアイコン */
+.deviceSetInfo-close-icon {
+  float: right;
+  padding: 3px;
+  cursor: pointer;
+}
+
+/* 編集不可行 */
+.grid-column-disabled-color {
+  background-color: var(--ntss-list-body-background-disable-color) !important;
+}
+
+/* グリッドの背景色 */
+.tare-offwater.k-grid {
+  background-color: var(--main-background-color);
+}
+
+
+/******************************************/
+/* 風袋・除水補正                            */
+/******************************************/
+.deviceSetInfo-table {
+  margin: 2%;
+}
+
+/* 行項目名ヘッダー */
+th.deviceSetInfo-header-row-name {
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+  text-align: center;
+  border-bottom: solid 0.1px var(--ntss-list-border-color);
+}
+
+/* フッター行名 */
+td.deviceSetInfo-footer-row-name {
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+  font-weight: normal;
+}
+
+/* フッター内容 */
+td.deviceSetInfo-footer-content {
+  text-align: right;
+  font-weight: normal;
+  background-color: var(--ntss-base-background-color);
+  color: var(--row-1-color);
+  border-left: solid 0.1px var(--ntss-list-border-color);
+  border-bottom: solid 0.1px var(--ntss-list-border-color);
+}
+
+/* 行項目名 */
+td.deviceSetInfo-row-name {
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+  border-bottom: solid 0.1px var(--ntss-list-border-color);
+  text-align: center;
+}
+
+/* ヘッダー一段目タイトル(平日) */
+th.deviceSetInfo-header-first-name {
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+  text-align: center;
+  border-left: solid 0.1px var(--ntss-list-border-color);
+  border-bottom: solid 0.1px var(--ntss-list-border-color);
+}
+
+/* ヘッダー二段目タイトル */
+th.deviceSetInfo-header-secound-name {
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+  text-align: center;
+  border-left: solid 0.1px var(--ntss-list-border-color);
+}
+
+/* 名称列 */
+td.deviceSetInfo-name-content {
+  text-align: left;
+  background-color: var(--ntss-base-background-color);
+  color: var(--row-1-color);
+  border-left: solid 0.1px var(--ntss-list-border-color);
+  border-bottom: solid 0.1px var(--ntss-list-border-color);
+  max-width: 100px;
+}
+
+/* 重さ列 */
+td.deviceSetInfo-weight-content {
+  text-align: right;
+  background-color: var(--ntss-base-background-color);
+  color: var(--row-1-color);
+  border-left: solid 0.1px var(--ntss-list-border-color);
+  border-bottom: solid 0.1px var(--ntss-list-border-color);
+  max-width: 100px;
+}
+
+/* numerictextbox */
+.deviceSetInfo-numbersTextbox {
+  text-align: right;
+}
+
+.deviceSetInfo-first-header {
+  display: none;
+}
+
+
+
+.grid-edited-cell {
+  color: #003300 !important;
+  font-weight: bold !important;
+  background-color: #ccffcc !important;
+}
+
+
+/******************************************/
+/* マスタメンテナンス用スタイル           */
+/******************************************/
+.master-maintenance-page .kendo-grid-toolbar-style {
+  background-color: var(--main-background-color);
+}
+.master-maintenance-page .k-grid {
+  background-color: var(--main-background-color);
+}
+.master-maintenance-page .k-grid tr {
+  height: 2em;
+  border-color: var(--master-maintenance-kgrid-border-color);
+  color: var(--master-maintenance-kgrid-body-color);
+  background-color: var(--master-maintenance-kgrid-item-background-color);
+}
+.master-maintenance-page .k-grid tr:nth-child(2n) {
+  background-color: var(--ntss-list-content-2nd-background-color);
+}
+.master-maintenance-page .k-grid a {
+  color: var(--master-maintenance-kgrid-item-color);
+}
+.master-maintenance-page .k-grid tr:hover {
+  background-color: var(--master-maintenance-kgrid-item-hover-background-color);
+  color: var(--master-maintenance-kgrid-body-color);
+}
+.master-maintenance-page .k-grid th {
+  color: #fff;
+  background-color: var(--master-maintenance-kgrid-header-background-color);
+}
+.master-maintenance-page .k-grid th a {
+  color: #fff;
+}
+.master-maintenance-page .k-grid td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color: var(--master-maintenance-kgrid-border-color);
+}
+.master-maintenance-page .k-widget,
+.master-maintenance-page .k-button,
+.master-maintenance-page .k-dropdown {
+  font-size: 1.0em;
+}
+.master-maintenance-page .k-input {
+  font-size: 1.0em;
+  color: var(--kendo-input-color);
+  background-color: var(--kendo-input-background-color);
+}
+.master-maintenance-page .k-grid th.k-state-selected,
+.master-maintenance-page .k-grid td.k-state-selected,
+.master-maintenance-page .k-grid tr.k-state-selected>td {
+  color: var(--master-maintenance-kgrid-selected-color);
+  background-color: var(--master-maintenance-kgrid-selected-background-color);
+}
+
+.master-edited-row {
+  color: #003300 !important;
+  background-color: #ccffcc !important;
+}
+.master-edited-cell {
+  color: #003300 !important;
+  font-weight: bold !important;
+}
+.master-deleted-row {
+  background-color: #aaaaaa !important;
+}
+.master-sort-edited {
+  background-color: #ffff66 !important;
+}
+.master-deleted-combo {
+  background-color: #ff6358 !important;
+}
+.master-grid-header {
+  border: solid 1px var(--ntss-list-border-color);
+  color: #fff;
+  background-color: var(--ntss-list-header-background-color);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,0.1) 100%);
+}
+/** kendo Gridバリデーションエラー時の吹き出し幅調整 */
+.k-grid-edit-row td>.k-widget.k-tooltip-validation:not(.k-switch),
+.k-edit-cell>.k-widget.k-tooltip-validation:not(.k-switch) {
+  width: auto;
+}
+
+/******************************************/
+/* 患者検索 - 機能別患者リストgrid用スタイル */
+/******************************************/
+.pat-list-grid-area  {
+  border: 1px solid #dddddd;
+}
+.pat-list-grid-area .k-grid-header {
+  border-bottom-width: 0px;
+  border-color: var(--master-maintenance-kgrid-border-color);
+  background: var(--ntss-list-header-background-color);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,0.1) 100%);
+}
+.pat-list-grid-area .k-grid-header .k-link {
+  margin: 0px;
+  padding: 0px;
+}
+.pat-list-grid-area .k-grid {
+  background-color: var(--main-background-color);
+}
+.pat-list-grid-area .k-grid tr {
+  height: 2em;
+  border-color: 1px solid  var(--master-maintenance-kgrid-border-color);
+  color: var(--master-maintenance-kgrid-body-color);
+  /* ヘッダーを除いた行からカウントされるため、背景色は偶数のものを使用 */
+  background-color: var(--ntss-list-content-2nd-background-color);
+}
+.pat-list-grid-area .k-grid tr:nth-child(2n) {
+  /* ヘッダーを除いた行からカウントされるため、背景色は奇数のものを使用 */
+  background-color: var(--ntss-list-item-background-color);
+}
+.pat-list-grid-area .k-grid .color-header {
+  background-color: var(--ntss-header-background-color);
+  color: var(--ntss-header-color);
+}
+.pat-list-grid-area .k-grid .k-grid-content tr:hover {
+  background-color: var(--master-maintenance-kgrid-item-hover-background-color);
+  color: var(--ntss-list-body-color);
+}
+.pat-list-grid-area .k-grid th {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color: var(--ntss-list-border-color);
+  padding: 1px 1px 1px 4px !important;
+}
+.pat-list-grid-area .k-grid td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color: var(--ntss-list-border-color);
+  padding: 1px 1px 1px 1px !important;
+  cursor: pointer;
+}
+.pat-list-grid-area .k-widget {
+  border-width: 0px;
+  font-size:inherit !important;
+}
+/* 改行処理 */
+.pat-list-grid-area .k-selectable tbody tr td {
+  white-space:inherit !important;
+}
+/* 選択行の強調表示を打消し */
+.pat-list-grid-area .k-grid tr.k-state-selected td {
+  background-color: transparent !important;
+  color: inherit;
+}
+/* ソートアイコン */
+.pat-list-grid-area .k-grid .k-i-sort-asc-sm::before {
+  content: "▲" !important;
+  color: #ffffff;
+}
+.pat-list-grid-area .k-grid .k-i-sort-desc-sm::before {
+  content: "▼" !important;
+  color: #ffffff;
+}
+.pat-list-grid-area .k-grid .k-i-sort-asc-sm, .pat-list-grid-area .k-grid .k-i-sort-desc-sm{
+  margin-left: 4px !important;;
+}
+/* 患者名 - 人数 */
+.pat-list-grid-area .k-grid .searched-cnt {
+  float: right;
+  padding-right: 2px;
+  font-size: 0.75em;
+}
+/* 選択箇所緑枠 */
+.pat-list-grid-area .k-grid .selected-pat {
+  outline: 3px solid #2ca06f;
+  outline-offset: -3px;
+}
+/* 入外区分が入院の場合、患者名は紫色にする */
+.pat-list-grid-area .k-grid .in_class {
+  color: #A356A3 !important;
+}
+/* 回診状態_強調表示：オレンジ */
+.pat-list-grid-area .k-grid .round-state-td-highlighting-1 {
+  color: #FFA500 !important;
+}
+/* 回診状態_強調表示：赤 */
+.pat-list-grid-area .k-grid .round-state-td-highlighting-2 {
+  color: #FF3366 !important;
+}
+/* 患者ID右寄せ */
+.pat-list-grid-area .k-grid .pat-id-body {
+  text-align: right !important;
+}
+/* 患者ID右寄せ */
+.pat-list-grid-area .k-grid .same-icon {
+  position: relative;
+  top: 0.25em;
+  height: 20px;
+}
+
+/******************************************/
+/* 体重計マスタメンテナンス用スタイル           */
+/******************************************/
+
+.mst-weight-label {
+  /* フォント色 */
+  color: var(--mst-weight-font-color);
+}
+
+/******************************************/
+/* 日付カレンダー                        */
+/******************************************/
+.pika-single {
+  z-index: 20002 !important;
+  border-radius: 7.5px;
+}
+
+.pika-title,
+.pika-label {
+  background-color: var(--ntss-calendar-title-label-background-color);
+  color: var(--ntss-calendar-title-label-color);
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  background-image:         linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+}
+.pika-lendar {
+  display: inline-block;
+  float: none;
+  margin: 0px;
+}
+.pika-lendar button {
+  box-shadow: unset;
+}
+.pika-table thead {
+  background-color: var(--ntss-calendar-header-background-color);
+}
+.pika-button:hover {
+  background-color: var(--ntss-calendar-button-hover-background-color);
+  text-decoration: underline;
+}
+.has-event.is-disabled .pika-button {
+  background-color: var(--ntss-calendar-button-is-disabled-background-color);
+  opacity: 0.75;
+}
+.is-disabled .has-custom-event.pika-button {
+  opacity: 0.75;
+}
+.has-custom-event.pika-button {
+  background-color: #9acd32;
+}
+.custom-span-selected.has-event .pika-button {
+  background: #00b050;
+}
+.custom-span-double-selected.has-event .pika-button {
+  background: #adff2f;
+}
+.pika-goto-today {
+  cursor: pointer;
+  display: inline-block;
+  outline: none;
+  border: 1px solid var(--ntss-calendar-button-goto-today-border-color);
+  margin: 8px;
+  text-align: center;
+  padding: 3px;
+  color: var(--ntss-calendar-button-goto-today-color);
+  line-height: 15px;
+  background: var(--ntss-calendar-button-goto-today-background-color);
+}
+.pika-goto-today.disabled {
+  opacity: .25;
+}
+.pika-footer {
+  width: 100%;
+  border: 1px solid var(--ntss-calendar-button-footer-border-color);
+  display: block;
+}
+
+.treatment-record-accordion  {
+  background-color: inherit;
+  background-image: none;
+  font-family: inherit;
+}
+.treatment-record-content-area input,
+.treatment-record-content-area select,
+.treatment-record-content-area button {
+  font-family: inherit;
+}
+.content-container .treatment-record-accordion  {
+  background-color: var(--body-background-color);
+}
+.treatment-record-accordion .list-item {
+  margin-bottom: 2px;
+  background-image: none;
+}
+.treatment-record-accordion .k-button {
+  font-size: 1em;
+}
+.treatment-record-accordion div.list-item__top {
+  font-size: 1.0em;
+  color: #ffffff;
+  background-color: var(--ntss-list-header-background-color);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  line-height: 2em;
+  padding: 2px 2px 2px 0.5em;
+  border-bottom: 1px solid #dddddd;
+}
+/* ライブラリのスタイルの打ち消し start */
+.treatment-record-accordion div.list-item__center {
+  padding: 0;
+  line-height: unset;
+  min-height: unset;
+}
+.treatment-record-accordion div.list-item__right {
+  padding: 0 12px 0 0;
+  line-height: unset;
+  min-height: unset;
+}
+.treatment-record-accordion.list .list-item--expandable .list-item__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 1.75em;
+  flex-shrink: 0;
+}
+.treatment-record-accordion.list .list-item--expandable .list-item__expand-chevron {
+  display: inline-block;
+  border-right-color: #ffffff;
+  border-bottom-color: #ffffff;
+}
+/* ライブラリのスタイルの打ち消し end */
+.treatment-record-accordion ons-input[type="date"] {
+  width: 14em;
+  margin-right: 1em;
+}
+.treatment-record-accordion ons-input[type="time"] {
+  width: auto;
+}
+.treatment-record-accordion ons-input .text-input,
+.treatment-record-accordion .selectbox {
+  color: #050505;
+  background-color: #fafafa;
+}
+.content-container .treatment-record-accordion ons-input .text-input,
+.content-container .treatment-record-accordion .selectbox {
+  color: var(--treatment-record-input-color);
+  background-color: var(--treatment-record-input-background-color);
+}
+.treatment-submenu  {
+  background-color: var(--main-background-color);
+}
+.modal-container .select-input,
+.sub-modal-container .select-input,
+.treatment-record-accordion .select-input {
+  font-size: 1.0em;
+}
+.content-container .treatment-record-accordion .select-input {
+  color: var(--treatment-record-input-color);
+  background-color: var(--treatment-record-input-background-color);
+}
+.treatment-record-list {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 auto;
+  font-size: 1em;
+  background-color: var(--ntss-list-background-color);
+}
+.treatment-record-list .select-input,
+.treatment-record-list .text-input  {
+  color: var(--time-input-color);
+  background-color: var(--time-input-background-color);
+  font-size: 1.0em;
+}
+.treatment-record-accordion ons-col.title {
+  flex: 0 0 30%;
+  display: flex;
+  align-items: center;
+  min-width: 12em;
+  max-width: 18em;
+}
+@media only screen and (max-width: 576px) {
+  .treatment-record-accordion ons-col.unit {
+    flex: 0 0 3em !important;
+  }
+}
+.treatment-record-accordion ons-col.num-value,
+.treatment-record-accordion ons-col.date-value,
+.treatment-record-accordion ons-col.time-value,
+.treatment-record-accordion ons-col.select-value {
+  flex: 0 0 8em;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+.treatment-record-accordion ons-col.unit {
+  flex: 0 0 6em;
+  display: flex;
+  align-items: center;
+  margin-left: 5px;
+}
+.treatment-record-accordion ons-col.num-value .sub-title {
+  margin-left: 0em;
+  margin-right: 0.5em;
+}
+.treatment-record-accordion ons-col.radio-items,
+.treatment-record-accordion ons-col.button-items {
+  display: flex;
+  align-items: center
+}
+.treatment-record-accordion ons-col.radio-items ons-radio {
+  margin-right: 0.5em;
+}
+.treatment-record-accordion ons-col.radio-items label {
+  margin-right: 1em;
+  white-space: nowrap;
+}
+/* FNSI-add redmine4848 徐 start */
+/* .treatment-record-accordion ons-row {
+  height: 4em;
+} */
+.treatment-record-accordion ons-row {
+  padding: 0.2em 0 0.2em 0;
+}
+/* FNSI-add redmine4848 徐 end */
+.treatment-record-accordion ons-col.select-button {
+  margin: 1px;
+  flex: 0 0 6em;
+  display: flex;
+}
+.treatment-record-accordion ons-col.text-value {
+  display: flex;
+  align-items: center
+}
+.content-container .treatment-record-accordion label.theme {
+  color: var(--treatment-record-text-color);
+}
+.chart-type-selection .select-input {
+  font-size: 1.0em;
+  color: var(--ntss-list-body-color);
+  background-color: var(--treatment-record-input-background-color);
+}
+_::-webkit-full-page-media, _:future, :root .k-edit-cell > .k-dropdown > .k-dropdown-wrap {
+  pointer-events: none;
+}
+
+.alert-dialog {
+  font-size: 1.5em;
+}
+
+/* ダイアログメッセージの左寄せ */
+.alert-dialog-content {
+  text-align: left;
+  /* add 6791複数の新規患者取込を行った際の表示メッセージが切れて表示されるstart zhao */
+  word-break: break-all;
+  /* add 6791複数の新規患者取込を行った際の表示メッセージが切れて表示される end zhao */
+}
+.alert-dialog-title,
+.alert-dialog-content {
+  font-size: inherit !important;
+}
+/* popup画面上button的文字没显示全 */
+.alert-dialog-button{
+  font-size: 97%;
+}
+.alert-dialog--warn {
+  background-color: #FF3366 !important;
+}
+.alert-dialog-content--warn {
+  color: #fafafa !important;
+}
+.alert-dialog-title--warn {
+  color: #fafafa !important;
+}
+.alert-dialog-long-content {
+  z-index: 21000 !important;
+}
+.alert-dialog-long-content .alert-dialog {
+  min-width: 320px;
+  z-index: 21000 !important;
+}
+.alert-dialog-long-content .alert-dialog-mask {
+  z-index: 21000 !important;
+}
+
+.d-inline-flex {
+  display: inline-flex;
+}
+
+.d-flex {
+  display: flex;
+}
+
+.d-flex > .spacer {
+  flex: 1 1 auto;
+}
+
+.flex-0 {
+  flex: 0;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.flex-column {
+  flex-direction: column;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.align-items-center {
+  align-items: center;
+}
+
+.align-items-flex-end {
+  align-items: flex-end;
+}
+
+.justify-content-center {
+  justify-content: center;
+}
+
+.justify-content-space-between {
+  justify-content: space-between;
+}
+
+.justify-content-flex-end {
+  justify-content: flex-end;
+}
+
+label.vertical-align-center > input {
+  margin: 0;
+  vertical-align: middle;
+}
+
+label.vertical-align-center > .label {
+  vertical-align: middle;
+}
+
+ons-input[padder] > input[type="text"] {
+  padding-right: 0.4em;
+  padding-left: 0.4em;
+}
+
+.loading-wrapper {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1em;
+  color: #fff;
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+ons-button.nik-btn {
+  width: auto;
+  min-width: 62px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+/******************************************/
+/* 検査依頼用スタイル                     */
+/******************************************/
+
+.exam-request-header * .span-disabled {
+  color: gray;
+}
+
+.examrequest-input-display-period .text-input {
+  height: 1.5em;
+}
+
+.examrequest-label {
+  color: var(--all-label-color);
+}
+
+.main-content-area .exam-request-header-item {
+  background-color: #333333;
+  margin-bottom: 4px;
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+}
+
+.request-header-component > #header-item,
+.request-header-component > #rad-header-item {
+  background-color: unset;
+  background-image: unset;
+}
+
+/******************************************/
+/* 患者個別放射線検査依頼                     */
+/******************************************/
+
+.main-content-area .rad-header-item {
+  background-color: #333333;
+  margin-bottom: 4px;
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+}
+
+/* グリッド描画サイズ選択エリア */
+#sel-grid-area .select-input, #sel-set-text-area .select-input{
+  font-size: inherit;
+}
+/******************************************/
+/* 患者検査系kendo-grid用スタイル(検査結果一覧/患者個別検査結果一覧用)     */
+/******************************************/
+.kendo-grid-style-page .kendo-grid-toolbar-style {
+  background-color: var(--main-background-color);
+}
+.kendo-grid-style-page .k-grid {
+  background-color: var(--main-background-color);
+}
+.kendo-grid-style-page .k-grid-header-locked th{
+  padding: 1px 3px 3px 3px;
+  border-color:var(--master-maintenance-kgrid-header-background-color);
+}
+.kendo-grid-style-page .k-grid-header-wrap th{
+  padding: 1px 3px 3px 3px;
+}
+.kendo-grid-style-page .k-grid tr {
+  height: 2em;
+  border-color: var(--master-maintenance-kgrid-border-color);
+  color: var(--master-maintenance-kgrid-body-color);
+  background-color: var(--master-maintenance-kgrid-item-background-color);
+}
+.kendo-grid-style-page .k-grid tr:hover {
+  background-color: var(--master-maintenance-kgrid-item-hover-background-color);
+  color: var(--master-maintenance-kgrid-body-color);
+}
+.kendo-grid-style-page .k-grid th {
+  color: #fff;
+  word-wrap: break-word;
+  white-space: normal;
+  background-color: var(--master-maintenance-kgrid-header-background-color);
+}
+.kendo-grid-style-page .k-grid tr:nth-child(odd) td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color: var(--master-maintenance-kgrid-border-color);
+  background-color: var(--master-maintenance-kgrid-item-background-color);
+  word-wrap: break-word;
+}
+.kendo-grid-style-page .k-grid tr:nth-child(even) td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color: var(--master-maintenance-kgrid-border-color);
+  background-color: var(--ntss-list-content-2nd-background-color);
+  word-wrap: break-word;
+}
+.kendo-grid-style-page .k-widget,
+.kendo-grid-style-page .k-button,
+.kendo-grid-style-page .k-dropdown {
+  font-size: 1em;
+}
+.kendo-grid-style-page .k-input {
+  font-size: 1em;
+  color: var(--kendo-input-color);
+  background-color: var(--kendo-input-background-color);
+}
+.kendo-grid-style-page .k-grid th.k-state-selected,
+.kendo-grid-style-page .k-grid td.k-state-selected,
+.kendo-grid-style-page .k-grid tr.k-state-selected>td {
+  color: var(--master-maintenance-kgrid-selected-color);
+  /*background-color: var(--master-maintenance-kgrid-selected-background-color);*/
+}
+.kendo-grid-style-selected {
+  background-color: var(--master-maintenance-kgrid-selected-background-color) !important;
+}
+/* 検査結果-選択ボタン */
+.examRecord-style-select-button {
+  /* mod FNSI-特大フォントの適応 関 start */
+  /* width: 70px; */
+  width: 5em;
+  /* mod FNSI-特大フォントの適応 関 end */
+  padding: 0;
+  font-size: 1em;
+}
+
+/******************************************/
+/* kendo-grid用スタイル(検査結果モーダル/検査結果手入力画面・1オーダー編集画面-テーマ固定用)  */
+/******************************************/
+.kendo-grid-style-page-modal .kendo-grid-toolbar-style {
+  background-color: #fafafa;
+}
+.kendo-grid-style-page-modal .k-grid {
+  background-color:#fafafa;
+  --ntss-list-background-color: #fafafa;
+  --ntss-list-header-background-color: #333333;
+  --main-background-color: #fafafa;
+  --ntss-list-body-color: #050505;
+  --ntss-list-body-background-color: #cccccc;
+}
+
+.modal-container .kendo-grid-style-page-modal .k-grid,
+.sub-modal-container .kendo-grid-style-page-modal .k-grid {
+  font-size: 1em;
+}
+
+.kendo-grid-style-page-modal .k-alt {
+  background-color:#fafafa !important;
+}
+
+.kendo-grid-style-page-modal .k-grid tr {
+  border-color:  #cccccc;
+  color: #050505;
+  background-color: #fafafa;
+}
+
+.kendo-grid-style-page-modal .k-grid tr:hover {
+  background-color:  #E6E6E6 !important;
+  color: #050505 ;
+}
+.kendo-grid-style-page-modal .k-grid th {
+  color: #fff;
+  word-wrap: break-word;
+  white-space: normal;
+  background-color: #333333;
+}
+.kendo-grid-style-page-modal .k-grid tr:nth-child(odd) td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color:  #cccccc;
+  word-wrap: break-word;
+}
+.kendo-grid-style-page-modal .k-grid tr:nth-child(even) td {
+  border-width: 0 0 1px 1px !important;
+  vertical-align: middle !important;
+  border-color:  #cccccc;
+  background-color:rgba(33,37,41,0.03);
+  word-wrap: break-word;
+}
+.kendo-grid-style-page-modal .k-input {
+  color:#050505;
+  background-color: #fafafa;;
+}
+.kendo-grid-style-page-modal .k-grid th.k-state-selected,
+.kendo-grid-style-page-modal .k-grid td.k-state-selected,
+.kendo-grid-style-page-modal .k-grid tr.k-state-selected>td {
+  color: #212529;
+  background-color: rgba(0,123,255,0.25)!important;
+}
+
+/******************************************/
+/* スケジュール表用スタイル               */
+/******************************************/
+
+.schedule-list-header > .popover--top {
+  width: 200px;
+}
+
+.schedule-kur-multiselect > .k-widget > .k-multiselect-wrap.k-floatwrap {
+  max-height: 5em;
+  overflow-y: auto;
+}
+
+.select-indicator > .k-dropdown-wrap.k-state-default,
+.show-row-num-switch > .k-dropdown-wrap.k-state-default {
+  align-items: center;
+}
+
+#kendo_day > .k-grid .k-header:first-child,
+#kendo_kur > .k-grid .k-header:first-child {
+  border-left-width: 1px;
+}
+
+/******************************************/
+/* 患者イベントフォントカラースタイル           */
+/******************************************/
+
+.ntss-pat-event-text {
+  /* フォント色 */
+  color: var(--ntss-base-color);
+}
+
+.ntss-pat-event-label {
+  color: var(--ntss-base-color);
+}
+
+/******************************************/
+/* デフォルト設定用スタイル           */
+/*******************************************/
+.default-setting-content-title {
+  width: 9em;
+  min-width: 4em;
+  padding-bottom: 1em;
+}
+.default-setting-content-title-last-row {
+  width: 9em;
+  min-width: 4em;
+}
+.default-setting-content-label {
+  word-break:
+    break-all;
+}
+.default-setting-content {
+  text-align: left;
+  padding-left: 1em;
+  padding-bottom: 1em;
+}
+.default-setting-content-last-row {
+  text-align: left;
+  padding-left: 1em;
+}
+
+/******************************************/
+/* コントロールは共通に合わせる             */
+/******************************************/
+
+/* 部分もグラデーションにすること */
+table th,
+.footer-base-area,
+.list-header-col,
+.list-header-col-title {
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+}
+
+button,
+ons-button,
+label.toggle,
+.k-button,
+.btn-ntss-custom,
+.cls-prescription-box,
+.td-button.button-font.button,
+ons-speed-dial .ons-icon {
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  box-shadow: 0 2px 2px 0 rgba(255,255,255,.2) ,0 2px 10px 0 rgba(255,255,255,.5) ,0 -2px 2px 0 rgba(0,0,0,.1);
+}
+
+.color-header,
+.modal-header .toolbar,
+.sub-modal-header .toolbar {
+  background: unset !important;
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%) !important;
+  background-color: var(--ntss-list-header-background-color) !important;
+}
+
+.calendar-date {
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+}
+
+.imgButton {
+  box-shadow: none;
+}
+
+/* コントロールの高さは全体的に2em統一する */
+button,
+table th,
+input.text-input,
+label.toggle,
+.k-button,
+.color-header,
+.custom-input,
+.btn-ntss-custom,
+.list-header-col,
+.list-header-col-title,
+.alarm-notification-list,
+input[type="date"],
+input[type="number"],
+input[type="text"],
+input[type="search"],
+input[type="time"],
+input[type="datetime-local"],
+.examrequest-input-display-period .text-input,
+*:not(.pika-label)>select {
+  height: 2em;
+}
+/* add FNSI zhuhongrui start  */
+input[type="date"]{
+  color: #333333;
+}
+/* add FNSI zhuhongrui end  */
+
+/* add 画面スタイル対応 陳 start */
+.gridHead{
+  background-color: #333333;
+  color: #ffffff;
+  line-height: 2em;
+  border: 1px solid #dee2e6;
+}
+/* add 画面スタイル対応 陳 end */
+
+.k-input {
+  height: 2em !important;
+}
+
+/* コンテンツを揃える */
+table th,
+.list-header-col,
+.list-header-col-title {
+  line-height: 1.5;
+}
+
+.color-header {
+  line-height: 2em;
+  padding-left: 4px;
+}
+
+/* ボーダースタイル */
+.ntss-form-control>input,
+.ntss-form-control>select,
+input[type="date"],
+input[type="number"],
+input[type="text"],
+input[type="search"],
+input[type="time"],
+input[type="month"],
+input[type="datetime-local"],
+input.text-input,
+textarea.text-input,
+input.ntss-form-control,
+textarea.ntss-form-control,
+.content-textarea,
+.custom-textarea,
+.custom-input,
+.k-dropdown .k-dropdown-wrap,
+.k-dropdown,
+.k-multiselect,
+.select-input,
+select.ntss-form-control,
+*:not(.pika-label)>select {
+  border-radius: 5px;
+  background-color:  #F7F7F7;
+  font-size: 1em;
+}
+
+textarea.text-input,
+textarea.ntss-form-control,
+.content-textarea,
+.custom-input,
+.k-dropdown .k-dropdown-wrap,
+.k-dropdown,
+.k-multiselect,
+.select-input{
+  /* mod 7952 必須項目にも関わらず背景色が黄色になっていない 張 start */
+  /* background-color:  #F7F7F7 !important; */
+  background-color:  #F7F7F7;
+  /* mod 7952 必須項目にも関わらず背景色が黄色になっていない 張 end */
+}
+
+.k-dropdown .k-dropdown-wrap {
+  border: none;
+}
+
+input[type="date"],
+input[type="number"],
+input[type="text"],
+input[type="search"],
+input[type="time"],
+input[type="email"],
+input[type="month"],
+input[type="datetime-local"],
+.text-input,
+.select-input,
+textarea,
+.content-textarea,
+.k-dropdown,
+*:not(.pika-label)>select{
+  border: unset;
+  border-width: 2px;
+  border-style: inset;
+  border-image-repeat: stretch;
+  border-color: unset;
+  height: 2em;
+  border-radius: 5px;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+/* バリデーションエラー時のスタイル */
+input.text-input:invalid {
+  border: unset;
+  border-width: 2px;
+  border-style: inset;
+  border-image-repeat: stretch;
+  border-color: unset;
+  background-color:  #F7F7F7;
+}
+
+ons-input {
+  border: none !important;
+  box-shadow: none;
+}
+
+.ntss-custom-input {
+  height: 2em;
+  font-size: inherit;
+  width: auto;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  display: inline-flex;
+}
+
+.ntss-custom-input .text-input {
+  padding: 1px 2px;
+}
+
+.ntss-custom-input .text-input:disabled {
+  opacity: 1;
+}
+
+.ntss-custom-input {
+  height: 2em;
+  font-size: inherit;
+  width: auto;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  display: inline-flex;
+}
+
+.k-dropdown>:hover,
+.k-dropdown .k-state-hover,
+.k-dropdown .k-state-focused {
+  border: none;
+}
+
+
+.custom-select-edited > select {
+  color: green;
+  font-weight: bold;
+  border: 2px green solid !important;
+  /*border-radius: 5px;*/
+}
+
+.custom-select-required > select {
+  background-color: #ffff99;
+}
+
+.custom-select-invalid > select {
+  background-color: rgba(255, 0, 0, 0.5);
+}
+
+.custom-select-disabled > select {
+  background-color: silver;
+  cursor: not-allowed; /* 禁止カーソル */
+}
+
+.select-has-size > select {
+  height: 100%;
+  overflow-x: auto;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 2px;
+}
+.select-has-size .select-input:-ms-expand {
+  display: none;
+}
+
+.select-font-inherit .select-input {
+  font-size: inherit;
+  line-height: unset;
+}
+
+ons-select > .select-input {
+  padding-left: 4px;
+  line-height: unset;
+}
+
+/* スタイルを無効にする */
+input[type="text"]:disabled,
+input[type="date"]:disabled,
+input[type="number"]:disabled,
+input[type="search"]:disabled,
+input[type="time"]:disabled,
+input.text-input:disabled,
+.custom-textarea:disabled,
+.custom-input:disabled,
+.custom-input-disabled,
+*:not(.pika-label)>select:disabled,
+span.k-dropdown:has(> span.k-dropdown-wrap.k-state-disabled) {
+  color: -internal-light-dark-color(rgb(84, 84, 84), rgb(170, 170, 170));
+  cursor: default;
+  /* FNSI-add redmine4824 徐 start */
+  background-color: #ebebe4;
+  /* background-color: #ebebe4 !important; */
+  /* FNSI-add redmine4824 徐 end */
+  border-width: 2px;
+  border-style: inset;
+  border-image-repeat: stretch;
+  border-color: unset;
+  height: 2em;
+  border-radius: 5px;
+}
+
+/*mod FNSI-画面部品デザイン じょはく start*/
+ons-input[disabled] {
+  opacity: 1 !important;
+  background-color: #ebebe4;
+  color: #1f1f21;
+}
+/*add mod-画面部品デザイン じょはく end*/
+
+/* カードヘッダ全体 */
+.card-header {
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  padding: 2px;
+  margin: 0;
+}
+.card-header .card-name {
+  line-height: 1.7;
+}
+
+/* タイトルダイアログ */
+.toolbar__title.toolbar__left {
+  color: #fff;
+}
+
+/******************************************/
+/* kendo-grid用スタイル                    */
+/******************************************/
+.k-grid th,
+.k-grid td {
+  padding: 0.25rem 0.75rem !important;
+  height: 2em;
+}
+.k-grid th {
+  vertical-align: middle !important;
+  border-width: 0 1px 1px 0;
+}
+.k-grid thead,
+  /* 指示履歴 */
+#modal-indHistory .k-grid-header .k-header {
+  color: #fff;
+  background-color: var(--ntss-header-background-color);
+  background-image: -webkit-linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+}
+
+/******************************************/
+/* checkbox用スタイル, radio-button用スタイル*/
+/******************************************/
+ons-radio.radio-button {
+  margin-right: 5px;
+  vertical-align: middle;
+  line-height: 0;
+}
+ons-checkbox.checkbox {
+  margin-right: 5px;
+}
+
+/*add FNSI-画面部品デザイン じょはく start*/
+ons-checkbox[disabled], ons-radio[disabled] {
+  /* del 检查予定no5 張岩 start*/
+  /* background-color: #a2a2a2; */
+  /* del 检查予定no5 張岩 end*/
+  border-radius: 15px;
+}
+
+:disabled + .checkbox__checkmark:before,
+:disabled + .radio-button--round__checkmark:before{
+  background-color: #a2a2a2!important;
+
+}
+
+:disabled + .checkbox__checkmark,
+:disabled + .radio-button__checkmark {
+  opacity: 1;
+}
+/*del FNSI-画面部品デザイン じょはく end*/
+
+:checked + .checkbox__checkmark:before,
+:checked + .radio-button--round__checkmark:before {
+  background-color: #3B7FA3;
+}
+
+.checkbox-edited,
+.radio-edited {
+  color: green !important;
+  font-weight: bold;
+}
+
+/******************************************/
+/* button用スタイル                        */
+/******************************************/
+button:not([class^='pika']),
+label.toggle,
+.k-button,
+.btn-ntss-custom {
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ntss-btn-outset {
+  border-style: outset;
+  border-image-repeat: stretch;
+  border-color: unset;
+}
+
+.visit-history .ntss-btn-outset.calender {
+  width:100% !important;
+}
+
+.button,
+.btn-dark,
+.btn-light,
+.open-button,
+.close-button,
+.select-button,
+.reset.button,
+.button.cancel,
+.search.button,
+.button--outline,
+.color-btn-ok,
+.common-style-ok-button {
+  height: 2em;
+  color: #fff;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1em;
+}
+
+/* middle */
+.button,
+.open-button,
+.close-button,
+.select-button,
+.reset.button,
+.button--outline,
+.registration-btn,
+.common-style-select-button {
+  background-image: linear-gradient(#B1CBD8 0%,#3D82A5 50%,#3D82A5 50%,#377B9E 100%);
+}
+
+/* add 通常のボタンの設定 zhuhongrui start */
+.common-style-select-button {
+  background-image:unset;
+  height: 2em;
+  color: #ffffff;
+  border-bottom: solid 3px #4974a0;
+  background-color: #4291B9;
+}
+/* add 通常のボタンの設定 zhuhongrui end */
+
+/* light */
+.btn-light,
+.denial-btn,
+.clear.button,
+.button.cancel,
+.common-style-cancel-button,
+.p-cancel.button {
+  background-image: linear-gradient(#afb1b5 0%,#73839e 30%,#6e83a7 50%,#5b5f67 100%);
+}
+
+/* dark */
+.btn-dark,
+.color-btn-ok,
+.search.button,
+.ok.button,
+.common-style-ok-button {
+  background-image: linear-gradient(#B1CBD8 0%,#2055cc 30%,#3262AF 50%,#0f77ab 100%);
+}
+
+.button:disabled,
+.button[disabled] {
+  opacity: 0.6;
+}
+
+.button--outline:hover {
+  border: none;
+}
+.button--outline:active {
+  border: none;
+  background-color: unset;
+  color: #fff;
+}
+
+.flex-align-center {
+  display: flex;
+  align-items: center;
+}
+/******************************************/
+/* textarea用スタイル                        */
+/******************************************/
+textarea:focus {
+  border: 2px green solid;
+  outline: 0;
+}
+.textarea textarea:focus {
+  border: 2px green solid !important;
+  outline: 0;
+}
+
+.textarea-popover textarea {
+  font-family: inherit;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  font-size: 1em;
+  background-color: #efeff4;
+}
+
+.textarea-edited {
+  border: 2px green solid !important;
+  outline: 0;
+}
+
+.textarea-edited:disabled {
+  opacity: 0.5;
+}
+
+/******************************************/
+/* Date(カレンダ)用スタイル                 */
+/******************************************/
+/*▼は不要*/
+.ntss-input-date::-webkit-calendar-picker-indicator,
+.ntss-input-date>input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+
+.ntss-control-size {
+  font-size: 1em;
+  box-sizing: border-box;
+}
+
+.pat-info-card .ntss-custom-input .text-input {
+  font-size: inherit;
+}
+
+.input-item-date .ntss-input-date {
+  font-size: 1em;
+  box-sizing: border-box;
+}
+
+input[type="date"].ntss-input-date,
+.ntss-input-date>input[type="date"] {
+  padding-right: 1.8em;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+input[type="date"],
+input[type="time"],
+input[type="month"],
+input[type="datetime-local"],
+.ntss-input-date {
+  font-family: -apple-system, 'Helvetica Neue', 'Helvetica', 'Arial', 'Lucida Grande', sans-serif;
+}
+/******************************************/
+/* custom-select用スタイル                    */
+/******************************************/
+.custom-select-edited > select {
+  color: green;
+  font-weight: bold;
+}
+/* 入力必須項目のチェックがされない / 入力欄の色の不正 5795  shan  start */
+.custom-select-required > select {
+  background-color: #ffff99 !important;
+}
+.select-input > option {
+  background-color: #f7f7f7 !important;
+}
+
+.custom-select-invalid > select {
+  background-color: rgba(255, 0, 0, 0.5) !important;
+}
+/* 入力必須項目のチェックがされない / 入力欄の色の不正 5795  shan  end */
+.custom-select-disabled > select {
+  background-color: silver;
+  cursor: not-allowed; /* 禁止カーソル */
+}
+
+/******************************************/
+/* ons-button用スタイル                           */
+/******************************************/
+.fetch-souchi-settei-button-area ons-button,
+.registration-btn-area ons-button,
+.denial-btn-area ons-button,
+.card-contents ons-button,
+.chart-selection-area ons-button,
+.new-btn-area ons-button,
+.submenu-container .btn-area ons-button ,
+#select-exec ons-button {
+  width: fit-content;
+}
+
+/******************************************/
+/* ons-input用スタイル                    */
+/******************************************/
+input[type="number"] {
+  text-align: right;
+}
+
+.custom-input input[type="text"],
+.custom-input-number input[type="text"],
+.custom-input input[type="tel"],
+.custom-input input[type="email"] {
+  box-sizing: border-box;
+  font-size: 100%;
+  width: 100%;
+}
+
+.custom-input-required input[type="text"],
+.custom-input-required,
+  /*add FNSI-装置設定画面部品デザイン改修 趙 start*/
+.device-input-number .custom-input-number-required input[type="number"],
+  /*add FNSI-装置設定画面部品デザイン改修 趙 end*/
+.device-input-number .custom-input-number-required input[type="text"]  {
+  color: black;
+  background-color: #ffff99;
+  width: 100%;
+}
+
+.idInputChange input[type="text"] {
+  flex: 1
+}
+
+.search-area input[type="text"] {
+  font-size: 100%;
+  vertical-align: initial;
+}
+
+/*add FNSI-装置設定画面部品デザイン改修 趙 start*/
+.custom-input-number-edited input[type="number"],
+  /*add FNSI-装置設定画面部品デザイン改修 趙 end*/
+.custom-input-number-edited input[type="text"] {
+  border: 2px green solid;
+  outline: 0;
+}
+
+.custom-input-edited input[type="text"],
+.custom-input-edited input[type="tel"],
+.custom-input-edited input[type="email"] {
+  border: 2px green solid;
+  outline: 0;
+}
+
+.custom-input-invalid input[type="text"],
+  /*add FNSI-装置設定画面必須入力対象のスタイル調整 趙 start*/
+.device-input-number .custom-input-number-invalid input[type="number"],
+  /*add FNSI-装置設定画面必須入力対象のスタイル調整 趙 end*/
+.custom-input-invalid input[type="tel"],
+.custom-input-invalid input[type="email"] {
+  color: black;
+  background-color: rgba(255, 0, 0, 0.5);
+}
+
+.query-area input[type="text"],
+.query-area ons-input[type="text"],
+.search-pat-info-area input[type="text"],
+.search-pat-info-area ons-input[type="text"],
+.search-treat-area input[type="text"],
+.search-treat-area ons-input[type="text"],
+.list-input .custom-input-required input[type="text"],
+.list-input ons-input[type="text"] {
+  width: fit-content;
+}
+
+.age-input input[type="text"] {
+  width: 50px;
+}
+
+.age-input input[type="number"] {
+  font-size: 100%;
+}
+.disp-item-area .text-input {
+  font-size: inherit;
+  /* No.15 add F 2021-01-26 start */
+  background-color:var(--ntss-list-background-color);
+  color:var(--ntss-list-body-color);
+  /* No.15 add F 2021-01-26 end */
+}
+/* No.16 add F 2021-01-26 start */
+.disp-item-area .text-input:focus{
+  border: 2px solid #008000;
+}
+/* No.16 add F 2021-01-26 end */
+/* 上記の設定が治療方法セットマスタ画面で選択項目の表示で競合して、黒テーマの時に見にくくなる為の対応 */
+.mst-treatment-set-area .text-input:disabled {
+  color: unset;
+}
+#introduction-letter .form input[type="text"],
+#introduction-letter .form ons-input[type="text"] {
+  color: initial;
+  /*del FNSI-改修内容redmine4179 任 start*/
+  /*cursor: not-allowed;*/
+  /*del FNSI-改修内容redmine4179 任 end*/
+  background-color: white;
+  height: 2em;
+  width: fit-content;
+  box-sizing: border-box;
+  font-size: 100%;
+}
+
+.device-input-number {
+  line-height: 2em;
+}
+
+.comTextarea {
+  width: 100%;
+}
+
+.comTextarea > textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.focus-button {
+  border: 1px solid #00f !important;
+  margin-bottom: 0.1px !important;
+}
+
+.focus-button.bottom-radius {
+  border-bottom-left-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+}
+
+.focus-button.bottom-left-radius {
+  border-bottom-left-radius: 8px !important;
+}
+
+.focus-button.bottom-right-radius {
+  border-bottom-right-radius: 8px !important;
+}
+
+.margin-footer {
+  margin: 10px;
+}
+
+.pat-icon-area, .pat-create {
+  font-size: 1.5em;
+}
+
+.mst_facility,
+.mst_com_fixed_phrase,
+.mst_round_type,
+.mst_take_medicine,
+.mst_url_link_register {
+  height : 100%;
+}
+
+.ntss-theme-screen {
+  background-color: var(--ntss-base-background-color);
+  color: var(--ntss-list-body-color);
+}
+/*
+add FNSI-改修内容患者イベントテンプレートマスタ画面全部表示できない 任 start
+*/
+.mst_pat_event_data_template {
+  height: calc(100% - 2em);
+}
+/*
+add FNSI-改修内容患者イベントテンプレートマスタ画面全部表示できない 任 end
+*/
+
+.input-style-required > input,
+.input-style-required > input.text-input:invalid,
+input[type="date"].input-style-required,
+.input-style-required .k-dropdown-wrap {
+  background-color: #ffff99 !important;
+}
+.input-style-invalid > input,
+.input-style-invalid > input.text-input:invalid,
+input[type="date"].input-style-invalid,
+.input-style-invalid .k-dropdown-wrap {
+  background-color: rgba(255, 0, 0, 0.5);
+}
+
+/*add FNSI-画面部品デザイン じょはく start*/
+/* add FNSI zhuhongrui start */
+.green-btn {
+  color: #ffffff !important;
+  background-color: #2ca06f;
+  /* ボタン押下時の色表示対応 */
+  border-bottom: solid 3px var(--btn-common-border-color) !important;
+  box-shadow: unset;
+  background-image: none;
+}
+/* add FNSI zhuhongrui end */
+.blue-btn {
+  background-image: linear-gradient(#B1CBD8 0%,#3D82A5 50%,#3D82A5 50%,#377B9E 100%);
+}
+.white-btn {
+  background-image: linear-gradient(#fdfcfc 0%,#e0e0e0 50%,#e0e0e0 50%,#d2d2d2 100%);
+}
+.red-btn {
+  background-image: linear-gradient(#ef9797 0%,#e8424a 50%,#e8424a 50%,#ec1a1a 100%);
+}
+/*add FNSI-画面部品デザイン じょはく end*/
+
+/* add 4393 fanjun start */
+.btn-float{
+  top: 0;
+  background: #ffffff;
+}
+/* add 4393 fanjun ned */
+.ntss-input-item{
+  top: 34px;
+}
+/* bug:3872 add by maxueqiang */
+.pat-btn-margin-right {
+  margin-right: 5px;
+}
+/*add FNSI-改修内容4214 任 start*/
+@media (max-width: 500px){
+  .white-space-nowrap {
+    white-space: nowrap;
+  }
+}
+/*add FNSI-改修内容4214 任 end*/
+
+#segment .segment__item {
+  font-size: 1.0em;
+}
+
+.pat-btn-margin-bottom {
+  margin-bottom: 5px;
+}
+
+/* mod #7229 入力ボックスフォーカスボーダーが緑になる start */
+.k-textbox:focus, .k-textbox.k-state-focused, .k-textarea:focus, .k-textarea.k-state-focused, .k-input.k-textbox:focus, .k-input.k-textbox.k-state-focused{
+  border: 2px solid green !important;
+}
+ons-input .text-input:focus{
+  border: 2px solid green !important;
+  outline: 0;
+}
+/* mod #7229 入力ボックスフォーカスボーダーが緑になる end */
+/* #8745 表示内容が画面上半分にしか表示されない。 林峻峰 start */
+.k-selectable tbody tr td {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.k-selectable tbody tr td div, .k-selectable tbody tr td span{
+  white-space: wrap;
+}
+.kendo-grid-toolbar-style .k-grid tr:nth-child(n + 3):nth-last-child(n-3) .k-tooltip.k-tooltip-validation {
+  margin: 0.5em;
+  font-weight: normal;
+}
+/* #8745 表示内容が画面上半分にしか表示されない。 林峻峰 end */
+
+/* カレンダスタイル統合制御 */
+.vc-pane {
+  border: solid 1px rgb(190, 190, 190) !important;
+  border-radius: 10px;
+  margin-left: 15px;
+  margin-right: 15px;
+  margin-bottom: 20px;
+}
+.vc-header {
+  background-color: #4781ed !important;
+  border-top-left-radius: 9px;
+  border-top-right-radius: 9px;
+  padding: 0px !important;
+}
+.vc-weekday {
+  background-color: #77a0ed !important;
+  color: white !important;
+}
+/* #9171 start */
+.k-column-resizer {
+  inset-inline-end: 0;
+}
+/* #9171 end
+ /* add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue start */
+ .dropdownlist-select {
+  border: 2px green solid;
+}
+ /* add #10774 治療記録＞体重にて未編集なのに破棄確認メッセージが出てしまう。zhangyue end */
+ 
+/* 表内の患者IDは一律右寄せ */
+.hosp-pat-id-body {
+  text-align: right !important;
+}
+
+/******************************************/
+/* kendo-dropdownlist用スタイル           */
+/******************************************/
+/* 子要素に対するスタイル定義(非活性用) */
+span.k-dropdown span.k-dropdown-wrap.k-state-disabled {
+  background-color: transparent;       /* 子要素背景色を透明化し、透明度適用により親子背景色が重なり濃くなる事象を回避 */
+  filter: grayscale(0);                /* ライブラリのスタイル打消し */
+}
+
+/******************************************/
+/* kendo-multiselect用スタイル            */
+/******************************************/
+/* 親要素に対するスタイル定義(非活性用) */
+div.k-multiselect.k-state-disabled {
+  background-color: #ebebe4;           /* 非活性用背景色に上書き */
+  opacity: 1;                          /* ライブラリのスタイル打消し */
+  filter: grayscale(0);                /* ライブラリのスタイル打消し */
+}
+
+/* 子要素に対するスタイル定義(非活性用) */
+div.k-multiselect.k-state-disabled div.k-multiselect-wrap {
+  background-color: transparent;       /* 子要素背景色を透明化し、親要素背景色を生かす */
+  color: rgba(33, 37, 41, 0.65);       /* ライブラリ指定の文字色に透明度を指定し、文字色を薄める */
+}
+
+/******************************************/
+/* password入力欄用スタイル            */
+/******************************************/
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 30px;
+  box-sizing: border-box;
+}
+
+.password-wrapper .password-eyeicon {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #333333;
+}
+
+.password-wrapper .password-eyeicon:hover {
+  opacity: 0.7;
+}

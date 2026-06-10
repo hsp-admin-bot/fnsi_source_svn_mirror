@@ -1,0 +1,17 @@
+[[get-treatment-record-result-merge]]
+=== 治療記録(実績マージ)取得
+
+==== Request
+include::{snippets}/treatment_record/result-merge/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/treatment_record/result-merge/get/ok/http-response.adoc[]
+
+==== Response(失敗:該当データなし)
+include::{snippets}/treatment_record/result-merge/get/not-found/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/treatment_record/result-merge/get/ok/path-parameters.adoc[]
+
+==== Response Fields
+include::{snippets}/treatment_record/result-merge/get/ok/response-fields.adoc[]

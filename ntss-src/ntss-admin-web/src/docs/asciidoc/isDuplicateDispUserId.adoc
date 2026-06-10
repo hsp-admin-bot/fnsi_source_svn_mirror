@@ -1,0 +1,17 @@
+[[is-duplicate-user]]
+=== ユーザーID重複チェック
+
+==== Request
+include::{snippets}/user/check/ok1/http-request.adoc[]
+
+==== Response(成功：ユーザーID重複あり)
+include::{snippets}/user/check/ok1/http-response.adoc[]
+
+==== Response(成功：ユーザーID重複なし)
+include::{snippets}/user/check/ok2/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/user/check/ok1/path-parameters.adoc[]
+
+==== Response Fields
+include::{snippets}/user/check/ok1/response-fields.adoc[]

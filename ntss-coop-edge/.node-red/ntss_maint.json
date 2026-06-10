@@ -1,0 +1,803 @@
+[
+    {
+        "id": "225869c8.f8def6",
+        "type": "tab",
+        "label": "ifedgeメンテンス",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "216306bc.931eaa",
+        "type": "subflow",
+        "name": "改行統一",
+        "info": "",
+        "category": "",
+        "in": [
+            {
+                "x": 50,
+                "y": 30,
+                "wires": [
+                    {
+                        "id": "ce7db126.e63d4"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 520,
+                "y": 40,
+                "wires": [
+                    {
+                        "id": "9aaea03d.1384a",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [],
+        "color": "#DDAA99"
+    },
+    {
+        "id": "17df765235e97eab",
+        "type": "subflow",
+        "name": "setupEnv",
+        "info": "",
+        "category": "",
+        "in": [
+            {
+                "x": 140,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "588f183efc6f17b8"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 580,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "588f183efc6f17b8",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [],
+        "meta": {},
+        "color": "#DDAA99"
+    },
+    {
+        "id": "e122faa3.b76b78",
+        "type": "websocket-client",
+        "path": "${NTSS_MAINT_WEBSOCKET_URL}",
+        "tls": "",
+        "wholemsg": "false"
+    },
+    {
+        "id": "4ffca4ac.77ed6c",
+        "type": "tls-config",
+        "name": "",
+        "cert": "",
+        "key": "",
+        "ca": "",
+        "certname": "",
+        "keyname": "",
+        "caname": "",
+        "servername": "",
+        "verifyservercert": false
+    },
+    {
+        "id": "28427e3a0b6c7cc7",
+        "type": "config-log",
+        "logname": "SendFlow",
+        "logdir": "${NTSS_LOG_DIR_SEND}",
+        "stamp": "local",
+        "logstyle": "plain",
+        "logrotate": false,
+        "logcompress": false,
+        "logrotatecount": "5",
+        "logsize": "1000"
+    },
+    {
+        "id": "9aaea03d.1384a",
+        "type": "exec",
+        "z": "216306bc.931eaa",
+        "command": "nkf",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "oldrc": false,
+        "name": "改行をLFに",
+        "x": 330,
+        "y": 80,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "ce7db126.e63d4",
+        "type": "function",
+        "z": "216306bc.931eaa",
+        "name": "",
+        "func": "var maintEcecCmd = env.get('NTSS_MAINT_EXEC_CMD');\nvar times = maintEcecCmd.split(' ');\nvar maintShellPath = times[times.length-1];\n\nvar execArg =  '-Lu --overwrite ' + maintShellPath;\nmsg.payload = execArg;\nnode.log('--------改行をLFに----------------------');\nnode.log(JSON.stringify(msg));\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "x": 190,
+        "y": 80,
+        "wires": [
+            [
+                "9aaea03d.1384a"
+            ]
+        ]
+    },
+    {
+        "id": "588f183efc6f17b8",
+        "type": "function",
+        "z": "17df765235e97eab",
+        "name": "",
+        "func": "// payloadを壊さない\n\nvar commonLib = global.get('commonLib');\nvar setting = commonLib.getSettings();\n\n// オリジナルメッセージを保管する\n//msg.payloadOrg = msg.payload;\n\n// サーバ情報の設定\nmsg.urlRoot = setting.urlRoot;\n\n// シリアル番号(11桁)\nvar tmpSerialNo = '0';\nif (setting.serial_no !== undefined && setting.serial_no !== null && setting.serial_no !== '') {\n    tmpSerialNo = setting.serial_no;\n}\nvar SerialNo = commonLib.LeftAppend(tmpSerialNo, 11, '0');\n\n// 施設コード（6桁）\nvar tmpFacilityCd = '0';\nif (setting.facility_cd !== undefined && setting.facility_cd !== null && setting.facility_cd !== '') {\n    tmpFacilityCd = setting.facility_cd;\n}\nvar facilityCd = commonLib.LeftAppend(tmpFacilityCd, 6, '0');\n\n// ログファイル名の設定\n// msg.logfile=\"flogger_yyyymmdd.log\"\n\nvar dt = new Date();\nvar y = dt.getFullYear();\nvar m = (\"00\" + (dt.getMonth() + 1)).slice(-2);\nvar d = (\"00\" + dt.getDate()).slice(-2);\n\n// IF_施設コード（6桁）_シリアル番号(11桁)_作成年月日.log\n//msg.logfile = \"flogger_\" + y + m + d + \".log\";\nmsg.logfile = \"IF_\" + facilityCd + \"_\" + SerialNo + \"_\" + y + m + d + \".log\";\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "5f7c6a22f4cbf552",
+        "type": "comment",
+        "z": "17df765235e97eab",
+        "name": " payloadを壊さない",
+        "info": "# **大事なこと**\n**payloadを壊さない**",
+        "x": 290,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "a2f74b6e.70f5b8",
+        "type": "websocket in",
+        "z": "225869c8.f8def6",
+        "name": "サーバよりの受信",
+        "server": "",
+        "client": "e122faa3.b76b78",
+        "x": 110,
+        "y": 80,
+        "wires": [
+            [
+                "81e843ab.1e939",
+                "ea961ef4.cb4e9"
+            ]
+        ]
+    },
+    {
+        "id": "9c5f125f.bfc7e",
+        "type": "websocket out",
+        "z": "225869c8.f8def6",
+        "name": "サーバへ返信",
+        "server": "",
+        "client": "e122faa3.b76b78",
+        "x": 1300,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "81e843ab.1e939",
+        "type": "zip",
+        "z": "225869c8.f8def6",
+        "name": "unzip",
+        "mode": "decompress",
+        "filename": "",
+        "compressionlevel": 6,
+        "outasstring": false,
+        "x": 270,
+        "y": 80,
+        "wires": [
+            [
+                "24a6b927.338e36"
+            ]
+        ]
+    },
+    {
+        "id": "24a6b927.338e36",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "saveFiles",
+        "func": "var commonLib = global.get('commonLib');\nvar fs = global.get('fs');\nvar path = global.get('path');\nvar array = msg.payload\n\nvar maintEcecCmd = env.get('NTSS_MAINT_EXEC_CMD');\n//node.log(maintEcecCmd);\nvar items = maintEcecCmd.split(' ');\n\nvar maintShellPath = items[items.length-1];\nvar maintRoot = path.dirname(maintShellPath) + '/';\nvar maintShell = path.basename(maintShellPath);\nvar eyecatchCtlNo = 'ctlno_'\n\nnode.log(maintShellPath);\nnode.log(maintRoot);\nnode.log(maintShell);\n\nmsg.status = '500';\n\n// あれば消す\nif (commonLib.isExist(maintShellPath)) {\n    // maintenance shellの削除\n    fs.unlinkSync(maintShellPath);\nnode.log('delete file [' + maintShellPath + ']');\n}\n    \nfor(var file of array) {\n    file.filename = file.filename.replace(/\\\\/g, '/');\nnode.log('-------->zip file =['+ file.filename + ']');\n    if (file.filename.slice( -1 ) === '/') {\n        // ディレクトリなければ作る\n        if (!commonLib.isExist(maintRoot + file.filename)) {\n            fs.mkdirSync(maintRoot + file.filename);\n        }\nnode.log('    ---->path = [' + maintRoot + file.filename + ']');      \n    } else {\n        // ファイル\n        if (file.filename.match(eyecatchCtlNo)) {\n            const filename = path.basename(file.filename);\n            msg.ctlNo = 1 * filename.replace(eyecatchCtlNo, '');\n        }\n        \n        if (file.filename.match(maintShell)) {\n            fs.writeFileSync(maintShellPath, file.payload);\nnode.log('    ---->creat file = [' + maintShellPath, file.payload + ']');           \n        }\n        fs.writeFileSync(maintRoot + file.filename, file.payload);\nnode.log('    ---->creat file = [' + maintRoot + file.filename + ']');   \n    }\n}\n\n\nif (fs.existsSync(maintShellPath)) {\n    return [msg, null];\n} else {\n    msg.retMessage = maintShell +'が存在しません';\n    return [null, msg];\n}\n\n\nfunction isExist(path) {\n    var fs =global.get('fs');\n\n    try {\n        fs.statSync(path);\n    } catch (err) {\n        if (err.code === 'ENOENT') {\n            return false;\n        } else {\n            throw new Error('Exeption occured at File Exist check ' + isExist.name);\n        }\n    }\n    return true;\n}\n\n",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "x": 420,
+        "y": 80,
+        "wires": [
+            [
+                "536cc55.5fd4d3c"
+            ],
+            [
+                "53a819aa.7d4128"
+            ]
+        ]
+    },
+    {
+        "id": "b9ec190d.5bbdd8",
+        "type": "exec",
+        "z": "225869c8.f8def6",
+        "command": "${NTSS_MAINT_EXEC_CMD}",
+        "addpay": false,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "60",
+        "oldrc": false,
+        "name": "exec maintenance shell",
+        "x": 770,
+        "y": 60,
+        "wires": [
+            [
+                "fb4820b6.1b13e"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "fb4820b6.1b13e",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "chkExecResult",
+        "func": "\nif (msg.rc.code === 0) {\n    // 成功\n    msg.status = '200';\n    msg.retMessage = msg.payload;\n} else {\n    // 失敗\n    msg.status = '500';\n    msg.retMessage = msg.rc.message;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "x": 1000,
+        "y": 60,
+        "wires": [
+            [
+                "53a819aa.7d4128"
+            ]
+        ]
+    },
+    {
+        "id": "53a819aa.7d4128",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "createResponse",
+        "func": "var commonLib = global.get('commonLib');\nvar setting = commonLib.getSettings();\n\nvar response = {\n    \"system\" : \"NTSS\",\n    \"status\" : \"result\",\n    \"facility_cd\" : \"\",\n    \"result\" : {\n        \"ctl_no\" : \"\",\n        \"status\": \"\",\n        \"message\": \"\"\n    }\n}\n\n// 施設コードの設定\nresponse.facility_cd = setting.facility_cd;\n\n// ctl_noの設定\nresponse.result.ctl_no = msg.ctlNo;\n\n// 結果の設定\nresponse.result.status = msg.status;\nresponse.result.message = msg.retMessage;\n\nmsg.payload = response;\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "x": 1100,
+        "y": 140,
+        "wires": [
+            [
+                "228695ac.4e02ba"
+            ]
+        ]
+    },
+    {
+        "id": "aaa3a0da.ba074",
+        "type": "catch",
+        "z": "225869c8.f8def6",
+        "name": "",
+        "scope": [
+            "24a6b927.338e36",
+            "b9ec190d.5bbdd8",
+            "fb4820b6.1b13e",
+            "536cc55.5fd4d3c"
+        ],
+        "uncaught": false,
+        "x": 590,
+        "y": 280,
+        "wires": [
+            [
+                "110bd8ea.8b3477"
+            ]
+        ]
+    },
+    {
+        "id": "110bd8ea.8b3477",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "例外処理",
+        "func": "msg.status = '500';\nmsg.retMessage = 'Maintenanceフローで例外が発生しました';\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 800,
+        "y": 280,
+        "wires": [
+            [
+                "53a819aa.7d4128"
+            ]
+        ]
+    },
+    {
+        "id": "f7b7eb19.607ba8",
+        "type": "inject",
+        "z": "225869c8.f8def6",
+        "name": "定時処理",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "${NTSS_MAINT_ALIVE_INTERVAL}",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "30",
+        "topic": "",
+        "payload": "{\"system\":\"NTSS\",\"status\":\"connect\",\"facility_cd\":\"\",\"result\":{\"status\":100,\"message\":\"connection\"}}",
+        "payloadType": "json",
+        "x": 550,
+        "y": 360,
+        "wires": [
+            [
+                "648bbea2.755e8"
+            ]
+        ]
+    },
+    {
+        "id": "648bbea2.755e8",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "施設コードの設定",
+        "func": "var commonLib = global.get('commonLib');\nvar setting = commonLib.getSettings();\n\n// 施設コードの設定\nmsg.payload.facility_cd = setting.facility_cd;\n\n// シリアル番号の設定\nmsg.payload.serial_no = setting.serial_no;\n\n// add 2023-02-22 bug #6912 エッジの連携処理を停止しても稼働ビューア画面では正常と表示される 孫 start\nvar journalInterval = env.get('NTSS_JOURNA_ALIVE_INTERVAL');\nvar mainInterval = env.get('NTSS_MAINT_ALIVE_INTERVAL');\nif (journalInterval === undefined || journalInterval === null || journalInterval === '') {\n    journalInterval = '10';\n}\nif (mainInterval === undefined || mainInterval === null || mainInterval === '') {\n    mainInterval = '60';\n}\nmsg.payload.journal_interval = journalInterval;\nmsg.payload.main_interval = mainInterval;\n\n/* add by chamaojia 2024-06-24 [10574]  --start */\nvar headerKey = env.get('NTSS_REQUEST_AWS_HEADER_KEY');\nvar headerValue = env.get('NTSS_REQUEST_AWS_HEADER_VALUE');\nmsg.payload[headerKey] = headerValue;\n/* add by chamaojia 2024-06-24 [10574]  --end */\n\n//console.log(\"Main:\" + JSON.stringify(msg.payload));\n// add 2023-02-22 bug #6912 エッジの連携処理を停止しても稼働ビューア画面では正常と表示される 孫 end\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 360,
+        "wires": [
+            [
+                "d51b7904.823c98"
+            ]
+        ]
+    },
+    {
+        "id": "228695ac.4e02ba",
+        "type": "change",
+        "z": "225869c8.f8def6",
+        "name": "",
+        "rules": [
+            {
+                "t": "delete",
+                "p": "_session",
+                "pt": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1160,
+        "y": 200,
+        "wires": [
+            [
+                "d51b7904.823c98"
+            ]
+        ],
+        "info": "`msg._session`を削除しないとサーバにメッセージが送信されない"
+    },
+    {
+        "id": "536cc55.5fd4d3c",
+        "type": "subflow:216306bc.931eaa",
+        "z": "225869c8.f8def6",
+        "name": "改行をLFに",
+        "env": [],
+        "x": 570,
+        "y": 60,
+        "wires": [
+            [
+                "b9ec190d.5bbdd8"
+            ]
+        ]
+    },
+    {
+        "id": "d51b7904.823c98",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "console.debug",
+        "func": "node.debug(JSON.stringify(msg.payload));\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "x": 1260,
+        "y": 260,
+        "wires": [
+            [
+                "9c5f125f.bfc7e"
+            ]
+        ]
+    },
+    {
+        "id": "8bc06bc1.235f78",
+        "type": "http request",
+        "z": "225869c8.f8def6",
+        "name": "MaintHttpReq",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "4ffca4ac.77ed6c",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 580,
+        "y": 740,
+        "wires": [
+            [
+                "b2ee4d7c.e347e"
+            ]
+        ]
+    },
+    {
+        "id": "bf990bf7.1fd408",
+        "type": "inject",
+        "z": "225869c8.f8def6",
+        "name": "command_start",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"command\",\"command\":\"start\",\"dir_path\":\"\"}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 740,
+        "wires": [
+            [
+                "8ace2f7d.a3dc6"
+            ]
+        ]
+    },
+    {
+        "id": "8ace2f7d.a3dc6",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "setMaintRequestInfo",
+        "func": "var commonLib = global.get('commonLib');\nvar setting = commonLib.getSettings();\n\nvar requestBody = msg.payload;\nrequestBody.facility_cd = setting.facility_cd;\nrequestBody.serial_no = setting.serial_no;\nif (requestBody.dir_path !== undefined && requestBody.dir_path !== '') {\n    requestBody.dir_path = requestBody.dir_path.replace('${facility_cd}', setting.facility_cd).replace('${serial_no}', setting.serial_no)\n}\n\nmsg.url = setting.urlRoot + 'ifedge/maintenance';\nmsg.payload = requestBody;\n\nnode.log('------------------->Maintenance message:<-------------------');\nnode.log(msg.url);\nnode.log(JSON.stringify(msg.payload));\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "x": 370,
+        "y": 740,
+        "wires": [
+            [
+                "8bc06bc1.235f78"
+            ]
+        ]
+    },
+    {
+        "id": "b2ee4d7c.e347e",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "outputMaintLog",
+        "func": "node.log('------------->Maintenance result:<-------------------');\nnode.log(JSON.stringify(msg));\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "x": 780,
+        "y": 740,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "9b28e057.b8e3a",
+        "type": "inject",
+        "z": "225869c8.f8def6",
+        "name": "command_stop",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"command\",\"command\":\"stop\",\"dir_path\":\"\"}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 800,
+        "wires": [
+            [
+                "8ace2f7d.a3dc6"
+            ]
+        ]
+    },
+    {
+        "id": "ea961ef4.cb4e9",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "MaintenanceDebugLog1",
+        "func": "node.log('=============>Receive Maintenance websocket message:<=============');\nnode.log(JSON.stringify(msg.payload));",
+        "outputs": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "x": 360,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "7e266e86.85f55",
+        "type": "inject",
+        "z": "225869c8.f8def6",
+        "name": "command_sendEdgeSetting",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"command\",\"command\":\"sendEdgeSetting\",\"dir_path\":\"\"}",
+        "payloadType": "json",
+        "x": 170,
+        "y": 860,
+        "wires": [
+            [
+                "8ace2f7d.a3dc6"
+            ]
+        ]
+    },
+    {
+        "id": "ff0c0e6.8fd94f",
+        "type": "inject",
+        "z": "225869c8.f8def6",
+        "name": "file_sourceUpdate",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"file\",\"command\":\"\",\"dir_path\":\"${facility_cd}_${serial_no}\"}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 640,
+        "wires": [
+            [
+                "8ace2f7d.a3dc6"
+            ]
+        ],
+        "info": "/*　ソース更新 */\n{\n    \"facility_cd\": setting.facility_cd,\n    \"serial_no\": setting.serial_no,\n    \"type\": \"file\",\n    \"command\": \"\",\n    \"dir_path\": $setting.facility + \"_\" + cd_setting.serial_no\n}\n-- setting.facility_cd = 996996\n-- setting.serial_no = 3\n\n/* AWS につてい*/\napplication.yml:\n  websocket.if-edge-mnt.resourcePath : /opt\n\n-- ディレクトリ構成\n/opt/996996_3\n│maintenance.sh\n└source\n　│sampleIFEdge.txt\n　├custom_nodes\n　│└custom-file-watch\n　│　 sample-custom-file-watch.txt\n　└lib \n　　└lib\n　　　 sampleLib.txt\n　　　 \n--maintenance.shの内容:\n/opt/996996_3/maintenance.shの内容:\ndatapath=DATA_PATH\n\ncp -r /home/ntss1/if_edge/maint/$datapath/source/*  /home/ntss1/.node-red\n\n"
+    },
+    {
+        "id": "1841ed9aba18097f",
+        "type": "comment",
+        "z": "225869c8.f8def6",
+        "name": "maintファイルの削除処理",
+        "info": "#maintファイルの削除処理\n#[/etc/sysconfig/ntss]→NTSS_MAINT_EXEC_CMD関連したフォルダ\n",
+        "x": 130,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "fb6f9281f71536cb",
+        "type": "inject",
+        "z": "225869c8.f8def6",
+        "name": "deleteMainFiles",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "86400",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "30",
+        "topic": "",
+        "payload": "maint",
+        "payloadType": "str",
+        "x": 130,
+        "y": 500,
+        "wires": [
+            [
+                "1d9bf0505b3909c8"
+            ]
+        ]
+    },
+    {
+        "id": "1d9bf0505b3909c8",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "GetMaintSettingInfo",
+        "func": "// 2023-03-02 bug #7175 連携エッジ内のファイル管理 孫\nvar commonLib = global.get('commonLib');\nvar setting = commonLib.getSettings();\nvar path = global.get('path');\n\nvar fileKeepDays = setting.fileKeepDays;\nnode.log('Maint電文の保留期間:　' + fileKeepDays + '　日');\nif (undefined === fileKeepDays || null === fileKeepDays || '' === fileKeepDays) {\n    node.log('Maint電文の保留期間不正');\n    return;\n}\n\nvar maintEcecCmd = env.get('NTSS_MAINT_EXEC_CMD');\nvar items = maintEcecCmd.split(' ');\n\nvar maintShellPath = items[items.length - 1];\nvar keepDirRoot = path.dirname(maintShellPath);\nnode.log('Maint電文の保管フォルダ:[' + keepDirRoot + ']');\nif (undefined === keepDirRoot || null === keepDirRoot || '' === keepDirRoot) {\n    node.log('Maint電文の保管フォルダ不正');\n    return;\n}\n\nmsg.fileKeepDays = fileKeepDays;\nmsg.keepDirRoot = keepDirRoot;\nmsg.type = msg.payload;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 500,
+        "wires": [
+            [
+                "fa2166a5571d647e"
+            ]
+        ]
+    },
+    {
+        "id": "fa2166a5571d647e",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "deleteOldFiles",
+        "func": "// 古いmaintファイルのを削除する\nvar commonLib = global.get('commonLib');\nvar fs = global.get('fs');\n\nvar fileKeepDays = msg.fileKeepDays;\nvar keepDirRoot = msg.keepDirRoot;\nvar deleteType = msg.type;\n\nlet dtNow = new Date();\nlet dtTarget = new Date(new Date().setDate(new Date().getDate() - fileKeepDays));\nlet dtMonth = ((dtTarget.getMonth() + 1) < 10) ? '0' + (dtTarget.getMonth() + 1) : dtTarget.getMonth() + 1;\nlet dtDate = (dtTarget.getDate() < 10) ? '0' + dtTarget.getDate() : dtTarget.getDate();\nlet strDtTarget = dtTarget.getFullYear().toString() + dtMonth + dtDate;\n\nlet logMsg = '';\ntry {\n    let dataTypeDirs = fs.readdirSync(keepDirRoot);\n    if (0 === dataTypeDirs.length) {\n        node.log(keepDirRoot + 'にMaintファイルのがありません。');\n        return;\n    }\n\n    //タイプづつ\n    for (var dataTypeDir of dataTypeDirs) {\n        var maintPath = keepDirRoot + '/' + dataTypeDir;\n        let maintPathStats = fs.statSync(maintPath);\n        if (maintPathStats.isDirectory()) {\n            let dataTypeDirComp = dataTypeDir.substr(0, 8);\n            if (dataTypeDirComp > strDtTarget) {\n                node.log(maintPath + '(日付:' + dataTypeDirComp + ')は削除対象外のため削除しません。');\n                continue;\n            }\n            msg.cmd = makeDeleteDirCmd(maintPath);\n            logMsg = maintPath + 'を削除しました。';\n            node.log(logMsg);\n            msg.logMsg = logMsg;\n            node.send(msg);\n        } else {\n            // mod 2023-03-13 bug #7175 連携エッジ内のファイル管理 孫 start\n            //let ctimeYYYY = maintPathStats.ctime.getFullYear().toString();\n            //let ctimeMM = ((maintPathStats.ctime.getMonth() + 1) < 10) ? '0' + (maintPathStats.ctime.getMonth() + 1) : maintPathStats.ctime.getMonth() + 1;\n            //let ctimeDD = ((maintPathStats.ctime.getDate()) < 10) ? '0' + (maintPathStats.ctime.getDate()) : maintPathStats.ctime.getDate();\n            //let ctimeOrg = ctimeYYYY + ctimeMM + ctimeDD;\n            let yyyy = maintPathStats.mtime.getFullYear();\n            let mm = maintPathStats.mtime.getMonth() + 1;\n            let dd = maintPathStats.mtime.getDate()\n            let ctimeOrg = yyyy + (\"00\" + mm).slice(-2) + (\"00\" + dd).slice(-2);\n            // mod 2023-03-13 bug #7175 連携エッジ内のファイル管理 孫 end\n            msg.ctime = ctimeOrg;\n            if (ctimeOrg > strDtTarget) {\n                node.log(maintPath + '(日付:' + ctimeOrg + ')は削除対象外のため削除しません。');\n                continue;\n            }\n\n            msg.cmd = makeDeleteFileCmd(maintPath);\n            logMsg = maintPath + 'を削除しました。';\n            node.log(logMsg);\n            msg.logMsg = logMsg;\n            node.send(msg);\n        }\n        await sleep(500);\n    }\n} catch (err) {\n    node.log(err);\n}\n\nfunction makeDeleteDirCmd(dir) {\n    return 'rm -rf ' + dir;\n}\n\nfunction makeDeleteFileCmd(file) {\n    return 'rm ' + file;\n}\n\nfunction sleep(time = 0) {\n    return new Promise((resolve, reject) => {\n        setTimeout(() => {\n            resolve();\n        }, time);\n    })\n}\nreturn;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 500,
+        "wires": [
+            [
+                "64c7b701d5c01fff"
+            ]
+        ]
+    },
+    {
+        "id": "64c7b701d5c01fff",
+        "type": "exec",
+        "z": "225869c8.f8def6",
+        "command": "",
+        "addpay": "cmd",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": false,
+        "oldrc": false,
+        "name": "execute_cmd",
+        "x": 750,
+        "y": 500,
+        "wires": [
+            [
+                "ecb05cded2610d0e"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "ecb05cded2610d0e",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "checkDeleteResult",
+        "func": "if (msg.rc.code === 0) {\n    // OK\n    msg.message = 'Delete Old File Cmd OK.[' + msg.cmd + ']';\n    //node.log(msg.message);\n\n    node.send([msg, null]);\n} else {\n    // NG\n    msg.message = 'Delete Old File Cmd NG.[' + msg.cmd + ']. message=' + msg.rc.message;\n    node.log(msg.message);\n\n    node.send([null, msg]);\n}\nreturn;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 950,
+        "y": 500,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3d15fd926222d2be",
+        "type": "status",
+        "z": "225869c8.f8def6",
+        "name": "checkWSConnect",
+        "scope": [
+            "a2f74b6e.70f5b8",
+            "9c5f125f.bfc7e"
+        ],
+        "x": 350,
+        "y": 420,
+        "wires": [
+            [
+                "37f9958030ee7f56"
+            ]
+        ]
+    },
+    {
+        "id": "37f9958030ee7f56",
+        "type": "function",
+        "z": "225869c8.f8def6",
+        "name": "WSChangeStatus",
+        "func": "// websocket connect status change\nvar maintWsStatus = msg.status.event;\n// last connect status\nvar lastMaintWsStatus = global.get('maintWsStatus');\nif (!lastMaintWsStatus || maintWsStatus != lastMaintWsStatus) {\n    let wsUrl = env.get('NTSS_MAINT_WEBSOCKET_URL');\n    if (maintWsStatus == 'connect') {\n        global.set('maintWsStatus', maintWsStatus);\n        var websocketstatMsg = '[' + wsUrl + '] Connected.';\n        node.log(websocketstatMsg);\n        // record log file\n        msg.websocketstatMsg = websocketstatMsg;\n        node.send([null, msg]);\n\n        // need send message\n        msg.payload = {};\n        msg.payload.status = 'connect';\n        node.send([msg, null]);\n    } else if (maintWsStatus == 'disconnect') {\n        global.set('maintWsStatus', maintWsStatus);\n        var websocketstatMsg = wsUrl + ' is on CLOSE state.';\n        node.log(websocketstatMsg);\n        msg.websocketstatMsg = websocketstatMsg;\n        node.send([null, msg]);\n    }\n\n}",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 590,
+        "y": 420,
+        "wires": [
+            [
+                "648bbea2.755e8"
+            ],
+            [
+                "90da7f34650ab633"
+            ]
+        ]
+    },
+    {
+        "id": "90da7f34650ab633",
+        "type": "subflow:17df765235e97eab",
+        "z": "225869c8.f8def6",
+        "name": "",
+        "x": 820,
+        "y": 420,
+        "wires": [
+            [
+                "ec8edaf5c2f7d84e"
+            ]
+        ]
+    },
+    {
+        "id": "ec8edaf5c2f7d84e",
+        "type": "flogger",
+        "z": "225869c8.f8def6",
+        "name": "LogWebsocketStatus",
+        "logfile": "",
+        "inputchoice": "object",
+        "inputobject": "websocketstatMsg",
+        "inputobjectType": "msg",
+        "inputmoustache": "Recieved payload {{payload}} and topic {{topic}}",
+        "loglevel": "INFO",
+        "logconfig": "28427e3a0b6c7cc7",
+        "sendpane": "",
+        "x": 1060,
+        "y": 420,
+        "wires": [
+            []
+        ]
+    }
+]

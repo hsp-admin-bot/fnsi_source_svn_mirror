@@ -1,0 +1,1 @@
+UPDATE pat_main SET taboo_allergy_info = regexp_replace(taboo_allergy_info::TEXT, '"taboo_allergy_cd": ""', '"taboo_allergy_cd": null', 'g')::JSONB;

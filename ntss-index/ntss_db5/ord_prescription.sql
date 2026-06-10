@@ -1,0 +1,2 @@
+﻿DROP INDEX IF EXISTS idx_ord_prescription_01;
+CREATE INDEX idx_ord_prescription_01 ON ord_prescription USING btree (facility_cd,is_disp,prescription_type,is_del,issue_state,pat_id,reg_date,issue_date);

@@ -1,0 +1,35 @@
+# ntss-coreの/src/main/resourcesのapplication.ymlは基本的に使用しません。
+# 呼び出し元(ntss-admin-webなど)で定義されているため。
+# stgやprodなど各profile用のapplication.ymlを作る必要はありません。
+# ntss-coreで必要な設定は、テスト(/src/test/resourcesで定義)のみです。
+spring:
+  datasource:
+    certificate:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db7?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk7
+      password: nkk7
+    default:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk5
+      password: nkk5
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+      
+
+doma:
+  dialect: postgres
+
+logging:
+  level:
+    org.springframework.transaction.interceptor: TRACE
+
+ntss:
+  logging:
+    appender:
+      file-name: /var/log/{0}.log
+    rolling:
+      file-name-pattern:  /var/log/{0}_%d'{'yyyyMMdd'}'.log
+      max-history: 14

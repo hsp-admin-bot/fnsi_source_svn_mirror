@@ -1,0 +1,1 @@
+update mst_pat_list_layout set template_cd = 4 where template_cd is null

@@ -1,0 +1,4 @@
+COMMENT ON COLUMN ntss.mst_spitz.is_in_hospital IS '院外院内フラグ';
+-- 採血管マスタ
+-- 2・院外院内フラグの文言修正
+ UPDATE ntss.sys_master_define SET column_info = '{"fields": [{"type": "number", "alias": "code", "title": "採血管ID", "physical_name": "spitz_cd"}, {"type": "string", "alias": "name", "title": "採血管名", "validation": {"required": "true", "maxlength": 40}, "physical_name": "spitz_name"}, {"type": "string", "title": "ラベル印字項目", "validation": {"maxlength": 10}, "physical_name": "label_print"}, {"type": "combo1", "title": "院外院内フラグ", "physical_name": "is_in_hospital"}, {"type": "disp", "title": "削除", "physical_name": "is_disp"}]}' WHERE master_physical_name='mst_spitz';

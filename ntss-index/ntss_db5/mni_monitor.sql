@@ -1,0 +1,10 @@
+﻿﻿DROP INDEX IF EXISTS idx_mni_monitor_02;
+CREATE INDEX idx_mni_monitor_02 ON mni_monitor USING btree (facility_cd,pat_id,ord_no);
+DROP INDEX IF EXISTS idx_mni_monitor_05;
+CREATE INDEX idx_mni_monitor_05 ON mni_monitor USING btree (data_type);
+DROP INDEX IF EXISTS idx_mni_monitor_06;
+CREATE INDEX idx_mni_monitor_06 ON mni_monitor USING btree (facility_cd, machine_type_cd, machine_serial, occur_date);
+DROP INDEX IF EXISTS idx_mni_monitor_03;
+CREATE INDEX idx_mni_monitor_03 ON mni_monitor USING btree (ord_no);
+DROP INDEX IF EXISTS idx_mni_monitor_04;
+CREATE INDEX idx_mni_monitor_04 ON mni_monitor USING btree (facility_cd,data_type,occur_date);

@@ -1,0 +1,3 @@
+--INSERT INTO "ntss"."log_table_comment" ( "tbl_name", "tbl_comment", "col_name", "col_comment", "json_flg", "keystep", "pk_flg", "delete_flg", "ord_main_hst_ins_flg" )
+--VALUES
+--	( 'ord_main', '治療情報', 'bvms_path', 'BVMSファイルのパス', '1', '0', '0', NULL, '0' );

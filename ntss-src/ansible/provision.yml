@@ -1,0 +1,14 @@
+---
+- hosts: app
+  become: yes
+  tasks:
+    - name: Install Java 1.8
+      yum: name=java-1.8.0-openjdk-devel state=present
+    - name: Install tomcat8
+      yum: name=tomcat8 state=present
+
+#  - debug:
+#    msg: "System {{ inventory_hostname }} has uuid {{ ansible_product_uuid }}"
+#  roles:
+#    - { role: deploy, app_name: ntss-m-notice, active_profile: "{{ active_profile }}"}
+

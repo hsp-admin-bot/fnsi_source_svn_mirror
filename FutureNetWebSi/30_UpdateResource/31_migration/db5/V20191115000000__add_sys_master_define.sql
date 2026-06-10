@@ -1,0 +1,32 @@
+insert into 
+    sys_master_define
+    (
+    master_physical_name,
+    master_name,
+    disp_class,
+    edit_level,
+    mode,
+    allow_sort,
+    allow_add_record,
+    disp_order,
+    column_info,
+    combo_data,
+    reference_combo_def,
+    reg_date,up_date
+    )
+values
+    (
+        'mst_insurance',
+        '保険マスタ',
+        '2',
+        '1',
+        '1',
+        '1',
+        '1',
+        '2500',
+        '{"fields":[{"type":"number","alias":"code","title":"主キー","hidden":"true","physical_name":"insu_cd"},{"type":"string","alias":"name","title":"保険名","validation":{"required":"true"},"physical_name":"name"},{"type":"string","alias":"insu_name","title":"保険者名","physical_name":"insu_name"},{"type":"string","alias":"insu_name_short","title":"保険略称","validation":{"maxlength":2},"physical_name":"insu_name_short"},{"type":"combo1","alias":"insu_type","title":"保険区分","physical_name":"insu_type"},{"type":"number","alias":"futan_g","title":"負担率（外来）","validation":{"max":100,"min":0,"required":"true","maxlength":null},"physical_name":"futan_g"},{"type":"number","alias":"futan_n","title":"負担率（入院）","validation":{"max":100,"min":0,"required":"true","maxlength":null},"physical_name":"futan_n"},{"type":"del","title":"削除","physical_name":"is_del"},{"type":"disp","title":"削除","physical_name":"is_disp"}]}',
+        '{"combos":[{"values":[{"text":"保険","value":"0"},{"text":"公費","value":"1"}],"physical_name":"insu_type"}]}',
+		null,
+        now(),
+        now()
+);

@@ -1,0 +1,26 @@
+version: '2'
+services:
+    ntss-postgresql:
+        image: postgres:15.2
+        environment:
+          HTTP_PROXY: http://192.168.102.66:8080
+          HTTPS_PROXY: http://192.168.102.66:8080
+          TZ: "Asia/Tokyo"
+        ports:
+            - 5432:5432
+        volumes:
+            - ./init:/docker-entrypoint-initdb.d
+        environment:
+           - POSTGRES_PASSWORD=password
+    ntss-test-db:
+        image: postgres:15.2
+        environment:
+          HTTP_PROXY: http://192.168.102.66:8080
+          HTTPS_PROXY: http://192.168.102.66:8080
+          TZ: "Asia/Tokyo"
+        ports:
+            - 5433:5432
+        volumes:
+            - ./init_test:/docker-entrypoint-initdb.d
+        environment:
+           - POSTGRES_PASSWORD=password

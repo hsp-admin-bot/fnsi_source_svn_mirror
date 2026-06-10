@@ -1,0 +1,1 @@
+UPDATE ntss.sys_facility_setting SET function_name='患者情報' WHERE facility_setting_no='1049';

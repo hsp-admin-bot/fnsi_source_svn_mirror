@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS tg_sync_mst_facility ON mst_facility ;

@@ -1,0 +1,30 @@
+{
+  "name": "ntss",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NTSS",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "doc:lint": "textlint ./docs/**/*.md"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "textlint": "11.2.5",
+    "textlint-rule-no-mix-dearu-desumasu": "4.0.0",
+    "textlint-rule-preset-jtf-style": "2.3.3",
+    "textlint-rule-spellcheck-tech-word": "5.0.0"
+  },
+  "overrides": {
+    "lodash": "4.17.21",
+    "js-yaml": "3.14.2",
+    "minimatch": "3.1.4",
+    "minimist": "1.2.6",
+    "ajv": "6.12.3",
+    "semver": "5.7.2",
+    "brace-expansion": "1.1.12",
+    "async": "2.6.4"
+  }
+}

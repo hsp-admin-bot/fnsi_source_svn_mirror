@@ -1,0 +1,14 @@
+[[get-mst-report]]
+=== 帳票マスタ取得
+
+==== Request
+include::{snippets}/report/mst_report/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/report/mst_report/get/ok/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/report/mst_report/get/ok/path-parameters.adoc[]
+
+==== Response Fields
+include::{snippets}/report/mst_report/get/ok/response-fields.adoc[]

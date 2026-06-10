@@ -1,0 +1,14 @@
+[[register-notification-message]]
+=== 通知メッセージ登録
+
+==== Request
+include::{snippets}/notification_message/post/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/notification_message/post/ok/http-response.adoc[]
+
+==== Response(失敗:必須項目チェックエラー)
+include::{snippets}/notification_message/post/required-be-empty/http-response.adoc[]
+
+==== Request Fields
+include::{snippets}/notification_message/post/ok/request-fields.adoc[]

@@ -1,0 +1,14 @@
+[[get-staff-facility]]
+=== 担当施設取得
+
+==== Request
+include::{snippets}/facilities/staff_facility/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/facilities/staff_facility/get/ok/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/facilities/staff_facility/get/ok/path-parameters.adoc[]
+
+==== Response Fields
+include::{snippets}/facilities/staff_facility/get/ok/response-fields.adoc[]

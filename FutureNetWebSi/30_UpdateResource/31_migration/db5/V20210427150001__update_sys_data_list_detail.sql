@@ -1,0 +1,33 @@
+UPDATE ntss.sys_data_list_detail
+	SET function_display_sql='select mainte_layout_cd as id, layout_name as name from mst_mainte_layout where facility_cd = @facilityCd AND layout_class = ''1'' AND is_del = ''0'' ',master_display_sql='select mainte_layout_cd as id, layout_name as name from mst_mainte_layout where facility_cd = @facilityCd AND layout_class = ''1'' AND is_del = ''0'' '
+	WHERE data_list_detail_cd=1350;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_sql='select mainte_layout_cd as id, layout_name as name from mst_mainte_layout where facility_cd = @facilityCd AND layout_class = ''1'' AND is_del = ''0'' ',master_display_sql='select mainte_layout_cd as id, layout_name as name from mst_mainte_layout where facility_cd = @facilityCd AND layout_class = ''1'' AND is_del = ''0'' '
+	WHERE data_list_detail_cd=1390;
+UPDATE ntss.sys_data_list_detail
+	SET master_display_name='項目1'
+	WHERE data_list_detail_cd=1395;
+UPDATE ntss.sys_data_list_detail
+	SET master_display_name='項目2'
+	WHERE data_list_detail_cd=1396;
+UPDATE ntss.sys_data_list_detail
+	SET master_display_name='項目3'
+	WHERE data_list_detail_cd=1397;
+UPDATE ntss.sys_data_list_detail
+	SET master_display_name='実施者'
+	WHERE data_list_detail_cd=1398;
+UPDATE ntss.sys_data_list_detail
+	SET master_display_name='点検結果'
+	WHERE data_list_detail_cd=1400;
+UPDATE ntss.sys_data_list_detail
+	SET master_display_name='点検記録番号'
+	WHERE data_list_detail_cd=1401;
+UPDATE ntss.sys_data_list_detail
+	SET master_display_name='点検コメント'
+	WHERE data_list_detail_cd=1402;
+UPDATE ntss.sys_data_list_detail
+	SET master_display_name='補足コメント'
+	WHERE data_list_detail_cd=1403;
+UPDATE ntss.sys_data_list_detail
+	SET master_display_name='確認者'
+	WHERE data_list_detail_cd=1399;

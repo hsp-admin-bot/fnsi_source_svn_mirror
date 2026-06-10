@@ -1,0 +1,572 @@
+{
+    "facility_cd": "999999",
+    "serial_no": "1",
+    "tmpDirPath": "/home/ntss/if_edge/tmp",
+    "urlRoot": "https://dev-dline.nksfn.com/ntss-coop-api/",
+    "alive_schedule_interval_time": "900",
+    "receive": {
+        "watch": [
+            {
+                "datatype": "ini_dial",
+                "protocol": "socket",
+                "socket-type": "fujitsu",
+                "port": "9999",
+                "ope_cd": "800001"
+            },
+            {
+                "datatype": "profile",
+                "protocol": "file",
+                "file-type": "data",
+                "path-type": "share",
+                "polling-time": 500,
+                "watch": "/mnt/dia_rep/test/watch",
+                "data": "/mnt/dia_rep/test/data",
+                "ope_cd": "800003"
+            },
+            {
+                "datatype": "exam_rst",
+                "protocol": "tshsocket",
+                "socket-type": "NEC_TSHPlus",
+                "port": "9997",
+                "ope_cd": "800005"
+            },
+            {
+                "datatype": "shot_ord",
+                "protocol": "socket",
+                "socket-type": "fujitsu",
+                "port": "9996",
+                "ope_cd": "800006"
+            },
+            {
+                "datatype": "pre_ord",
+                "protocol": "socket",
+                "socket-type": "fujitsu",
+                "port": "9995",
+                "ope_cd": "800007"
+            },
+            {
+                "datatype": "staff_mst",
+                "protocol": "socket",
+                "socket-type": "fujitsu",
+                "port": "9994",
+                "ope_cd": "800008"
+            }
+        ],
+        "keepDirRoot": "/home/ntss/if_edge/save/receive"
+    },
+    "tshplus_telegram_format": [
+        {
+            "protocol": "tshsocket",
+            "socket-type": "NEC_TSHPlus",
+            "description": "NEC標準連携TSHPlus Socket通信データフォーマット",
+            "data_max_length": 15936,
+            "header_length": 64,
+            "format": [
+                {
+                    "name": "TelegramId",
+                    "length": 2,
+                    "value": "SM"
+                },
+                {
+                    "name": "LogMode",
+                    "length": 1,
+                    "value": "0"
+                },
+                {
+                    "name": "ContentsCode",
+                    "length": 2,
+                    "value": "SS"
+                },
+                {
+                    "name": "Date",
+                    "length": 4,
+                    "value": "0000"
+                },
+                {
+                    "name": "Time",
+                    "length": 6,
+                    "value": "000000"
+                },
+                {
+                    "name": "ToApId",
+                    "length": 6,
+                    "value": "RECORD"
+                },
+                {
+                    "name": "HostName",
+                    "length": 8,
+                    "value": "NEC     "
+                },
+                {
+                    "name": "FromApId",
+                    "length": 6,
+                    "value": "IFEdge"
+                },
+                {
+                    "name": "DataCounter",
+                    "length": 6,
+                    "value": "000000"
+                },
+                {
+                    "name": "TelegramLength",
+                    "length": 6,
+                    "value": "000000"
+                },
+                {
+                    "name": "ContinuationFlag",
+                    "length": 1,
+                    "value": "0"
+                },
+                {
+                    "name": "DataSeq",
+                    "length": 10,
+                    "value": "0000000000"
+                },
+                {
+                    "name": "Filler",
+                    "length": 6,
+                    "value": "      "
+                },
+                {
+                    "name": "Data",
+                    "length": 0,
+                    "value": ""
+                }
+            ]
+        },
+        {
+            "protocol": "tshsocket",
+            "socket-type": "NEC_TSHMedicine",
+            "description": "NECMedicine連携TSHPlus Socket通信データフォーマット",
+            "data_max_length": 15936,
+            "header_length": 64,
+            "format": [
+                {
+                    "name": "TelegramId",
+                    "length": 2,
+                    "value": "SM"
+                },
+                {
+                    "name": "LogMode",
+                    "length": 1,
+                    "value": "0"
+                },
+                {
+                    "name": "ContentsCode",
+                    "length": 2,
+                    "value": "SS"
+                },
+                {
+                    "name": "Date",
+                    "length": 4,
+                    "value": "0000"
+                },
+                {
+                    "name": "Time",
+                    "length": 6,
+                    "value": "000000"
+                },
+                {
+                    "name": "HostName",
+                    "length": 8,
+                    "value": "NEC     "
+                },
+                {
+                    "name": "DataSeqSm",
+                    "length": 10,
+                    "value": "0000000000"
+                },
+                {
+                    "name": "DataSeqSd",
+                    "length": 10,
+                    "value": "0000000000"
+                },
+                {
+                    "name": "DataCounter",
+                    "length": 3,
+                    "value": "000"
+                },
+                {
+                    "name": "TotalCounter",
+                    "length": 3,
+                    "value": "000"
+                },
+                {
+                    "name": "TelegramLength",
+                    "length": 6,
+                    "value": "000000"
+                },
+                {
+                    "name": "ContinuationFlag",
+                    "length": 1,
+                    "value": "0"
+                },
+                {
+                    "name": "Filler",
+                    "length": 8,
+                    "value": "        "
+                },
+                {
+                    "name": "Data",
+                    "length": 0,
+                    "value": ""
+                }
+            ]
+        },
+        {
+            "protocol": "tshsocket",
+            "socket-type": "TOSHIBA_TSHPlus",
+            "description": "東芝標準連携TSHPlus Socket通信データフォーマット",
+            "data_max_length": 15936,
+            "header_length": 66,
+            "format": [
+                {
+                    "name": "STX",
+                    "length": 1,
+                    "value": "0x02"
+                },
+                {
+                    "name": "TelegramId",
+                    "length": 2,
+                    "value": "SM"
+                },
+                {
+                    "name": "LogMode",
+                    "length": 1,
+                    "value": "0"
+                },
+                {
+                    "name": "ContentsCode",
+                    "length": 2,
+                    "value": "SS"
+                },
+                {
+                    "name": "Date",
+                    "length": 4,
+                    "value": "0000"
+                },
+                {
+                    "name": "Time",
+                    "length": 6,
+                    "value": "000000"
+                },
+                {
+                    "name": "ToApId",
+                    "length": 6,
+                    "value": "RECORD"
+                },
+                {
+                    "name": "HostName",
+                    "length": 8,
+                    "value": "TOSHIBA "
+                },
+                {
+                    "name": "FromApId",
+                    "length": 6,
+                    "value": "IFEdge"
+                },
+                {
+                    "name": "DataCounter",
+                    "length": 6,
+                    "value": "000000"
+                },
+                {
+                    "name": "TelegramLength",
+                    "length": 6,
+                    "value": "000000"
+                },
+                {
+                    "name": "ContinuationFlag",
+                    "length": 1,
+                    "value": "0"
+                },
+                {
+                    "name": "DataSeq",
+                    "length": 10,
+                    "value": "0000000000"
+                },
+                {
+                    "name": "Filler",
+                    "length": 6,
+                    "value": "      "
+                },
+                {
+                    "name": "Data",
+                    "length": 0,
+                    "value": ""
+                },
+                {
+                    "name": "ETX",
+                    "length": 1,
+                    "value": "0x03"
+                }
+            ]
+        }
+    ],
+    "response_telegram": [
+        {
+            "description": "電子カルテの種類：富士通",
+            "socket-type": "fujitsu",
+            "type_name": "ResponseType",
+            "type_name_success": "OK",
+            "type_name_failure": "N2",
+            "length_name": "TelegramLength",
+            "retry_value": "N1",
+            "skip_value": "N2",
+            "abnormal_value": ["NG","N3","N4"],
+            "header_length_included": false,
+            "response_success": {
+                "header_length": 65,
+                "header": [
+                    {
+                        "name": "TlegramType",
+                        "length": 2,
+                        "value": ""
+                    },
+                    {
+                        "name": "RecordContinuationInstructions",
+                        "length": 1,
+                        "value": ""
+                    },
+                    {
+                        "name": "DestinationSystemCode",
+                        "length": 2,
+                        "value": "XX"
+                    },
+                    {
+                        "name": "SourceSystemCode",
+                        "length": 2,
+                        "value": "VN"
+                    },
+                    {
+                        "name": "DATE",
+                        "length": 8,
+                        "value": "$DATE",
+                        "format": "YYYYMMDD"
+                    },
+                    {
+                        "name": "TIME",
+                        "length": 6,
+                        "value": "$DATE",
+                        "format": "HH24MISS"
+                    },
+                    {
+                        "name": "TerminalName",
+                        "length": 8,
+                        "value": "VOSERVER"
+                    },
+                    {
+                        "name": "UserID",
+                        "length": 8,
+                        "value": "00000000"
+                    },
+                    {
+                        "name": "TreatmentDivision",
+                        "length": 2,
+                        "value": ""
+                    },
+                    {
+                        "name": "ResponseType",
+                        "length": 2,
+                        "value": "$TYPENAME"
+                    },
+                    {
+                        "name": "TelegramLength",
+                        "length": 6,
+                        "value": "000065"
+                    },
+                    {
+                        "name": "ErrorCode",
+                        "length": 5,
+                        "value": ""
+                    },
+                    {
+                        "name": "Preliminary",
+                        "length": 12,
+                        "value": ""
+                    },
+                    {
+                        "name": "Terminal",
+                        "length": 1,
+                        "value": "\r"
+                    }
+                ]
+            }
+        },
+        {
+            "description": "電子カルテの種類：NEC",
+            "socket-type": "nec",
+            "type_name": "Result",
+            "type_name_success": "000000",
+            "type_name_failure": "999999",
+            "length_name": "DataLength",
+            "retry_value": "??????",
+            "abnormal_value": ["999999"],
+            "header_length_included": true,
+            "response_success": {
+                "header_length": 32,
+                "header": [
+                    {
+                        "name": "DestinationID",
+                        "length": 6,
+                        "value": "      "
+                    },
+                    {
+                        "name": "SourceID",
+                        "length": 6,
+                        "value": "      "
+                    },
+                    {
+                        "name": "HandlingCommands",
+                        "length": 8,
+                        "value": "        "
+                    },
+                    {
+                        "name": "Result",
+                        "length": 6,
+                        "value": "$TYPENAME"
+                    },
+                    {
+                        "name": "DataLength",
+                        "length": 6,
+                        "value": "000000"
+                    }
+                ]
+            }
+        },
+        {
+            "description": "電子カルテの種類：パナソニック",
+            "socket-type": "pana",
+            "type_name": "ResponseCode",
+            "retry_value": "0x15",
+            "abnormal_value": ["0x10"],
+            "response_success": {
+                "header_length": 5,
+                "header": [
+                    {
+                        "name": "ResponseCode",
+                        "length": 1,
+                        "value": "0x10"
+                    },
+                    {
+                        "name": "Identifier",
+                        "length": 3,
+                        "value": "SDC"
+                    },
+                    {
+                        "name": "EOT",
+                        "length": 1,
+                        "value": "0x04"
+                    }
+                ]
+            },
+            "response_failure": {
+                "header_length": 10,
+                "header": [
+                    {
+                        "name": "ResponseCode",
+                        "length": 1,
+                        "value": "0x10"
+                    },
+                    {
+                        "name": "Identifier",
+                        "length": 3,
+                        "value": "SER"
+                    },
+                    {
+                        "name": "ErrorCode",
+                        "length": 5,
+                        "value": "99999"
+                    },
+                    {
+                        "name": "EOT",
+                        "length": 1,
+                        "value": "0x04"
+                    }
+                ]
+            }
+        },
+        {
+            "description": "電子カルテの種類：NEC標準連携TSHPlus",
+            "socket-type": "NEC_TSHPlus",
+            "response_success": {
+                "header_length": 6,
+                "header": [
+                    {
+                        "name": "ResponseInfo",
+                        "length": 6,
+                        "value": "nullpo"
+                    }
+                ]
+            }
+        },
+        {
+            "description": "電子カルテの種類：NECMedicine連携TSHPlus",
+            "socket-type": "NEC_TSHMedicine",
+            "response_success": {
+                "header_length": 6,
+                "header": [
+                    {
+                        "name": "ResponseInfo",
+                        "length": 6,
+                        "value": "nullpo"
+                    }
+                ]
+            }
+        },
+        {
+            "description": "電子カルテの種類：東芝標準連携TSHPlus",
+            "socket-type": "TOSHIBA_TSHPlus",
+            "response_success": {
+                "header_length": 6,
+                "header": [
+                    {
+                        "name": "ResponseInfo",
+                        "length": 6,
+                        "value": "nullpo"
+                    }
+                ]
+            }
+        },
+        {
+            "description": "電子カルテの種類：CSI",
+            "socket-type": "csi",
+            "type_name": "ErrorCode",
+            "type_name_success": "OK",
+            "type_name_failure": "NG",
+            "length_name": "DataLength",
+            "abnormal_value": ["NG"],
+            "response_success": {
+                "header_length": 8,
+                "header": [
+                    {
+                        "name": "DataLength",
+                        "length": 6,
+                        "value": "000000"
+                    },
+                    {
+                        "name": "ErrorCode",
+                        "length": 2,
+                        "value": "$TYPENAME"
+                    }
+                ]
+            }
+        }
+    ],
+    "send": {
+        "keepDirRoot": "/home/ntss/if_edge/save/send"
+    },
+    "timer": [
+         {"datatype" : "profile", "ope_cd" : "031001", "send_time" : ["05:00","16:00"]}
+    ],
+    "check_connect_items": {
+        "redelivery": false,
+        "socket": [],
+        "tshsocket": [],
+        "headsocket": [],
+        "filesocket": [],
+        "file": [],
+        "ftp": [],
+        "soap": []
+    }
+}

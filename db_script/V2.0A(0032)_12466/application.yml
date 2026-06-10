@@ -1,0 +1,39 @@
+thread:
+  size: 5
+program:
+  update:
+    size: 300
+  limit:
+    size: 10000
+
+
+spring:
+  main:
+    allow-circular-references: true
+  datasource:
+    default:
+      jdbc-url: jdbc:postgresql://172.30.15.46:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
+#      jdbc-url: jdbc:postgresql://127.0.0.1:5432/ntss_db5?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk5
+      password: nkk5
+    personal:
+      jdbc-url: jdbc:postgresql://172.30.15.46:5432/ntss_db6?currentSchema=ntss&stringtype=unspecified
+#      jdbc-url: jdbc:postgresql://127.0.0.1:5432/ntss_db6?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk6
+      password: nkk6
+    auth:
+      jdbc-url: jdbc:postgresql://172.30.15.46:5432/ntss_db4?currentSchema=ntss&stringtype=unspecified
+#      jdbc-url: jdbc:postgresql://127.0.0.1:5432/ntss_db4?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk4
+      password: nkk4
+
+server:
+  port: 8091
+  servlet:
+    contextPath: /ntss-web-api
+
+
+

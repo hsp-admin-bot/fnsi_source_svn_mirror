@@ -1,0 +1,1 @@
+UPDATE sys_data_set SET  "report_class" = '{"classes": [1, 2, 3, 9]}' WHERE "sql_cd" = 4;

@@ -1,0 +1,365 @@
+/*********************/
+/* 1.ヘッダー         */
+/*********************/
+.common-header-item {
+  height: 6.2em;
+  width: 100%;
+  background-color: #4189ac;
+}
+
+/*************************/
+/* 5.メニューバー          */
+/*************************/
+.ntss-footer {
+  background-color: #333333;
+  text-align: center;
+  border-top: solid 1px #cccccc;;
+  z-index: 4;
+}
+
+.ntss-footer-item-label {
+  font-size: 0.1em;
+  vertical-align: text-top;
+}
+
+.ntss-footer-item {
+  width: 25%;
+}
+
+.ntss-footer-item-row {
+  background-color: inherit;
+  height: 100%;
+}
+
+/* テーマが青の場合のスタイル */
+.theme-icon {
+  color: #ffffff;
+}
+
+/* フッターメニューのアイコンのスタイル定義 */
+.ntss-footer-icon {
+  vertical-align: middle;
+  height: 40px;
+  width: 40px;
+}
+
+
+/******************************************/
+/* 6.パンくずリストに関するスタイル            */
+/******************************************/
+.bread-crumbs {
+  background-color: #050505;
+  font-size: 130%;
+}
+
+/* パンくずリストエリアのスタイル定義 */
+.breadcrumb-area {
+  height: 35px;
+  line-height: 27px;
+  margin-left: 5px;
+  margin-right: 5px;
+  font-size: 1em;
+  white-space: nowrap;
+  overflow-y: hidden;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+  color: #cccccc;
+}
+
+/* パンくずリストのスタイル定義 */
+.breadcrumb-content {
+  padding-left: 0;
+  margin-left: 0;
+  margin-top: 3px;
+  overflow-x: auto;
+}
+
+.breadcrumb-content li {
+  position: relative;
+  display: inline-block;
+  list-style: none;
+  margin-right: 15px;
+}
+
+.breadcrumb-content li:after {
+  /* 三角の部分 */
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: -10px;
+  width: 20px;
+  height: 20px;
+  transform: rotate(45deg);
+  background-color: #999999;
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 75%,transparent 50%,rgba(0,0,0,.1) 100%);
+  border-radius: 0 0px 0 25px;
+}
+
+.breadcrumb-content li:last-child:after {
+  content: "";
+}
+
+.breadcrumb-content li a {
+  text-decoration: none;
+  padding: 0 6px 0 7px;
+  display: inline-block;
+  height: 28px;
+  /* フォント・背景色 */
+  color: #fafafa;
+  background-color: #999999;
+  background-image: linear-gradient(rgba(255,255,255,.3) 0%,transparent 50%,transparent 50%,rgba(0,0,0,.1) 100%);
+}
+
+.breadcrumb-content li a:hover {
+  text-decoration: underline;
+}
+/*add FNSI-画面部品デザイン じょはく start*/
+.fab-font-color {
+  color: #fafafa;
+}
+.color-border {
+  border: 1px solid white;
+}
+/*.header-item {*/
+/*  background-color: black;*/
+/*}*/
+/*add FNSI-画面部品デザイン じょはく end*/
+
+:root {
+    --body-background-color: #000000;
+    --header-item-background-color: #333333;
+    --event-reg-time-header-sticky-background-color: #555555;
+    --col-sticky-background-color: #151515;
+    --condition-search-area-background-color: #fafafa;
+    --filterLabel-color: #cccccc;
+    --search-input-background-color: #fafafa;
+    --main-background-color: #050505;
+    --ntss-header-color: #fafafa;
+    --popover-area-background-color: #444444;
+
+    --ntss-list-background-color: #050505;
+    --ntss-list-border-color: #333333;
+    --ntss-list-header-background-color: #555555;
+    --ntss-list-body-background-color: #333333;
+    /* add FutreNetWeb+SI課題管理No6855 趙 start */
+    --ntss-list-body-pat-serch-color: #003300;
+    /* add FutreNetWeb+SI課題管理No6855 趙 end */
+    --ntss-list-body-color: #cccccc;
+    --ntss-list-item-background-color: #151515;
+    --ntss-list-content-2nd-background-color: #252525;
+    --ntss-list-content-3nd-background-color: #292929;
+    --ntss-list-content-rst-background-color: #003300;
+
+    --ntss-footer-background-color: #333333;
+    --ntss-footer-border-color: #333333;
+
+    --bread-crumbs-background-color: #050505;
+    --breadcrumb-area-color: #cccccc;
+
+    --emergency-background-color: #aa1c03;
+    --emergency-color: #cccccc;
+    --emergency-border-color: #333333;
+    --emergency-checked-border-color: #fafafa;
+
+    --preventive-background-color: #c4b104;
+    --preventive-color: #cccccc;
+    --preventive-border-color: #333333;
+    --preventive-checked-border-color: #ffffff;
+
+    --com-problem-background-color: #808080;
+    --com-problem-color: #cccccc;
+    --com-problem-border-color: #333333;
+    --com-problem-checked-border-color: #ffffff;
+
+    --all-label-background-color: #b0c4de;
+    --all-label-color: #fafafa;
+    --all-label-border-color: #333333;
+    --all-label-checked-border-color: #ffffff;
+
+    --process-state-1-color: #cccccc;
+
+    --self-measure-result-1-color: #cccccc;
+
+    --row-1-color: #fafafa;
+    --row-2-color: #fafafa;
+    --list-chart-icon-color: #fafafa;
+
+    --highcharts-title-fill: #fafafa;
+    --highcharts-legend-item-fill: #fafafa;
+
+    --machine-record-detail-base-border-color: #333333;
+    --machine-record-detail-base-color: #fafafa;
+    --machine-record-detail-background-color: #000000;
+
+    --table-header-check-all-background-color: #555555;
+    --table-header-check-all-border-color: #333333;
+
+    --denial-btn-area-background-color: #000000;
+    --registration-btn-area-background-color: #000000;
+
+    --monitoring-detail-info-label-color: #cccccc;
+    --ntss-monitoring-basepane-background-color: #151515;
+    --ntss-monitoring-basepane-box-shadow-color: #15151580;
+    --ntss-monitoring-basepane-info-background-color: #c4b104;
+    --ntss-monitoring-basepane-info-text-color: #c4b104;
+    --ntss-monitoring-basepane-alert-background-color: #aa1c03;
+    --ntss-monitoring-basepane-alert-text-color: #aa1c03;
+    --ntss-monitoring-basepane-text-color: #cccccc;
+    --ntss-monitoring-legend-style-color: #cccccc;
+    --ntss-monitoring-legend-hidden-style-color: #555555;
+    --ntss-monitoring-legend-hover-style-color: #fafafa;
+    --ntss-monitoring-select-machine-list-border-color: #fafafa;
+
+    --header-pat-info-label-color: #cccccc;
+
+    --highcharts-axis-line-stroke: #333333;
+    --highcharts-grid-line-stroke: #333333;
+    --highcharts-background-fill: #151515;
+    --ntss-monitoring-basepane-info-fill: #c4b104;
+    --ntss-monitoring-basepane-alert-fill: #aa1c03;
+
+    --highcharts-axis-labels-color: #333333;
+    --highcharts-axis-labels-fill: #333333;
+    --highcharts-plot-lines-0-stroke: #333333;
+    --highcharts-plot-border-stroke: #333333;
+
+    --pat-viewer-title-border-color: #333333;
+    --pat-viewer-title-color: #fafafa;
+    --pat-viewer-title-background-color: #555555;
+    --pat-viewer-day-saturday-td-background-color:#0000b4;
+    --pat-viewer-day-sunday-td-background-color: #b40000;
+    --pat-viewer-td-border-color: #333333;
+    --pat-viewer-td-color: #cccccc;
+    --pat-viewer-chart-legend-color: #cccccc;
+    --pat-viewer-ind-cond-info-disabled: #555555;
+    --pat-viewer-same-medicine-cell-text-color: #FFbb00;         /* 同日同薬時の文字色 ※白テーマ時：#FF9900、黒テーマ時：#FFbb00 */
+    --pat-viewer-alert-cell-background-color: #FF6666;           /* 警告セルの背景色 */
+    --pat-viewer-alert-cell-text-color: #050505;                 /* 警告セルの文字色 ※テーマ関係なく、白テーマのbase-colorを使用する */
+
+    --obs-rec-font-color: #cccccc;
+    --send-cond-font-color: #cccccc;
+    --send-cond-font-color-warn: #c4b104;
+    --send-cond-font-color-alert: #aa1c03;
+    --send-cond-basepane-background-color: #151515;
+    --mst-weight-font-color: #cccccc;
+    --treatment-status-font-color: #cccccc;
+
+    --ntss-base-background-color: #050505;
+    --ntss-base-color: #cccccc;
+    --ntss-header-background-color: #555555;
+    --ntss-header-background-disabled-color: #808080;
+    /*add FNSI-画面部品デザイン じょはく start*/
+    --grid-background-color: #050505;
+    /*add FNSI-画面部品デザイン じょはく end*/
+    --ntss-header-color: #fafafa;
+    --ntss-btn-ok-background-color: #0000ff;
+    --ntss-btn-ok-color: #fafafa;
+    --ntss-btn-cancel-background-color: #add8e6;
+    --ntss-btn-cancel-color: #050505;
+    --ntss-border-color: #333333;
+    --ntss-saturday-color: #87ceeb;
+    --ntss-saturday-color-n: #87ceeb;
+    --ntss-sunday-color: #ff6666;
+    --ntss-holiday-color: #ff6666;
+
+    --ntss-calendar-header-background-color: #f0f8ff;
+    --ntss-calendar-single-border-color: #4189AC;
+    --ntss-calendar-title-label-background-color: #4189AC;
+    --ntss-calendar-title-label-color: #fafafa;
+    --ntss-calendar-button-hover-background-color: #999999;
+    --ntss-calendar-button-is-disabled-background-color: #005da9;
+    --ntss-calendar-button-goto-today-border-color: #808080;
+    --ntss-calendar-button-goto-today-color: #666666;
+    --ntss-calendar-button-goto-today-background-color: #f5f5f5;
+    --ntss-calendar-button-footer-border-color: #808080;
+
+    --treatment-record-text-color: #cccccc;
+    --treatment-record-text-color-disabled: #707070;
+	/*add FNSI-画面部品デザイン じょはく start*/
+    --treatment-record-input-color: #050505;
+    --treatment-record-input-background-color: #fafafa;
+	/*add FNSI-画面部品デザイン じょはく end*/
+    --treatment-record-select-border-color: #ccc;
+    --treatment-record-dialysis-tr: #336633;
+    --treatment-record-medicine-bottle-invert: 100%;
+    --treatment-record-complaint-per-page-border: #06f;
+    --treatment-record-complaint-selected-color: #ffffff;
+    --treatment-record-complaint-selected-background-color: #0090ff;
+
+    --status-map-input-color: #fafafa;
+    --status-map-input-background-color: #050505;
+    --status-map-input-select-border-color: #ccc;
+    --status-map-bed-state-color-next-patient: #FFFFFF;
+    --status-map-bed-state-color-send: #42CB92;
+    --status-map-bed-state-color-treat: #2CA06F;
+    --status-map-bed-state-color-treat-end: #557769;
+    --status-map-bed-state-color-treat-unconfirmed:#557769;
+    --status-map-bed-state-color-treat-confirmed:#808080;
+    --status-map-bed-state-communication-error: #FF6699;
+    --status-list-large-display-footer-color: #555555;
+    --status-list-large-display-row-color: #333333;
+
+    --master-maintenance-kgrid-border-color: #333333;
+    --master-maintenance-kgrid-header-background-color: #555555;
+    --master-maintenance-kgrid-body-color: #cccccc;
+    --master-maintenance-kgrid-item-background-color: #151515;
+    --master-maintenance-kgrid-item-hover-background-color: transparent;
+    --master-maintenance-kgrid-item-color: #212529;
+    --master-maintenance-kgrid-selected-color: #cccccc;
+    --master-maintenance-kgrid-selected-background-color: #005da9;
+    /* add 指示受け・指示承認不具合対応 陳 start */
+    --master-maintenance-kgrid-item-a-color: #fafafa;
+    --main-content-area-border-color: #f1f1f1;
+    /* add 指示受け・指示承認不具合対応 陳 end */
+
+    --kendo-input-color: #fafafa;
+    --kendo-input-background-color: #050505;
+
+    --master-maintenance-complaint-per-page-border: #06f;
+    --master-maintenance-complaint-treatment-border: #06f;
+    --master-maintenance-complaint-per-page-background-color: #6495ed;
+    --master-maintenance-complaint-select-border-color: #ccc;
+    --master-maintenance-complaint-dummy-row-background-color: #5a5a5a;
+
+    --personal-setting-select-border-color: #ccc;
+
+    --notification-message-color: #000000;
+    --notification-message-background-color: #e8f9f0;
+    --notification-message-border-color: #d0f2e1;
+
+    --kendo-grid-style-low-class-color: #87ceeb;
+    --kendo-grid-style-high-class-color: #FF6666;
+
+    --ntss-list-content-disable-background-color: #ffffff4d;
+
+    /*チェックリスト未完了色*/
+    --check-list-progress-incomplete: #d00050b3;
+    /*チェックリスト完了色*/
+    --check-list-progress-complete: #ffffff4d;
+
+    --pat-event-text-color: #cccccc;
+    --pat-event-text-color-disabled: #707070;
+
+    /* ボタン部品関連 */
+    --btn1-execute-color: #1a71cc;
+    --btn2-cancel-color: #656a73;
+    --btn3-normal-color: #4291B9;
+    --btn4-alert-color: #ff3366;
+    --btn-common-border-color: #4974a0;
+
+  	--time-input-color: #050505;
+  	--time-input-background-color: #fafafa;
+  	
+    /* 患者カレンダー 治療実績 */
+    --pat-calendar-parent-rst: #003300;
+    --pat-calendar-odd-rst: #001900;
+    --pat-calendar-even-rst: #001100;
+    /* 患者カレンダー 治療実績以外(指示・治療以外のデータ) */
+    --pat-calendar-parent-other: #333333;
+    --pat-calendar-odd-other: #191919;
+    --pat-calendar-even-other: #111111;
+    
+    /* 禁忌・アレルギー、期限切れ、削除済み/削除済み含む、分類不一致 */
+    --ntss-has-prefix-background-color: #ff6666;
+    --ntss-has-prefix-color: #050505;
+}

@@ -1,0 +1,25 @@
+# components
+/src/components/operation-viewer/machines/MachinesMainComponent.vue
+/src/components/operation-viewer/motion-record-details/MotionRecordDetailsMainComponent.vue
+
+/src/components/header-contents/BioMonitoringDetailHeaderItem.vue
+/src/components/header-contents/BioMonitoringListHeaderItem.vue
+/src/components/header-contents/PatientHeaderItem.vue
+/src/components/header-contents/CommonPatientInformationHeaderitem.vue
+/src/components/main-contents/sub-contents
+/src/components/main-contents/BioMonitoringDetailMainItem.vue
+/src/components/main-contents/BioMonitoringListMainItem.vue
+/src/components/pat-viewer
+
+# pages
+/src/views/pat-viewer
+/src/pages/BioMonitoringDetailPage.vue
+/src/pages/BioMonitoringPage.vue
+
+# stores
+/src/stores/modules/pat-viewer
+/src/stores/modules/common
+/src/stores/modules/appItem.js
+/src/stores/modules/listGraph.js
+
+/src/customServiceWorker.js

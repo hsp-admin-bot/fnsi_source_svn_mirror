@@ -1,0 +1,6 @@
+UPDATE 
+	ntss.sys_master_define 
+SET 
+	column_info='{"fields": [{"type": "number", "alias": "code", "title": "薬剤グループコード", "hidden": "true", "editable": "false", "physical_name": "medicine_group_cd"}, {"type": "string", "alias": "name", "title": "薬剤グループ名", "validation": {"required": "true"}, "physical_name": "medicine_group_name"}, {"type": "modal", "title": "グループ情報", "editable": "false", "physical_name": "reg_medicine_info"}, {"type": "json", "title": "グループ情報", "hidden": "true", "editable": "false", "physical_name": "reg_medicine_info"}, {"type": "string", "title": "単位", "physical_name": "medicine_group_unit"}, {"type": "combo1", "title": "週間投与フラグ", "physical_name": "week_flg"}, {"type": "number", "title": "グラフ上限", "physical_name": "graph_upper"}, {"type": "number", "title": "グラフ下限", "physical_name": "graph_lower"}, {"type": "disp", "title": "削除", "physical_name": "is_disp"}]}' 
+WHERE 
+	master_physical_name='mst_medicine_group';

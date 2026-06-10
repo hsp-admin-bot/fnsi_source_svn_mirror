@@ -1,0 +1,21 @@
+{
+  "name": "iot-proxy",
+  "version": "1.0.0",
+  "description": "NTSS MQTT Message Receiver",
+  "main": "index.js",
+  "scripts": {
+    "test": "eslint .",
+    "prebuild": "rm -rf node_modules && npm install --production",
+    "build": "zip -r iot-proxy.zip index.js node_modules"
+  },
+  "author": "fossamagna <m-murakami@esm.co.jp>",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "body-parser": "^1.18.2",
+    "eslint": "^4.10.0",
+    "express": "^4.16.2"
+  },
+  "dependencies": {
+    "request": "^2.83.0"
+  }
+}

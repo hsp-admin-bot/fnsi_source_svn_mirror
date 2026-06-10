@@ -1,0 +1,11 @@
+CREATE USER nkktest4 WITH PASSWORD 'nkktest4';
+CREATE USER nkktest5 WITH PASSWORD 'nkktest5';
+CREATE USER nkktest6 WITH PASSWORD 'nkktest6';
+CREATE DATABASE ntsstest_db4;
+CREATE DATABASE ntsstest_db5;
+CREATE DATABASE ntsstest_db6;
+GRANT ALL PRIVILEGES ON DATABASE ntsstest_db4 TO nkktest4;
+GRANT ALL PRIVILEGES ON DATABASE ntsstest_db5 TO nkktest5;
+GRANT ALL PRIVILEGES ON DATABASE ntsstest_db6 TO nkktest6;
+\c ntsstest_db4;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;

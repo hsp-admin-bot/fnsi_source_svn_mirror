@@ -1,0 +1,44 @@
+/* 余白の定義 */
+@page {
+  margin: 10mm;
+}
+
+body {
+  -webkit-print-color-adjust: exact;
+  position: static;
+}
+
+/* スクロール領域をすべて表示 */
+body,
+div {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+/* フッタメニュー・コマンドボタン等を非表示 */
+.ntss-footer,
+.popover-mask,
+.sidebar-transition,
+.search-button,
+.submenu-footer,
+#grid-footer {
+  display: none !important;
+}
+
+/* 画面分割されている場合は右端の画面のみ表示 */
+.content-container > div:not(:last-child) {
+  display: none;
+}
+.content-container > div:last-child {
+  width: 100% !important;
+}
+
+/* 上記の指定で治療記録の患者ヘッダが非表示になっていたのを解除 */
+.content-container > div.header {
+  display: unset !important;
+}
+
+/* 一覧系のヘッダのsticky属性を外す */
+.ntss-list-header-th-sticky {
+  position: unset !important;
+}

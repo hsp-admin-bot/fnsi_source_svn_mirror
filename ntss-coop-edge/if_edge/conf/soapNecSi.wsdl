@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<wsdl:definitions name="StockQuote"
+    targetNamespace="http://example.com/stockquote.wsdl"
+    xmlns:tns="http://example.com/stockquote.wsdl"
+    xmlns:xsd1="http://example.com/stockquote.xsd"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+    <wsdl:types>
+        <xsd:schema targetNamespace="http://example.com/stockquote.xsd"
+            xmlns:xsd="http://www.w3.org/2000/10/XMLSchema">
+            <xsd:element name="Request">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element minOccurs="0" name="requestData" nillable="true">
+                            <xsd:complexType>
+                                <xsd:sequence>
+                                    <xsd:any minOccurs="0" processContents="lax"/>
+                                </xsd:sequence>
+                            </xsd:complexType>
+                        </xsd:element>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="TradePrice">
+                <xsd:complexType>
+                    <xsd:all>
+                        <xsd:element name="price" type="float"/>
+                    </xsd:all>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="TradePriceSubmit">
+                <xsd:complexType>
+                    <xsd:all>
+                        <xsd:element name="tickerSymbol" type="string"/>
+                        <xsd:element name="price" type="float"/>
+                    </xsd:all>
+                </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="valid" type="boolean"/>
+        </xsd:schema>
+    </wsdl:types>
+    <wsdl:message name="RequestInput">
+        <wsdl:part name="body" element="xsd1:TradePriceRequest"/>
+    </wsdl:message>
+    <wsdl:message name="RequestOutput">
+        <wsdl:part name="body" element="xsd1:TradePrice"/>
+    </wsdl:message>
+    <wsdl:message name="SetTradePriceInput">
+        <wsdl:part name="body" element="xsd1:TradePriceSubmit"/>
+    </wsdl:message>
+    <wsdl:message name="IsValidPriceInput">
+        <wsdl:part name="body" element="xsd1:TradePrice"/>
+    </wsdl:message>
+    <wsdl:message name="IsValidPriceOutput">
+        <wsdl:part name="body" element="xsd1:valid"/>
+    </wsdl:message>
+    <wsdl:portType name="StockQuotePortType">
+        <wsdl:operation name="Request">
+            <wsdl:input message="tns:RequestInput"/>
+            <wsdl:output message="tns:RequestOutput"/>
+        </wsdl:operation>
+    </wsdl:portType>
+    <wsdl:binding name="StockQuoteSoapBinding" type="tns:StockQuotePortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <wsdl:operation name="Request">
+            <soap:operation soapAction="http://example.com/Request"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+    </wsdl:binding>
+    <wsdl:service name="StockQuoteService">
+        <wsdl:port name="StockQuotePort" binding="tns:StockQuoteSoapBinding">
+            <!-- SOAP‚ÌAddress‚Íntss_if.json‚É‚ðÄÝ’è‚·‚é -->
+            <soap:address location="%%soapAddressSetting%%"/>
+        </wsdl:port>
+    </wsdl:service>
+</wsdl:definitions>

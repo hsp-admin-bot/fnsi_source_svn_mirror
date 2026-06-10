@@ -1,0 +1,1 @@
+ALTER TABLE mst_coop_distribute DROP COLUMN crud;

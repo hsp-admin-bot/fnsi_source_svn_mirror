@@ -1,0 +1,20 @@
+[[alter-font-size]]
+=== 文字サイズ変更
+
+==== Request
+include::{snippets}/user_settings/font_size/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/user_settings/font_size/ok/http-response.adoc[]
+
+==== Response(失敗：文字サイズ指定不正)
+include::{snippets}/user_settings/font_size/bad-request1/http-response.adoc[]
+
+==== Response(失敗：該当ユーザーIDなし)
+include::{snippets}/user_settings/font_size/bad-request2/http-response.adoc[]
+
+==== Request Fields
+include::{snippets}/user_settings/font_size/ok/request-fields.adoc[]
+
+==== Response Fields
+include::{snippets}/user_settings/font_size/bad-request1/response-fields.adoc[]

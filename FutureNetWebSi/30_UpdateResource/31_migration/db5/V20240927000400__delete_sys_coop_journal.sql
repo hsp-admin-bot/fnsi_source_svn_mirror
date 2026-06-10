@@ -1,0 +1,1 @@
+DELETE FROM "ntss"."sys_coop_journal" WHERE ctl_no = 2383 AND facility_cd = 'F_hosp';

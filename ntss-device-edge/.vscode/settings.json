@@ -1,0 +1,22 @@
+{
+    "files.associations": {
+        "*.pu": "diagram",
+        "alive_moni.h": "c",
+        "ntss_alive_moni.h": "c",
+        "unistd.h": "c",
+        "libio.h": "c",
+        "ntss_logger.h": "c",
+        "config_reader.h": "c",
+        "typeinfo": "c",
+        "master_controller.h": "c",
+        "system_error": "cpp",
+        "type_traits": "cpp",
+        "*.tcc": "c",
+        "forward_list": "c",
+        "list": "c",
+        "array": "c",
+        "hash_map": "c",
+        "hash_set": "c",
+        "string.h": "c"
+    }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "custom-file-watch",
+  "version": "1.0.0",
+  "description": "custom watch",
+  "main": "custom-file-watch.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "watch"
+  ],
+  "node-red": {
+    "nodes": {
+      "custom-file-watch": "custom-file-watch.js"
+    }
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "chokidar": "^3.1.1",
+    "fs.notify": "0.0.4"
+  }
+}

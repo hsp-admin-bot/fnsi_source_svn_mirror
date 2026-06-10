@@ -1,0 +1,2 @@
+truncate table LOG_JSON_COMMENT;
+INSERT INTO LOG_JSON_COMMENT(TBL_NAME, COL_NAME, JSON_KEY_NAME, JSON_KEY_COMMENT) VALUES('mst_user_authentication', 'user_password_history', 'password', '暗号化したパスワード履歴');

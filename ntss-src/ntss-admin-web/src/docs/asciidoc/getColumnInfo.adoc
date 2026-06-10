@@ -1,0 +1,14 @@
+[[get-column-info]]
+=== カラム定義情報データ取得
+
+==== Request
+include::{snippets}/master_maintenance/column_info/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/master_maintenance/column_info/get/ok/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/master_maintenance/column_info/get/ok/path-parameters.adoc[]
+
+==== Response Fields
+include::{snippets}/master_maintenance/column_info/get/ok/response-fields.adoc[]

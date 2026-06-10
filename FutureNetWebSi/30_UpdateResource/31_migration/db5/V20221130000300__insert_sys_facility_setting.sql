@@ -1,0 +1,2 @@
+DELETE from "ntss"."sys_facility_setting" where facility_setting_no = '3121';
+INSERT INTO "ntss"."sys_facility_setting" ("facility_setting_no", "setting_name", "default_value", "input_type", "option_value", "function_name", "maker_setting", "description", "disp_order", "reg_date", "up_date", "system_use_disp") VALUES ('3121', '帳票出力モード', '0', '4', '[{"id":"0","name":"0:new"},{"id":"1","name":"1:old"}]', '帳票', '0', 'Aspose.cellsプラグインを使用するかどうかを指定する', '125', '2021-09-23 09:11:48.091', '2021-09-23 09:11:48.091', '3');

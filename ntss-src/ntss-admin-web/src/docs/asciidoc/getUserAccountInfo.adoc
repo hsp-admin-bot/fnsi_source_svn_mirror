@@ -1,0 +1,14 @@
+[[get-user-account-info]]
+=== アカウント情報取得
+
+==== Request
+include::{snippets}/user/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/user/get/ok/http-response.adoc[]
+
+==== Response(失敗)
+include::{snippets}/user/get/internal_server_error/http-response.adoc[]
+
+==== Response Fields
+include::{snippets}/user/get/ok/response-fields.adoc[]

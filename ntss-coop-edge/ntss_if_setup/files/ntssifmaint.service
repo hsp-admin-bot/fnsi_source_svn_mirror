@@ -1,0 +1,23 @@
+[Unit]
+Description=Node-RED-MAINT
+After=syslog.target network.target
+
+[Service]
+EnvironmentFile=/etc/sysconfig/ntss
+### mod 2023-02-05 mem size 256 to 64 node18 ipv6 fiert to ipv4 start
+ExecStart=/usr/local/bin/node-red-pi --dns-result-order=ipv4first --max-old-space-size=64 -p 1881 -v ntss_maint.json
+### mod 2023-02-05 mem size 256 to 64 node18 ipv6 fiert to ipv4 end
+Restart=on-failure
+KillSignal=SIGINT
+
+# log output to syslog as 'node-red'
+SyslogIdentifier=node-red
+StandardOutput=syslog
+
+# non-root user to run as
+WorkingDirectory=/home/ntss/
+User=ntss
+Group=ntss
+
+[Install]
+WantedBy=multi-user.target

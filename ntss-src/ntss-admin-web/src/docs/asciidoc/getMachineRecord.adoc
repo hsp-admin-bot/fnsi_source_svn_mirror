@@ -1,0 +1,11 @@
+[[get-machine-record]]
+=== 装置記録の装置記録コードと装置記録メッセージの一覧取得
+
+==== Request
+include::{snippets}/machine_record/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/machine_record/get/ok/http-response.adoc[]
+
+==== Response Fields
+include::{snippets}/machine_record/get/ok/response-fields.adoc[]

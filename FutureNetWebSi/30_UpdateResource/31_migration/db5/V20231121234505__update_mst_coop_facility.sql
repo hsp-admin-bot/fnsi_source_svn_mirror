@@ -1,0 +1,1433 @@
+DELETE FROM ntss.mst_coop_facility
+WHERE ctl_no = -401
+;
+
+
+INSERT INTO ntss.mst_coop_facility(
+  ctl_no,
+  facility_cd,
+  description,
+  is_disp,
+  is_del,
+  if_edge_setting,
+  common_setting,
+  user_id,
+  reg_date,
+  up_date
+)
+VALUES(
+  -401,
+  'P_hosp',
+  'Medicom',
+  '1',
+  '0',
+  '{
+  "send": {
+    "keepDirRoot": "/home/ntss/if_edge/save/send"
+  },
+  "view": {
+    "keepDirRoot": "/home/ntss/if_edge/save/view"
+  },
+  "timer": [
+    {
+      "ope_cd": "031001",
+      "datatype": "profile",
+      "send_time": [
+        "12:00"
+      ]
+    }
+  ],
+  "receive": {
+    "watch": [
+      {
+        "port": "9998",
+        "check": "",
+        "ope_cd": "800003",
+        "datatype": "profile",
+        "protocol": "socket",
+        "socket-type": "pana",
+        "coop_version": "",
+        "check_timeout": "0"
+      },
+      {
+        "data": "/mnt/share/ExamResult",
+        "watch": "",
+        "is_day": "false",
+        "ope_cd": "800005",
+        "timeout": "",
+        "datatype": "exam_rst",
+        "is_watch": "false",
+        "protocol": "file",
+        "start_time": "",
+        "description": "検査結果",
+        "watch_model": "File1Timing",
+        "coop_version": "",
+        "data_pattern": "^FD(.*?)",
+        "polling_time": 500,
+        "search_pattern": ""
+      }
+    ],
+    "keepDirRoot": "/home/ntss/if_edge/save/receive"
+  },
+  "urlRoot": "https://dev-dline.nksfn.com/ntss-coop-api/",
+  "serial_no": "1",
+  "tmpDirPath": "/home/ntss/if_edge/tmp",
+  "facility_cd": "999999",
+  "fileKeepDays": 90,
+  "timerSendAll": {
+    "send_time": [
+      "00:10"
+    ],
+    "description": "未処理レコードの定時送信"
+  },
+  "timerLogUpload": {
+    "send_time": "05:00",
+    "description": "アップロードログ時刻"
+  },
+  "response_telegram": [
+    {
+      "type_name": "ResponseCode",
+      "description": "電子カルテの種類：パナソニック",
+      "retry_value": "0x15",
+      "socket-type": "pana",
+      "validations": [
+        {
+          "end": "1",
+          "start": "0",
+          "header": "0x02",
+          "check_type": "matchCheack",
+          "error_code": "00001",
+          "error_message": "受信電文の先頭がSTX・DLE・NAKいずれでもありません",
+          "decision_values": [
+            "0x02",
+            "0x10",
+            "0x15"
+          ]
+        },
+        {
+          "header": "0x02",
+          "is_exists": false,
+          "check_type": "existsCheack",
+          "error_code": "00002",
+          "start_value": "0x02",
+          "targe_value": "0x02",
+          "error_message": "STX以降、ETXではなくSTXを見つけました"
+        },
+        {
+          "header": "0x02",
+          "is_exists": false,
+          "check_type": "existsCheack",
+          "error_code": "00003",
+          "start_value": "0x02",
+          "targe_value": "0x10",
+          "error_message": "STX以降、ETXではなくDLEを見つけました"
+        },
+        {
+          "header": "0x02",
+          "is_exists": false,
+          "check_type": "existsCheack",
+          "error_code": "00004",
+          "start_value": "0x02",
+          "targe_value": "0x04",
+          "error_message": "STX以降、ETXではなくEOTを見つけました"
+        },
+        {
+          "header": "0x02",
+          "is_exists": false,
+          "check_type": "existsCheack",
+          "error_code": "00005",
+          "start_value": "0x02",
+          "targe_value": "0x15",
+          "error_message": "STX以降、ETXではなくNAKを見つけました"
+        },
+        {
+          "header": "0x10",
+          "is_exists": false,
+          "check_type": "existsCheack",
+          "error_code": "00006",
+          "start_value": "0x10",
+          "targe_value": "0x02",
+          "error_message": "DLE以降、EOTではなくSTXを見つけました"
+        },
+        {
+          "header": "0x10",
+          "is_exists": false,
+          "check_type": "existsCheack",
+          "error_code": "00007",
+          "start_value": "0x10",
+          "targe_value": "0x10",
+          "error_message": "DLE以降、EOTではなくDLEを見つけました"
+        },
+        {
+          "header": "0x10",
+          "is_exists": false,
+          "check_type": "existsCheack",
+          "error_code": "00008",
+          "start_value": "0x10",
+          "targe_value": "0x03",
+          "error_message": "DLE以降、EOTではなくETXを見つけました"
+        },
+        {
+          "header": "0x10",
+          "is_exists": false,
+          "check_type": "existsCheack",
+          "error_code": "00009",
+          "start_value": "0x10",
+          "targe_value": "0x15",
+          "error_message": "DLE以降、EOTではなくNAKを見つけました"
+        },
+        {
+          "check_type": "timeout",
+          "error_code": "00010",
+          "error_message": "ソケットの受信タイムアウトが発生しました"
+        },
+        {
+          "header": "0x02",
+          "is_exists": true,
+          "check_type": "existsCheack",
+          "error_code": "00100",
+          "start_value": "0x02",
+          "targe_value": "0x03",
+          "error_message": "STX以降にETXがありません"
+        },
+        {
+          "end": "4",
+          "start": "3",
+          "header": "0x02",
+          "check_type": "matchCheack",
+          "error_code": "00101",
+          "error_message": "電文区分が不正です",
+          "decision_values": [
+            "MDT0"
+          ]
+        },
+        {
+          "end": "3",
+          "start": "11",
+          "header": "0x02",
+          "check_type": "matchCheack",
+          "error_code": "00102",
+          "error_message": "データ区分が不正です",
+          "decision_values": [
+            "A61"
+          ]
+        },
+        {
+          "end": "1",
+          "start": "15",
+          "header": "0x02",
+          "check_type": "matchCheack",
+          "error_code": "00103",
+          "error_message": "情報種別が不正です",
+          "decision_values": [
+            "C"
+          ]
+        },
+        {
+          "header": "0x02",
+          "check_type": "dataLengthCheack",
+          "error_code": "00104",
+          "data_length": "550",
+          "error_message": "電文長(STX～ETX)が不正です"
+        },
+        {
+          "header": "0x10",
+          "is_exists": true,
+          "check_type": "existsCheack",
+          "error_code": "00200",
+          "start_value": "0x10",
+          "targe_value": "0x03",
+          "error_message": "DLE以降にEOTがありません"
+        },
+        {
+          "end": "3",
+          "start": "4",
+          "header": "0x10",
+          "check_type": "matchCheack",
+          "error_code": "00201",
+          "error_message": "該当するエラーコードが存在しません",
+          "decision_values": [
+            "001",
+            "010",
+            "011",
+            "020",
+            "021",
+            "022",
+            "023",
+            "031",
+            "050",
+            "054",
+            "055",
+            "999"
+          ]
+        },
+        {
+          "end": "3",
+          "start": "1",
+          "header": "0x10",
+          "check_type": "matchCheack",
+          "error_code": "00202",
+          "error_message": "識別子が不正です",
+          "decision_values": [
+            "SER"
+          ]
+        },
+        {
+          "header": "0x10",
+          "check_type": "dataLengthCheack",
+          "error_code": "00203",
+          "data_length": "8",
+          "error_message": "電文長(DLE～EOT)が不正です"
+        },
+        {
+          "check_type": "retrycountOver",
+          "error_code": "00300"
+        }
+      ],
+      "is_validation": "true",
+      "abnormal_value": [
+        "0x10"
+      ],
+      "response_failure": {
+        "header": [
+          {
+            "name": "ResponseCode",
+            "value": "0x10",
+            "length": 1
+          },
+          {
+            "name": "Identifier",
+            "value": "SER",
+            "length": 3
+          },
+          {
+            "name": "ErrorCode",
+            "value": "99999",
+            "length": 5
+          },
+          {
+            "name": "EOT",
+            "value": "0x04",
+            "length": 1
+          }
+        ],
+        "header_length": 10
+      },
+      "response_success": {
+        "header": [
+          {
+            "name": "ResponseCode",
+            "value": "0x10",
+            "length": 1
+          },
+          {
+            "name": "Identifier",
+            "value": "SDC",
+            "length": 3
+          },
+          {
+            "name": "EOT",
+            "value": "0x04",
+            "length": 1
+          }
+        ],
+        "header_length": 5
+      }
+    }
+  ],
+  "alive_schedule_interval_time": "900"
+}'::jsonb,
+  '{
+  "status": "on",
+  "ins_mode": "FUJITSU_PROFILE",
+  "coop_ope_cd": {
+    "ope_cd_send": [
+      {
+        "ope_cd": "004001",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004002",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004003",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004004",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004005",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004006",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004007",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004008",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004009",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004010",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004011",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004012",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004013",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004014",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004015",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004016",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004017",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004018",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004019",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004020",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004021",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004022",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004023",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004024",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004025",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004026",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004027",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004028",
+        "status": "off"
+      },
+      {
+        "ope_cd": "004040",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004041",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004042",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004043",
+        "status": "on"
+      },
+      {
+        "ope_cd": "009004",
+        "status": "on"
+      },
+      {
+        "ope_cd": "009005",
+        "status": "on"
+      },
+      {
+        "ope_cd": "009006",
+        "status": "on"
+      },
+      {
+        "ope_cd": "011001",
+        "status": "on"
+      },
+      {
+        "ope_cd": "011002",
+        "status": "on"
+      },
+      {
+        "ope_cd": "011003",
+        "status": "off"
+      },
+      {
+        "ope_cd": "011004",
+        "status": "off"
+      },
+      {
+        "ope_cd": "011005",
+        "status": "on"
+      },
+      {
+        "ope_cd": "011006",
+        "status": "on"
+      },
+      {
+        "ope_cd": "011007",
+        "status": "off"
+      },
+      {
+        "ope_cd": "011008",
+        "status": "off"
+      },
+      {
+        "ope_cd": "006001",
+        "status": "on"
+      },
+      {
+        "ope_cd": "006002",
+        "status": "on"
+      },
+      {
+        "ope_cd": "006003",
+        "status": "off"
+      },
+      {
+        "ope_cd": "006004",
+        "status": "on"
+      },
+      {
+        "ope_cd": "006005",
+        "status": "off"
+      },
+      {
+        "ope_cd": "006006",
+        "status": "off"
+      },
+      {
+        "ope_cd": "013001",
+        "status": "on"
+      },
+      {
+        "ope_cd": "009001",
+        "status": "off"
+      },
+      {
+        "ope_cd": "009002",
+        "status": "off"
+      },
+      {
+        "ope_cd": "009003",
+        "status": "off"
+      },
+      {
+        "ope_cd": "021001",
+        "status": "on"
+      },
+      {
+        "ope_cd": "021002",
+        "status": "on"
+      },
+      {
+        "ope_cd": "021003",
+        "status": "on"
+      },
+      {
+        "ope_cd": "021004",
+        "status": "on"
+      },
+      {
+        "ope_cd": "021005",
+        "status": "on"
+      },
+      {
+        "ope_cd": "021006",
+        "status": "on"
+      },
+      {
+        "ope_cd": "021007",
+        "status": "on"
+      },
+      {
+        "ope_cd": "021008",
+        "status": "on"
+      },
+      {
+        "ope_cd": "021009",
+        "status": "on"
+      },
+      {
+        "ope_cd": "021010",
+        "status": "on"
+      },
+      {
+        "ope_cd": "022001",
+        "status": "off"
+      },
+      {
+        "ope_cd": "022002",
+        "status": "off"
+      },
+      {
+        "ope_cd": "022003",
+        "status": "off"
+      },
+      {
+        "ope_cd": "022004",
+        "status": "off"
+      },
+      {
+        "ope_cd": "022005",
+        "status": "off"
+      },
+      {
+        "ope_cd": "022006",
+        "status": "off"
+      },
+      {
+        "ope_cd": "022007",
+        "status": "off"
+      },
+      {
+        "ope_cd": "022008",
+        "status": "off"
+      },
+      {
+        "ope_cd": "022009",
+        "status": "off"
+      },
+      {
+        "ope_cd": "022010",
+        "status": "off"
+      },
+      {
+        "ope_cd": "017001",
+        "status": "on"
+      },
+      {
+        "ope_cd": "007001",
+        "status": "on"
+      },
+      {
+        "ope_cd": "031001",
+        "status": "on"
+      },
+      {
+        "ope_cd": "031002",
+        "status": "off"
+      },
+      {
+        "ope_cd": "031003",
+        "status": "on"
+      },
+      {
+        "ope_cd": "031004",
+        "status": "off"
+      },
+      {
+        "ope_cd": "031005",
+        "status": "on"
+      },
+      {
+        "ope_cd": "900001",
+        "status": "off"
+      },
+      {
+        "ope_cd": "900002",
+        "status": "on"
+      },
+      {
+        "ope_cd": "900003",
+        "status": "off"
+      },
+      {
+        "ope_cd": "900004",
+        "status": "on"
+      },
+      {
+        "ope_cd": "007002",
+        "status": "off"
+      },
+      {
+        "ope_cd": "007003",
+        "status": "off"
+      },
+      {
+        "ope_cd": "007004",
+        "status": "off"
+      },
+      {
+        "ope_cd": "007005",
+        "status": "off"
+      },
+      {
+        "ope_cd": "007006",
+        "status": "off"
+      },
+      {
+        "ope_cd": "007007",
+        "status": "off"
+      },
+      {
+        "ope_cd": "007008",
+        "status": "off"
+      },
+      {
+        "ope_cd": "017002",
+        "status": "off"
+      },
+      {
+        "ope_cd": "013002",
+        "status": "on"
+      },
+      {
+        "ope_cd": "027001",
+        "status": "on"
+      },
+      {
+        "ope_cd": "027002",
+        "status": "on"
+      },
+      {
+        "ope_cd": "027003",
+        "status": "on"
+      },
+      {
+        "ope_cd": "027004",
+        "status": "on"
+      },
+      {
+        "ope_cd": "027005",
+        "status": "on"
+      },
+      {
+        "ope_cd": "027006",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004029",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004030",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004031",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004032",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004033",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004034",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004035",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004036",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004037",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004038",
+        "status": "on"
+      },
+      {
+        "ope_cd": "018001",
+        "status": "on"
+      },
+      {
+        "ope_cd": "018002",
+        "status": "on"
+      },
+      {
+        "ope_cd": "018003",
+        "status": "on"
+      },
+      {
+        "ope_cd": "010001",
+        "status": "on"
+      },
+      {
+        "ope_cd": "010002",
+        "status": "on"
+      },
+      {
+        "ope_cd": "010003",
+        "status": "on"
+      },
+      {
+        "ope_cd": "010004",
+        "status": "on"
+      },
+      {
+        "ope_cd": "010005",
+        "status": "on"
+      },
+      {
+        "ope_cd": "010006",
+        "status": "on"
+      },
+      {
+        "ope_cd": "010007",
+        "status": "on"
+      },
+      {
+        "ope_cd": "010008",
+        "status": "on"
+      },
+      {
+        "ope_cd": "010009",
+        "status": "on"
+      },
+      {
+        "ope_cd": "010010",
+        "status": "on"
+      },
+      {
+        "ope_cd": "010011",
+        "status": "on"
+      },
+      {
+        "ope_cd": "028001",
+        "status": "on"
+      },
+      {
+        "ope_cd": "028002",
+        "status": "on"
+      },
+      {
+        "ope_cd": "028003",
+        "status": "on"
+      },
+      {
+        "ope_cd": "028004",
+        "status": "on"
+      },
+      {
+        "ope_cd": "028005",
+        "status": "on"
+      },
+      {
+        "ope_cd": "028006",
+        "status": "on"
+      },
+      {
+        "ope_cd": "028007",
+        "status": "on"
+      },
+      {
+        "ope_cd": "028008",
+        "status": "on"
+      },
+      {
+        "ope_cd": "028009",
+        "status": "on"
+      },
+      {
+        "ope_cd": "028010",
+        "status": "on"
+      },
+      {
+        "ope_cd": "028011",
+        "status": "on"
+      },
+      {
+        "ope_cd": "028012",
+        "status": "on"
+      },
+      {
+        "ope_cd": "011009",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004037",
+        "status": "on"
+      },
+      {
+        "ope_cd": "004039",
+        "status": "on"
+      },
+      {
+        "ope_cd": "012001",
+        "status": "on"
+      },
+      {
+        "ope_cd": "013003",
+        "status": "on"
+      },
+      {
+        "ope_cd": "013004",
+        "status": "on"
+      },
+      {
+        "ope_cd": "013005",
+        "status": "on"
+      }
+    ],
+    "ope_cd_receive": [
+      {
+        "ope_cd": "800001",
+        "status": "off"
+      },
+      {
+        "ope_cd": "800002",
+        "status": "off"
+      },
+      {
+        "ope_cd": "800003",
+        "status": "on"
+      },
+      {
+        "ope_cd": "800004",
+        "status": "off"
+      },
+      {
+        "ope_cd": "800005",
+        "status": "on"
+      },
+      {
+        "ope_cd": "800006",
+        "status": "off"
+      },
+      {
+        "ope_cd": "800007",
+        "status": "off"
+      },
+      {
+        "ope_cd": "800008",
+        "status": "off"
+      }
+    ]
+  },
+  "coop_ord_cd": [
+    {
+      "key0": "MED",
+      "ctl_no": 1,
+      "ope_cd": [
+        "800001"
+      ],
+      "report": false,
+      "coop_cd": "ini_dial",
+      "coop_name": "浄化申し込み・初回指示",
+      "direction": "R",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "9",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 2,
+      "ope_cd": [
+        "800002"
+      ],
+      "report": false,
+      "coop_cd": "is_death",
+      "coop_name": "死亡退院",
+      "direction": "R",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "9",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 3,
+      "ope_cd": [
+        "017001",
+        "007001"
+      ],
+      "report": false,
+      "coop_cd": "profile",
+      "coop_name": "患者プロファイル(送信)",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 4,
+      "ope_cd": [
+        "800003"
+      ],
+      "report": false,
+      "coop_cd": "profile",
+      "coop_name": "患者プロファイル(受信)",
+      "direction": "R",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "9",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 5,
+      "ope_cd": [],
+      "report": false,
+      "coop_cd": "ind_dial",
+      "coop_name": "透析予約",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 6,
+      "ope_cd": [
+        "800004"
+      ],
+      "report": false,
+      "coop_cd": "ord_dial",
+      "coop_name": "オーダ受け",
+      "direction": "R",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "9",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 7,
+      "ope_cd": [
+        "013001",
+        "011009",
+        "004039",
+        "012001"
+      ],
+      "report": false,
+      "coop_cd": "accept",
+      "coop_name": "受付情報",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 8,
+      "ope_cd": [
+        "011001",
+        "011005",
+        "006001",
+        "006004",
+        "006006",
+        "013002",
+        "027001",
+        "027002",
+        "027003",
+        "027004",
+        "027005",
+        "027006",
+        "018001",
+        "018002",
+        "018003"
+      ],
+      "report": false,
+      "coop_cd": "rst_dial",
+      "coop_name": "透析実績",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 9,
+      "ope_cd": [
+        "011004",
+        "011008",
+        "006003",
+        "006005"
+      ],
+      "report": true,
+      "coop_cd": "rep_dial",
+      "coop_name": "透析レポート",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": [
+        {
+          "rep_dial": "xmlpdf"
+        }
+      ],
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 10,
+      "ope_cd": [
+        "031005"
+      ],
+      "report": false,
+      "coop_cd": "exam_rst",
+      "coop_name": "検査結果(定時一括送信)",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "send_time",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 11,
+      "ope_cd": [
+        "800005"
+      ],
+      "report": false,
+      "coop_cd": "exam_rst",
+      "coop_name": "検査結果(受信)",
+      "direction": "R",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "9",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 12,
+      "ope_cd": [
+        "021001",
+        "021002",
+        "021003",
+        "021004",
+        "021005",
+        "021006",
+        "021007",
+        "021008",
+        "021009",
+        "021010",
+        "031003",
+        "900002"
+      ],
+      "report": false,
+      "coop_cd": "exam_ord",
+      "coop_name": "検査オーダ",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "H",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 13,
+      "ope_cd": [
+        "022001",
+        "022002",
+        "022003",
+        "022004",
+        "022005",
+        "022006",
+        "022007",
+        "022008",
+        "022009",
+        "022010",
+        "031004",
+        "900003"
+      ],
+      "report": false,
+      "coop_cd": "rad_ord",
+      "coop_name": "放射線検査オーダ",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 14,
+      "ope_cd": [
+        "XXXX",
+        "XXXX",
+        "XXXX"
+      ],
+      "report": false,
+      "coop_cd": "phy_ord",
+      "coop_name": "心電図検査オーダ",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 15,
+      "ope_cd": [
+        "800006"
+      ],
+      "report": false,
+      "coop_cd": "shot_ord",
+      "coop_name": "透析注射連携",
+      "direction": "R",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "9",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 16,
+      "ope_cd": [
+        "800007"
+      ],
+      "report": false,
+      "coop_cd": "pre_ord",
+      "coop_name": "処方情報連携",
+      "direction": "R",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "9",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 17,
+      "ope_cd": [
+        "800008"
+      ],
+      "report": false,
+      "coop_cd": "staff_mst",
+      "coop_name": "スタッフマスタ連携",
+      "direction": "R",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "9",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 18,
+      "ope_cd": [
+        "011003",
+        "011007"
+      ],
+      "report": false,
+      "coop_cd": "vit_cop",
+      "coop_name": "バイタル連携",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 19,
+      "ope_cd": [
+        "011002",
+        "011006",
+        "006002"
+      ],
+      "report": false,
+      "coop_cd": "karte_ord",
+      "coop_name": "カルテ記載連携",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 20,
+      "ope_cd": [
+        "031001"
+      ],
+      "report": false,
+      "coop_cd": "profile",
+      "coop_name": "患者プロファイル(定時一括送信)",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "send_time",
+      "time_out_second": "10"
+    },
+    {
+      "key0": "MED",
+      "ctl_no": 21,
+      "ope_cd": [
+        "900004"
+      ],
+      "report": false,
+      "coop_cd": "",
+      "coop_name": "連携イベント作成・中止ツール(送信)",
+      "direction": "S",
+      "is_get_no": true,
+      "ana_result": "0",
+      "coop_result": "0",
+      "createIndex": false,
+      "effect_days": "6",
+      "report_type": null,
+      "coop_version": "",
+      "coop_cd_index": "",
+      "time_out_second": "10"
+    }
+  ],
+  "report_type": null,
+  "dataset_limit": 1000,
+  "cut_off_digits": 10,
+  "journal_keep_days": 100,
+  "hospPatIdCheckCoop": null,
+  "ViewSyncTimeOutSecond": 600,
+  "hosp_pat_id_company_method_code": "0"
+}'::jsonb,
+  -1,
+  '2021-04-14 10:37:14.962',
+  CURRENT_TIMESTAMP
+)
+;

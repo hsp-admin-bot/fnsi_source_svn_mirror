@@ -1,0 +1,17 @@
+[[get-indication-result-list]]
+=== 予実リスト取得
+
+==== Request
+include::{snippets}/indication_result/list/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/indication_result/list/get/ok/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/indication_result/list/get/ok/path-parameters.adoc[]
+
+==== Request Parameters
+include::{snippets}/indication_result/list/get/ok/request-parameters.adoc[]
+
+==== Response Fields
+include::{snippets}/indication_result/list/get/ok/response-fields.adoc[]

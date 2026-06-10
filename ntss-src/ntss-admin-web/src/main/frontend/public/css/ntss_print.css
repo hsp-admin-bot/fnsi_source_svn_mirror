@@ -1,0 +1,99 @@
+/* 余白の定義 */
+@page {
+  margin: 10mm;
+}
+
+body {
+  -webkit-print-color-adjust: exact;
+  position: static;
+}
+
+/* スクロール領域をすべて表示 */
+body, div {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+.main {
+  height: auto !important;
+}
+
+/* 利用者初回登録シート印刷時の表示page制御*/
+div.none-print{
+  width: 600px !important;
+  overflow-y: scroll !important;
+  display: none !important;
+}
+
+/* フッタメニュー・コマンドボタン等を非表示 */
+.ntss-footer,
+.popover-mask,
+.sidebar-transition,
+.search-button,
+.submenu-footer,
+#grid-footer {
+  display: none !important;
+}
+
+/* 画面分割されている場合は右端の画面のみ表示 */
+.content-container > div:not(:last-child) {
+  display: none;
+}
+.content-container > div:last-child {
+  width: 100% !important;
+}
+
+/* 上記の指定で治療記録の患者ヘッダが非表示になっていたのを解除 */
+.content-container > div.header {
+  display: unset !important;
+}
+
+/* 一覧系のヘッダのsticky属性を外す */
+.ntss-list-header-th-sticky {
+  position: unset !important;
+}
+
+/* 印刷用テキストエリア */
+.print-textarea {
+  display: block !important;
+  
+  width: 99%;
+  min-height: 1.8em;
+
+  border-radius: 5px;
+  color: var(--treatment-record-input-color);
+  background-color: var(--treatment-record-input-background-color);
+
+  white-space: pre-wrap;
+  word-break: break-word;
+
+  font: inherit;
+  line-height: 1.4;
+  
+  border-top: 2px solid #999;
+  border-left: 2px solid #999;
+  border-right: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+}
+
+body:has(#pat_viewer):not(:has(.pat-info-area-margin))
+div:not(
+  .div-style,
+  .device-info-img-content,
+  .ihdf-button-area,
+  .ind-support-view *,
+  .not-height-auto,
+  .not-height-auto *
+) {
+  height: auto !important;
+}
+
+/* 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
+.scroll-rightmost{
+  position: absolute;
+  right: 0;
+}
+/* 印刷時の倍率調整 */
+body:not(:has(.scroll-rightmost)) .scroll-adjustzoom {
+  zoom: 1.3;
+}

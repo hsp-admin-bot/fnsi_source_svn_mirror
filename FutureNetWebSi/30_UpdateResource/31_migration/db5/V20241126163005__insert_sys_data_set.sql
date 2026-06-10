@@ -1,0 +1,11 @@
+--INSERT INTO ntss.sys_data_set
+--(sql_cd, "sql", db_class, detail, can_repeat, use_application, report_class, memo, reg_date, up_date, pre_sql_info)
+--VALUES(-600301, 'SELECT
+--    pcd.save_2 ->> ''ord_no'' AS ord_no
+--FROM
+--    pat_coop_detail pcd
+--WHERE
+--    pcd.pat_id = @patId
+--    AND pcd.is_del = ''0''
+--    AND pcd.coop_version = @coopVersion
+--    AND pcd.facility_cd = @facilityCd', 2, '[{}]'::jsonb, '0', '{"applications": [4]}'::jsonb, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL);

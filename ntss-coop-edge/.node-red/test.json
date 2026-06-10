@@ -1,0 +1,185 @@
+[
+    {
+        "id": "967ca5b5.28bd68",
+        "type": "tab",
+        "label": "websocketサーバ",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "d1398705.771cc8",
+        "type": "tab",
+        "label": "その他",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "a8e31a53.801b38",
+        "type": "websocket-listener",
+        "z": "",
+        "path": "if_edge_maintenance",
+        "wholemsg": "false"
+    },
+    {
+        "id": "82363eb0.dd9d3",
+        "type": "websocket in",
+        "z": "967ca5b5.28bd68",
+        "name": "",
+        "server": "a8e31a53.801b38",
+        "client": "",
+        "x": 190,
+        "y": 180,
+        "wires": [
+            [
+                "fd2cf68c.f047d8"
+            ]
+        ]
+    },
+    {
+        "id": "2724aca1.82fbd4",
+        "type": "websocket out",
+        "z": "967ca5b5.28bd68",
+        "name": "",
+        "server": "a8e31a53.801b38",
+        "client": "",
+        "x": 720,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "be8f836b.277f2",
+        "type": "file in",
+        "z": "967ca5b5.28bd68",
+        "name": "",
+        "filename": "/home/ntss/if_edge/tmp/20200421.zip",
+        "format": "",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "x": 410,
+        "y": 380,
+        "wires": [
+            [
+                "2724aca1.82fbd4"
+            ]
+        ]
+    },
+    {
+        "id": "cff7f0c.8d0131",
+        "type": "inject",
+        "z": "967ca5b5.28bd68",
+        "name": "",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 140,
+        "y": 380,
+        "wires": [
+            [
+                "be8f836b.277f2"
+            ]
+        ]
+    },
+    {
+        "id": "9ef3feb8.5abb4",
+        "type": "debug",
+        "z": "967ca5b5.28bd68",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 610,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "fd2cf68c.f047d8",
+        "type": "function",
+        "z": "967ca5b5.28bd68",
+        "name": "",
+        "func": "var string = msg.payload.toString('utf-8', 0, msg.payload.length);\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 410,
+        "y": 180,
+        "wires": [
+            [
+                "9ef3feb8.5abb4"
+            ]
+        ]
+    },
+    {
+        "id": "5409e742.b295e8",
+        "type": "inject",
+        "z": "d1398705.771cc8",
+        "name": "",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 140,
+        "y": 260,
+        "wires": [
+            [
+                "4035bd9b.514004"
+            ]
+        ]
+    },
+    {
+        "id": "43ee5f28.38817",
+        "type": "inject",
+        "z": "d1398705.771cc8",
+        "name": "",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 140,
+        "y": 200,
+        "wires": [
+            [
+                "e6888a42.9819c8"
+            ]
+        ]
+    },
+    {
+        "id": "e6888a42.9819c8",
+        "type": "function",
+        "z": "d1398705.771cc8",
+        "name": "定時処理の停止",
+        "func": "var commonLib = global.get('commonLib');\n\ncommonLib.setProcessSkip('s');\ncommonLib.setProcessSkip('r');\ncommonLib.setProcessSkip('d');\n\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 340,
+        "y": 200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "4035bd9b.514004",
+        "type": "function",
+        "z": "d1398705.771cc8",
+        "name": "定時処理の停止解除",
+        "func": "var commonLib = global.get('commonLib');\n\ncommonLib.cancelProcessSkip('s');\ncommonLib.cancelProcessSkip('r');\ncommonLib.cancelProcessSkip('d');\n\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 360,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    }
+]

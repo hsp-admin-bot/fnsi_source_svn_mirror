@@ -1,0 +1,14 @@
+[[get-master-data]]
+=== マスタデータ取得
+
+==== Request
+include::{snippets}/master_maintenance/data/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/master_maintenance/data/get/ok/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/master_maintenance/data/get/ok/path-parameters.adoc[]
+
+==== Response Fields
+include::{snippets}/master_maintenance/data/get/ok/response-fields.adoc[]

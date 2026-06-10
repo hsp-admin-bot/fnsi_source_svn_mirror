@@ -1,0 +1,1 @@
+update sys_master_define set column_info = jsonb_set(column_info,'{fields,2, validation,maxlength}', '50', true)  where master_physical_name = 'mst_pat_list_layout';

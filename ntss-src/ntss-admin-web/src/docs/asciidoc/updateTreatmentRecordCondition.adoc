@@ -1,0 +1,17 @@
+[[put-treatment-record-condition]]
+=== 治療記録(治療条件)更新
+
+==== Request
+include::{snippets}/treatment_record/condition/put/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/treatment_record/condition/put/ok/http-response.adoc[]
+
+==== Response(失敗:該当治療記録なし)
+include::{snippets}/treatment_record/condition/put/not-found/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/treatment_record/condition/put/ok/path-parameters.adoc[]
+
+==== Request Fields
+include::{snippets}/treatment_record/condition/put/ok/request-fields.adoc[]

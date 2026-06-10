@@ -1,0 +1,11 @@
+[[get-monitor-graph-define]]
+=== モニタグラフ設定を取得
+
+==== Request
+include::{snippets}/monitor/graph-define/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/monitor/graph-define/get/ok/http-response.adoc[]
+
+==== Response Fields
+include::{snippets}/monitor/graph-define/get/ok/response-fields.adoc[]

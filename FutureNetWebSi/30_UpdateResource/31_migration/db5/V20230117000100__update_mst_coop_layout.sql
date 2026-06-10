@@ -1,0 +1,676 @@
+--delete from "mst_coop_layout" where "ctl_no" in (-6020001,-6020002,-6020003,-2040002,-2040003,-2040001,-2070001,-2070002,-2070003);
+--INSERT INTO "mst_coop_layout" ("ctl_no", "facility_cd", "coop_cd", "coop_cd_index", "direction", "coop_cd_sub", "coop_format", "coop_name", "coop_vender", "description", "is_editable", "coop_setting", "coop_ext_setting", "is_disp", "is_del", "user_id", "reg_date", "up_date", "coop_version") VALUES (-2040001, 'F_hosp', 'ind_dial', '', 'S', 'cre', 'text', '富士通予約', 'fujitsu', '予約送信', '1', '<root name="富士通透析予約">
+--<item name="電文種別" len="2" value="const:VO"/>
+--<item name="レコード継続指示" len="1" value="const:E"/>
+--<item name="送信先システムコード" len="2" value="const:XX"/>
+--<item name="発信元システムコード" len="2" value="const:VN"/>
+--<item name="処理情報.処理年月日" len="8" value="$SYSDATE"/>
+--<item name="処理情報.処理時刻" len="6" value="$SYSTIME"/>
+--<item name="端末名" len="8" value="const:VOSERVER"/>
+--<item name="利用者番号" len="8" value="dataset:-66.disp_user_id"/>
+--<item name="処理区分" len="2" value="const:01"/>
+--<item name="応答種別" len="2" value="$BLANK"/>
+--<item name="電文長" len="6" value="$LENGTH"/>
+--<item name="エラーコード" len="5" value="$BLANK"/>
+--<item name="予備" len="12" value="$BLANK"/>
+--<item name="情報種別" len="2" value="const:01"/>
+--<item name="患者情報.患者番号" len="10" value="dataset:-100001.hosp_pat_id" padding_format="zero" padding_position="left"/>
+--<item name="伝票情報.オーダ番号" len="8" value="$JOURNAL.coop_ord_no" padding_format="zero" padding_position="left" subMode="R"/>
+--<item name="伝票情報.文書番号(先頭8文字）" len="8" value="const:VOSERVER"/>
+--<item name="伝票情報.文書番号(患者番号)" len="12" value="dataset:-100001.hosp_pat_id" padding_format="zero" padding_position="left"/>
+--<item name="伝票情報.文書番号(オーダ番号)" len="10" value="dataset:-64.ord_no" padding_format="zero" padding_position="left"/>
+--<item name="伝票情報.文書版数" len="2" value="const:00"/>
+--<item name="伝票情報.関連オーダ番号" len="8" value="dataset:-54.ord_no"/>
+--<item name="伝票情報.オーダ日付" len="8" value="dataset:-59.treat_date"/>
+--<item name="伝票情報.オーダ時間" len="6" value="dataset:-59.start_time"/>
+--<item name="伝票情報.保険パターン番号" len="2" value="dataset:-54.insu_no"/>
+--<item name="伝票情報.入外区分" len="1" value="dataset:-20.exam_in_out"/>
+--<item name="伝票情報.診療科コード" len="3" value="dataset:-51.course_cd"/>
+--<item name="伝票情報.病棟コード" len="3" value="dataset:-51.ward_cd"/>
+--<item name="伝票情報.利用者番号" len="8" value="dataset:-67.disp_user_id"/>
+--<item name="伝票情報.伝票コード" len="4" value="const:V002"/>
+--<item name="伝票情報.伝票名称" len="50" value="const:血液浄化予定"/>
+--<item name="予約情報.予約グループCD" len="4" value="const:V"/>
+--<item name="予約情報.予約枠コード" len="8" value="dataset:-58.in_hospital_cd"/>
+--<item name="予約情報.予約開始日" len="8" value="dataset:-53.start_date"/>
+--<item name="予約情報.予約開始時間" len="6" value="dataset:-53.start_time"/>
+--<item name="予約情報.予約終了日" len="8" value="dataset:-53.end_date"/>
+--<item name="予約情報.予約終了時間" len="6" value="dataset:-53.end_time"/>
+--<occ name="明細行数" len="4" detail="予約詳細" sqlCode="-103" padding_format="zero" padding_position="left"/>
+--<item name="終端" len="1" value="$CR"/>
+--</root>', '{"dataset": [{"patId": "patId", "sqlCode": -100001}, {"key0": "key0", "ordNo": "ordNo", "sqlCode": -59, "facilityCd": "facilityCd"}, {"key0": "key0", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -54, "facilityCd": "facilityCd", "coopVersion": "coopVersion"}, {"key0": "key0", "ordNo": "ordNo", "sqlCode": -53, "facilityCd": "facilityCd"}, {"key0": "key0", "patId": "patId", "sqlCode": -51, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -103, "facilityCd": "facilityCd"}, {"ordNo": "ordNo", "sqlCode": -13}, {"key0": "key0", "ordNo": "ordNo", "sqlCode": -58, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -66, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -67, "facilityCd": "facilityCd"}, {"key0": "key0", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -64, "facilityCd": "facilityCd"}, {"patId": "patId", "sqlCode": -20}]}', '1', '0', 4, '2020-05-01 10:15:53.808', CURRENT_TIMESTAMP, '');
+--INSERT INTO "mst_coop_layout" ("ctl_no", "facility_cd", "coop_cd", "coop_cd_index", "direction", "coop_cd_sub", "coop_format", "coop_name", "coop_vender", "description", "is_editable", "coop_setting", "coop_ext_setting", "is_disp", "is_del", "user_id", "reg_date", "up_date", "coop_version") VALUES (-2040002, 'F_hosp', 'ind_dial', '', 'S', 'upd', 'text', '富士通予約', 'fujitsu', '予約送信', '1', '<root name="富士通透析予約">
+--<item name="電文種別" len="2" value="const:VO"/>
+--<item name="レコード継続指示" len="1" value="const:E"/>
+--<item name="送信先システムコード" len="2" value="const:XX"/>
+--<item name="発信元システムコード" len="2" value="const:VN"/>
+--<item name="処理情報.処理年月日" len="8" value="$SYSDATE"/>
+--<item name="処理情報.処理時刻" len="6" value="$SYSTIME"/>
+--<item name="端末名" len="8" value="const:VOSERVER"/>
+--<item name="利用者番号" len="8" value="dataset:-66.disp_user_id"/>
+--<item name="処理区分" len="2" value="const:02"/>
+--<item name="応答種別" len="2" value="$BLANK"/>
+--<item name="電文長" len="6" value="$LENGTH"/>
+--<item name="エラーコード" len="5" value="$BLANK"/>
+--<item name="予備" len="12" value="$BLANK"/>
+--<item name="情報種別" len="2" value="const:01"/>
+--<item name="患者情報.患者番号" len="10" value="dataset:-100001.hosp_pat_id" padding_format="zero" padding_position="left"/>
+--<item name="伝票情報.オーダ番号" len="8" value="$JOURNAL.coop_ord_no" padding_format="zero" padding_position="left" subMode="R"/>
+--<item name="伝票情報.文書番号(先頭8文字）" len="8" value="const:VOSERVER"/>
+--<item name="伝票情報.文書番号(患者番号)" len="12" value="dataset:-100001.hosp_pat_id" padding_format="zero" padding_position="left"/>
+--<item name="伝票情報.文書番号(オーダ番号)" len="10" value="dataset:-64.ord_no" padding_format="zero" padding_position="left"/>
+--<item name="伝票情報.文書版数" len="2" value="const:00"/>
+--<item name="伝票情報.関連オーダ番号" len="8" value="dataset:-54.ord_no"/>
+--<item name="伝票情報.オーダ日付" len="8" value="dataset:-59.treat_date"/>
+--<item name="伝票情報.オーダ時間" len="6" value="dataset:-59.start_time"/>
+--<item name="伝票情報.保険パターン番号" len="2" value="dataset:-54.insu_no"/>
+--<item name="伝票情報.入外区分" len="1" value="dataset:-20.exam_in_out"/>
+--<item name="伝票情報.診療科コード" len="3" value="dataset:-51.course_cd"/>
+--<item name="伝票情報.病棟コード" len="3" value="dataset:-51.ward_cd"/>
+--<item name="伝票情報.利用者番号" len="8" value="dataset:-67.disp_user_id"/>
+--<item name="伝票情報.伝票コード" len="4" value="const:V002"/>
+--<item name="伝票情報.伝票名称" len="50" value="const:血液浄化予定"/>
+--<item name="予約情報.予約グループCD" len="4" value="const:V"/>
+--<item name="予約情報.予約枠コード" len="8" value="dataset:-58.in_hospital_cd"/>
+--<item name="予約情報.予約開始日" len="8" value="dataset:-53.start_date"/>
+--<item name="予約情報.予約開始時間" len="6" value="dataset:-53.start_time"/>
+--<item name="予約情報.予約終了日" len="8" value="dataset:-53.end_date"/>
+--<item name="予約情報.予約終了時間" len="6" value="dataset:-53.end_time"/>
+--<occ name="明細行数" len="4" detail="予約詳細" sqlCode="-103" padding_format="zero" padding_position="left"/>
+--<item name="終端" len="1" value="$CR"/>
+--</root>', '{"dataset": [{"patId": "patId", "sqlCode": -100001}, {"key0": "key0", "ordNo": "ordNo", "sqlCode": -59, "facilityCd": "facilityCd"}, {"key0": "key0", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -54, "facilityCd": "facilityCd", "coopVersion": "coopVersion"}, {"key0": "key0", "ordNo": "ordNo", "sqlCode": -53, "facilityCd": "facilityCd"}, {"key0": "key0", "patId": "patId", "sqlCode": -51, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -103, "facilityCd": "facilityCd"}, {"ordNo": "ordNo", "sqlCode": -13}, {"key0": "key0", "ordNo": "ordNo", "sqlCode": -58, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -66, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -67, "facilityCd": "facilityCd"}, {"key0": "key0", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -64, "facilityCd": "facilityCd"}, {"patId": "patId", "sqlCode": -20}]}', '1', '0', 4, '2020-05-01 10:15:53.808', CURRENT_TIMESTAMP, '');
+--INSERT INTO "mst_coop_layout" ("ctl_no", "facility_cd", "coop_cd", "coop_cd_index", "direction", "coop_cd_sub", "coop_format", "coop_name", "coop_vender", "description", "is_editable", "coop_setting", "coop_ext_setting", "is_disp", "is_del", "user_id", "reg_date", "up_date", "coop_version") VALUES (-2040003, 'F_hosp', 'ind_dial', '', 'S', 'del', 'text', '富士通予約', 'fujitsu', '予約送信', '1', '<root name="富士通透析予約">
+--<item name="電文種別" len="2" value="const:VO"/>
+--<item name="レコード継続指示" len="1" value="const:E"/>
+--<item name="送信先システムコード" len="2" value="const:XX"/>
+--<item name="発信元システムコード" len="2" value="const:VN"/>
+--<item name="処理情報.処理年月日" len="8" value="$SYSDATE"/>
+--<item name="処理情報.処理時刻" len="6" value="$SYSTIME"/>
+--<item name="端末名" len="8" value="const:VOSERVER"/>
+--<item name="利用者番号" len="8" value="dataset:-196.disp_user_id"/>
+--<item name="処理区分" len="2" value="const:03"/>
+--<item name="応答種別" len="2" value="$BLANK"/>
+--<item name="電文長" len="6" value="$LENGTH"/>
+--<item name="エラーコード" len="5" value="$BLANK"/>
+--<item name="予備" len="12" value="$BLANK"/>
+--<item name="情報種別" len="2" value="const:01"/>
+--<item name="患者情報.患者番号" len="10" value="dataset:-100001.hosp_pat_id" padding_format="zero" padding_position="left"/>
+--<item name="伝票情報.オーダ番号" len="8" value="$JOURNAL.coop_ord_no" padding_format="zero" padding_position="left" subMode="R"/>
+--<item name="伝票情報.文書番号(先頭8文字）" len="8" value="const:VOSERVER"/>
+--<item name="伝票情報.文書番号(患者番号)" len="12" value="dataset:-100001.hosp_pat_id" padding_format="zero" padding_position="left"/>
+--<item name="伝票情報.文書番号(オーダ番号)" len="10" value="dataset:-78.ord_no" padding_format="zero" padding_position="left"/>
+--<item name="伝票情報.文書版数" len="2" value="const:00"/>
+--<item name="伝票情報.関連オーダ番号" len="8" value="dataset:-54.ord_no"/>
+--<item name="伝票情報.オーダ日付" len="8" value="dataset:-59.treat_date"/>
+--<item name="伝票情報.オーダ時間" len="6" value="dataset:-59.start_time"/>
+--<item name="伝票情報.保険パターン番号" len="2" value="dataset:-54.insu_no"/>
+--<item name="伝票情報.入外区分" len="1" value="dataset:-20.exam_in_out"/>
+--<item name="伝票情報.診療科コード" len="3" value="dataset:-51.course_cd"/>
+--<item name="伝票情報.病棟コード" len="3" value="dataset:-51.ward_cd"/>
+--<item name="伝票情報.利用者番号" len="8" value="dataset:-197.disp_user_id"/>
+--<item name="伝票情報.伝票コード" len="4" value="const:V002"/>
+--<item name="伝票情報.伝票名称" len="50" value="const:血液浄化予定"/>
+--<item name="予約情報.予約グループCD" len="4" value="const:V"/>
+--<item name="予約情報.予約枠コード" len="8" value="dataset:-800010.in_hospital_cd"/>
+--<item name="予約情報.予約開始日" len="8" value="dataset:-53.start_date"/>
+--<item name="予約情報.予約開始時間" len="6" value="dataset:-53.start_time"/>
+--<item name="予約情報.予約終了日" len="8" value="dataset:-53.end_date"/>
+--<item name="予約情報.予約終了時間" len="6" value="dataset:-53.end_time"/>
+--<occ name="明細行数" len="4" detail="予約詳細(削除)" sqlCode="-194" padding_format="zero" padding_position="left"/>
+--<item name="終端" len="1" value="$CR"/>
+--</root>', '{"dataset": [{"patId": "patId", "sqlCode": -100001}, {"key0": "key0", "ordNo": "ordNo", "sqlCode": -59, "facilityCd": "facilityCd"}, {"key0": "key0", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -54, "facilityCd": "facilityCd", "coopVersion": "coopVersion"}, {"key0": "key0", "ordNo": "ordNo", "sqlCode": -53, "facilityCd": "facilityCd"}, {"key0": "key0", "patId": "patId", "sqlCode": -51, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -194, "facilityCd": "facilityCd"}, {"ordNo": "ordNo", "sqlCode": -13}, {"key0": "key0", "ordNo": "ordNo", "sqlCode": -800010, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -196, "facilityCd": "facilityCd"}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -197, "facilityCd": "facilityCd"}, {"key0": "key0", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -78, "facilityCd": "facilityCd"}, {"patId": "patId", "sqlCode": -20}]}', '1', '0', 4, '2020-05-01 10:15:53.808', CURRENT_TIMESTAMP, '');
+--INSERT INTO "mst_coop_layout" ("ctl_no", "facility_cd", "coop_cd", "coop_cd_index", "direction", "coop_cd_sub", "coop_format", "coop_name", "coop_vender", "description", "is_editable", "coop_setting", "coop_ext_setting", "is_disp", "is_del", "user_id", "reg_date", "up_date", "coop_version") VALUES (-2070001, 'F_hosp', 'rst_dial', '', 'S', 'cre', 'text', '富士通実績', 'fujitsu', '実績送信', '1', '<root name="富士通透析実績">
+--    <item  name="電文種別" len="2" value="const:VO"/>
+--    <item  name="レコード継続指示" len="1" value="const:E"/>
+--    <item  name="送信先システムコード" len="2" value="const:XX"/>
+--    <item  name="発信元システムコード"  len="2" value="const:VN"/>
+--    <item  name="処理情報.処理年月日" len="8" value="$SYSDATE"/>
+--    <item  name="処理情報.処理時刻" len="6" value="$SYSTIME"/>
+--    <item  name="端末名" len="8" value="const:VOSERVER"/>
+--    <item  name="利用者番号" len="8" value="dataset:-71.disp_user_id"/>
+--    <item  name="処理区分" len="2" value="const:01"/>
+--    <item  name="応答種別" len="2" value="$BLANK"/>
+--    <item  name="電文長" len="6" value="$LENGTH"/>
+--    <item  name="エラーコード" len="5" value="$BLANK"/>
+--    <item  name="予備" len="12" value="$BLANK"/>
+--    <item  name="情報種別" len="2" value="const:02"/>
+--    <item  name="患者情報.患者番号" len="10" value="dataset:-100001.hosp_pat_id" padding_format="zero" padding_position="left"/>
+--    <item  name="伝票情報.オーダ番号" len="8" value="$JOURNAL.coop_ord_no" padding_format="zero" padding_position="left" subMode="R"/>
+--    <item  name="伝票情報.文書番号(先頭8文字）" len="8" value="const:VOSERVER"/>
+--    <item  name="伝票情報.文書番号" len="20" value="dataset:-82.document_no" />
+--    <item  name="伝票情報.文書番号(後2文字）" len="2" value="dataset:-48.document_no"/>
+--    <item  name="伝票情報.文書版数" len="2" value="const:00"/>
+--    <item  name="伝票情報.関連オーダ番号" len="8" value="dataset:-54.ord_no"/>
+--    <item  name="伝票情報.オーダ日付" len="8" value="dataset:-14.start_date8"/>
+--    <item  name="伝票情報.オーダ時間" len="6" value="dataset:-14.start_date6"/>
+--    <item  name="伝票情報.保険パターン番号" len="2" value="dataset:-54.insu_no"/>
+--    <item  name="伝票情報.入外区分" len="1" value="dataset:-11.in_out_f"/>
+--    <item  name="伝票情報.診療科コード" len="3" value="dataset:-52.course_cd"/>
+--    <item  name="伝票情報.病棟コード" len="3" value="dataset:-52.ward_cd"/>
+--    <item  name="伝票情報.利用者番号" len="8" value="dataset:-72.disp_user_id"/>
+--    <item  name="伝票情報.伝票コード" len="4" value="const:V002"/>
+--    <item  name="伝票情報.伝票名称" len="50" value="const:血液浄化実施"/>
+--    <item  name="予約情報.予約グループCD" len="4" value="const:V"/>
+--    <item  name="予約情報.予約枠コード" len="8" value="dataset:-57.bed_cd"/>
+--    <item  name="予約情報.予約開始日" len="8" value="$BLANK"/>
+--    <item  name="予約情報.予約開始時間" len="6" value="$BLANK"/>
+--    <item  name="予約情報.予約終了日" len="8" value="$BLANK"/>
+--    <item  name="予約情報.予約終了時間" len="6" value="$BLANK"/>
+--    <occ  name="明細行数" len="4" detail="実績詳細" sqlCode="-101" padding_format="zero" padding_position="left"/>
+--    <item  name="終端" value="$CR"/>
+--</root>', '{"dataset": [{"patId": "patId", "sqlCode": -100001}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -101, "facilityCd": "facilityCd"}, {"ordNo": "ordNo", "sqlCode": -14}, {"ordNo": "ordNo", "sqlCode": -11}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -71, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -72, "facilityCd": "facilityCd"}, {"key0": "key0", "sqlCode": -48, "facilityCd": "facilityCd"}, {"key0": "key0", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -54, "facilityCd": "facilityCd", "coopVersion": "coopVersion"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -52, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "sqlCode": -57, "facilityCd": "facilityCd"}, {"ordNo": "ordNo", "sqlCode": -82}]}', '1', '0', 4, '2020-05-01 10:15:53.808', CURRENT_TIMESTAMP, '');
+--INSERT INTO "mst_coop_layout" ("ctl_no", "facility_cd", "coop_cd", "coop_cd_index", "direction", "coop_cd_sub", "coop_format", "coop_name", "coop_vender", "description", "is_editable", "coop_setting", "coop_ext_setting", "is_disp", "is_del", "user_id", "reg_date", "up_date", "coop_version") VALUES (-2070002, 'F_hosp', 'rst_dial', '', 'S', 'upd', 'text', '富士通実績', 'fujitsu', '実績送信', '1', '<root name="富士通透析実績">
+--    <item  name="電文種別" len="2" value="const:VO"/>
+--    <item  name="レコード継続指示" len="1" value="const:E"/>
+--    <item  name="送信先システムコード" len="2" value="const:XX"/>
+--    <item  name="発信元システムコード"  len="2" value="const:VN"/>
+--    <item  name="処理情報.処理年月日" len="8" value="$SYSDATE"/>
+--    <item  name="処理情報.処理時刻" len="6" value="$SYSTIME"/>
+--    <item  name="端末名" len="8" value="const:VOSERVER"/>
+--    <item  name="利用者番号" len="8" value="dataset:-71.disp_user_id"/>
+--    <item  name="処理区分" len="2" value="const:02"/>
+--    <item  name="応答種別" len="2" value="$BLANK"/>
+--    <item  name="電文長" len="6" value="$LENGTH"/>
+--    <item  name="エラーコード" len="5" value="$BLANK"/>
+--    <item  name="予備" len="12" value="$BLANK"/>
+--    <item  name="情報種別" len="2" value="const:02"/>
+--    <item  name="患者情報.患者番号" len="10" value="dataset:-100001.hosp_pat_id" padding_format="zero" padding_position="left"/>
+--    <item  name="伝票情報.オーダ番号" len="8" value="$JOURNAL.coop_ord_no" padding_format="zero" padding_position="left" subMode="R"/>
+--    <item  name="伝票情報.文書番号(先頭8文字）" len="8" value="const:VOSERVER"/>
+--    <item  name="伝票情報.文書番号" len="20" value="dataset:-82.document_no" />
+--    <item  name="伝票情報.文書番号(後2文字）" len="2" value="dataset:-48.document_no"/>
+--    <item  name="伝票情報.文書版数" len="2" value="const:00"/>
+--    <item  name="伝票情報.関連オーダ番号" len="8" value="dataset:-54.ord_no"/>
+--    <item  name="伝票情報.オーダ日付" len="8" value="dataset:-14.start_date8"/>
+--    <item  name="伝票情報.オーダ時間" len="6" value="dataset:-14.start_date6"/>
+--    <item  name="伝票情報.保険パターン番号" len="2" value="dataset:-54.insu_no"/>
+--    <item  name="伝票情報.入外区分" len="1" value="dataset:-11.in_out_f"/>
+--    <item  name="伝票情報.診療科コード" len="3" value="dataset:-52.course_cd"/>
+--    <item  name="伝票情報.病棟コード" len="3" value="dataset:-52.ward_cd"/>
+--    <item  name="伝票情報.利用者番号" len="8" value="dataset:-72.disp_user_id"/>
+--    <item  name="伝票情報.伝票コード" len="4" value="const:V002"/>
+--    <item  name="伝票情報.伝票名称" len="50" value="const:血液浄化実施"/>
+--    <item  name="予約情報.予約グループCD" len="4" value="const:V"/>
+--    <item  name="予約情報.予約枠コード" len="8" value="dataset:-57.bed_cd" />
+--    <item  name="予約情報.予約開始日" len="8" value="$BLANK"/>
+--    <item  name="予約情報.予約開始時間" len="6" value="$BLANK"/>
+--    <item  name="予約情報.予約終了日" len="8" value="$BLANK"/>
+--    <item  name="予約情報.予約終了時間" len="6" value="$BLANK"/>
+--    <occ  name="明細行数" len="4" detail="実績詳細" sqlCode="-101" padding_format="zero" padding_position="left" />
+--    <item  name="終端" value="$CR"/>
+--</root>', '{"dataset": [{"patId": "patId", "sqlCode": -100001}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -101, "facilityCd": "facilityCd"}, {"ordNo": "ordNo", "sqlCode": -14}, {"ordNo": "ordNo", "sqlCode": -11}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -71, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -72, "facilityCd": "facilityCd"}, {"key0": "key0", "sqlCode": -48, "facilityCd": "facilityCd"}, {"key0": "key0", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -54, "facilityCd": "facilityCd", "coopVersion": "coopVersion"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -52, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "sqlCode": -57, "facilityCd": "facilityCd"}, {"ordNo": "ordNo", "sqlCode": -82}]}', '1', '0', 4, '2020-05-01 10:15:53.808', CURRENT_TIMESTAMP, '');
+--INSERT INTO "mst_coop_layout" ("ctl_no", "facility_cd", "coop_cd", "coop_cd_index", "direction", "coop_cd_sub", "coop_format", "coop_name", "coop_vender", "description", "is_editable", "coop_setting", "coop_ext_setting", "is_disp", "is_del", "user_id", "reg_date", "up_date", "coop_version") VALUES (-2070003, 'F_hosp', 'rst_dial', '', 'S', 'del', 'text', '富士通実績', 'fujitsu', '実績送信', '1', '<root name="富士通透析実績">
+--    <item  name="電文種別" len="2" value="const:VO"/>
+--    <item  name="レコード継続指示" len="1" value="const:E"/>
+--    <item  name="送信先システムコード" len="2" value="const:XX"/>
+--    <item  name="発信元システムコード"  len="2" value="const:VN"/>
+--    <item  name="処理情報.処理年月日" len="8" value="$SYSDATE"/>
+--    <item  name="処理情報.処理時刻" len="6" value="$SYSTIME"/>
+--    <item  name="端末名" len="8" value="const:VOSERVER"/>
+--    <item  name="利用者番号" len="8" value="dataset:-71.disp_user_id"/>
+--    <item  name="処理区分" len="2" value="const:03"/>
+--    <item  name="応答種別" len="2" value="$BLANK"/>
+--    <item  name="電文長" len="6" value="$LENGTH"/>
+--    <item  name="エラーコード" len="5" value="$BLANK"/>
+--    <item  name="予備" len="12" value="$BLANK"/>
+--    <item  name="情報種別" len="2" value="const:02"/>
+--    <item  name="患者情報.患者番号" len="10" value="dataset:-100001.hosp_pat_id" padding_format="zero" padding_position="left"/>
+--    <item  name="伝票情報.オーダ番号" len="8" value="$JOURNAL.coop_ord_no" padding_format="zero" padding_position="left" subMode="R"/>
+--    <item  name="伝票情報.文書番号(先頭8文字）" len="8" value="const:VOSERVER"/>
+--    <item  name="伝票情報.文書番号" len="20" value="dataset:-82.document_no" />
+--    <item  name="伝票情報.文書番号(後2文字）" len="2" value="dataset:-48.document_no"/>
+--    <item  name="伝票情報.文書版数" len="2" value="const:00"/>
+--    <item  name="伝票情報.関連オーダ番号" len="8" value="dataset:-54.ord_no"/>
+--    <item  name="伝票情報.オーダ日付" len="8" value="dataset:-14.start_date8"/>
+--    <item  name="伝票情報.オーダ時間" len="6" value="dataset:-14.start_date6"/>
+--    <item  name="伝票情報.保険パターン番号" len="2" value="dataset:-54.insu_no"/>
+--    <item  name="伝票情報.入外区分" len="1" value="dataset:-80.in_out_f"/>
+--    <item  name="伝票情報.診療科コード" len="3" value="dataset:-80.course_cd"/>
+--    <item  name="伝票情報.病棟コード" len="3" value="dataset:-80.ward_cd"/>
+--    <item  name="伝票情報.利用者番号" len="8" value="dataset:-72.disp_user_id"/>
+--    <item  name="伝票情報.伝票コード" len="4" value="const:V002"/>
+--    <item  name="伝票情報.伝票名称" len="50" value="const:血液浄化実施"/>
+--    <item  name="予約情報.予約グループCD" len="4" value="const:V"/>
+--    <item  name="予約情報.予約枠コード" len="8" value="dataset:-80.bed_cd" />
+--    <item  name="予約情報.予約開始日" len="8" value="$BLANK"/>
+--    <item  name="予約情報.予約開始時間" len="6" value="$BLANK"/>
+--    <item  name="予約情報.予約終了日" len="8" value="$BLANK"/>
+--    <item  name="予約情報.予約終了時間" len="6" value="$BLANK"/>
+--    <occ  name="明細行数" len="4" detail="実績詳細(削除)" sqlCode="-81" padding_format="zero" padding_position="left"/>
+--    <item  name="終端" value="$CR"/>
+--</root>', '{"dataset": [{"patId": "patId", "sqlCode": -100001}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -101, "facilityCd": "facilityCd"}, {"ordNo": "ordNo", "sqlCode": -14}, {"ordNo": "ordNo", "sqlCode": -11}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -71, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -72, "facilityCd": "facilityCd"}, {"key0": "key0", "sqlCode": -48, "facilityCd": "facilityCd"}, {"key0": "key0", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -54, "facilityCd": "facilityCd", "coopVersion": "coopVersion"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -52, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "sqlCode": -57, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -80, "facilityCd": "facilityCd"}, {"key0": "key0", "ordNo": "ordNo", "patId": "patId", "sqlCode": -81, "facilityCd": "facilityCd"}, {"ordNo": "ordNo", "sqlCode": -82}]}', '1', '0', 4, '2020-05-01 10:15:53.808', CURRENT_TIMESTAMP, '');
+--INSERT INTO "mst_coop_layout" ("ctl_no", "facility_cd", "coop_cd", "coop_cd_index", "direction", "coop_cd_sub", "coop_format", "coop_name", "coop_vender", "description", "is_editable", "coop_setting", "coop_ext_setting", "is_disp", "is_del", "user_id", "reg_date", "up_date", "coop_version") VALUES (-6020001, 'C_hosp', 'ind_dial', '', 'S', 'cre', 'xml', 'CSI透析予約', 'MIRAIs', '透析予約', '1', '<coop_info>
+--    <!-- 電文種別 -->
+--    <facility_cd>$JOURNAL.facility_cd</facility_cd>
+--    <!-- 電文種別 -->
+--    <coop_cd>ind_dial</coop_cd>
+--    <!-- 作成更新区分 -->
+--    <crud>C</crud>
+--    <!-- 向き（送受信） -->
+--    <direction>S</direction>
+--    <!-- （連携先)オーダ番号 -->
+--    <coop_ord_no>$JOURNAL.coop_ord_no</coop_ord_no>
+--    <!-- 患者番号（連携用） -->
+--    <hosp_pat_id>dataset:-200001.hosp_pat_id</hosp_pat_id>
+--    <!-- 電文内容 -->
+--    <dump>
+--        <rootNode>
+--            <!-- 患者情報 -->
+--            <PAT_BASIC_INFO>
+--                <!-- 表示用患者ID -->
+--                <DISP_PATID>dataset:-200001.hosp_pat_id</DISP_PATID>
+--                <!-- 患者ID -->
+--                <PATID>$JOURNAL.pat_id</PATID>
+--                <!-- 患者名 -->
+--                <NAME>dataset:-200001.pat_name</NAME>
+--                <!-- 医師1 -->
+--                <DOCTOR_CD1>dataset:-436.staff_cd1</DOCTOR_CD1>
+--                <!-- 医師2 -->
+--                <DOCTOR_CD2>dataset:-436.staff_cd2</DOCTOR_CD2>
+--                <MST_PAT_GROUP>
+--                    <!-- 科コード -->
+--                    <IN_HOSPITAL_CD>dataset:-436.course_cd1</IN_HOSPITAL_CD>
+--                </MST_PAT_GROUP>
+--            </PAT_BASIC_INFO>
+--            <!-- 透析スケジュール -->
+--            <SCH_DIALYSIS_PLAN>
+--                <!-- ベッド番号 -->
+--                <BED_NO>dataset:-436.bed_cd1</BED_NO>
+--                <!-- クールコード -->
+--                <KUR_CD>dataset:-436.kur_cd1</KUR_CD>
+--                <!-- 透析日 -->
+--                <DIALYSIS_DATE>dataset:-436.treat_date</DIALYSIS_DATE>
+--                <!-- クールマスタ -->
+--                <MST_KUR>
+--                    <!-- クール内標準開始時間 -->
+--                    <STANDARD_START_TIME>dataset:-436.kur_standard_start_time</STANDARD_START_TIME>
+--                </MST_KUR>
+--                <!-- ベッドマスタ -->
+--                <MST_BED>
+--                    <!-- ベッド名 -->
+--                    <BED_NAME>dataset:-436.bed_name</BED_NAME>
+--                </MST_BED>
+--            </SCH_DIALYSIS_PLAN>
+--            <IND_DIALYSIS_COND DIALYSIS_ITEM_CD="dataset:-437.item_cd" NAME="dataset:-437.item_name" VALUE="dataset:-437.item_value" _sqlCode="-437">
+--            <!-- 条件指示 詳細：項目番号, 項目名, 設定値-->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-437.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値 -->
+--                <MST_STAFF STAFF_CD="dataset:-437.ind_user_id">
+--                    <!-- 職種コード -->
+--                    <JOB_CLASS_CD>job_cd:-437.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-437.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-437.up_date</UP_DATE>
+--                <!-- 装置:モード -->
+--                <MST_TREAT_ITEM DEVICE_MODE="dataset:-437.add_item"/>
+--            </IND_DIALYSIS_COND>
+--            <IND_DIALYSIS_PLAN CTL_NO="$COUNT" _sqlCode="-438">
+--            <!-- 予約指示 詳細:番号 -->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-438.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値-->
+--                <MST_STAFF STAFF_CD="dataset:-438.ind_user_id">
+--                    <!-- 職種コード-->
+--                    <JOB_CLASS_CD>job_cd:-438.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-438.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-438.up_date</UP_DATE>
+--            </IND_DIALYSIS_PLAN>
+--            <IND_DIALYSIS_MEDI CTL_NO="$COUNT" _sqlCode="-439">
+--            <!-- 投薬指示 詳細:番号 -->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-439.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値-->
+--                <MST_STAFF STAFF_CD="dataset:-439.ind_user_id">
+--                    <!-- 職種コード-->
+--                    <JOB_CLASS_CD>job_cd:-439.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-439.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-439.up_date</UP_DATE>
+--            </IND_DIALYSIS_MEDI>
+--            <IND_DIALYSIS_EQUIP CTL_NO="$COUNT" _sqlCode="-440">
+--            <!-- 材料指示 詳細:番号 -->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-440.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値-->
+--                <MST_STAFF STAFF_CD="dataset:-440.ind_user_id">
+--                    <!-- 職種コード-->
+--                    <JOB_CLASS_CD>job_cd:-440.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-440.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-440.up_date</UP_DATE>
+--            </IND_DIALYSIS_EQUIP>
+--            <IND_DIALYSIS_ADD CTL_NO="$COUNT" _sqlCode="-441">
+--            <!-- 指示簿指示 詳細:番号 -->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-441.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値-->
+--                <MST_STAFF STAFF_CD="dataset:-441.ind_user_id">
+--                    <!-- 職種コード-->
+--                    <JOB_CLASS_CD>job_cd:-441.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-441.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-441.up_date</UP_DATE>
+--            </IND_DIALYSIS_ADD>
+--            <SYS_COOP_EXEC_DATA>
+--                <A00001>
+--                    <SYS_STAFF_AUTH>
+--                        <ACL>1</ACL>
+--                    </SYS_STAFF_AUTH>
+--                </A00001>
+--                <A00002>
+--                    <MST_BED>
+--                        <BED_NO>1</BED_NO>
+--                    </MST_BED>
+--                </A00002>
+--                <A10001></A10001>
+--                <A10002>
+--                    <USER_TABLES>
+--                        <TABLE_NAME>COOP_LAYOUT</TABLE_NAME>
+--                    </USER_TABLES>
+--                </A10002>
+--            </SYS_COOP_EXEC_DATA>
+--        </rootNode>
+--    </dump>
+--</coop_info>', '{"dataset": [{"patId": "patId", "sqlCode": -200001}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -436}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -437}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -438}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -439}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -440}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -441}]}', '1', '0', -1, '2021-09-06 11:38:27', CURRENT_TIMESTAMP, '');
+--INSERT INTO "mst_coop_layout" ("ctl_no", "facility_cd", "coop_cd", "coop_cd_index", "direction", "coop_cd_sub", "coop_format", "coop_name", "coop_vender", "description", "is_editable", "coop_setting", "coop_ext_setting", "is_disp", "is_del", "user_id", "reg_date", "up_date", "coop_version") VALUES (-6020002, 'C_hosp', 'ind_dial', '', 'S', 'upd', 'xml', 'CSI透析予約', 'MIRAIs', '透析予約', '1', '<coop_info>
+--    <!-- 電文種別 -->
+--    <facility_cd>$JOURNAL.facility_cd</facility_cd>
+--    <!-- 電文種別 -->
+--    <coop_cd>ind_dial</coop_cd>
+--    <!-- 作成更新区分 -->
+--    <crud>U</crud>
+--    <!-- 向き（送受信） -->
+--    <direction>S</direction>
+--    <!-- （連携先)オーダ番号 -->
+--    <coop_ord_no>$JOURNAL.coop_ord_no</coop_ord_no>
+--    <!-- 患者番号（連携用） -->
+--    <hosp_pat_id>dataset:-200001.hosp_pat_id</hosp_pat_id>
+--    <!-- 電文内容 -->
+--    <dump>
+--        <rootNode>
+--            <!-- 患者情報 -->
+--            <PAT_BASIC_INFO>
+--                <!-- 表示用患者ID -->
+--                <DISP_PATID>dataset:-200001.hosp_pat_id</DISP_PATID>
+--                <!-- 患者ID -->
+--                <PATID>$JOURNAL.pat_id</PATID>
+--                <!-- 患者名 -->
+--                <NAME>dataset:-200001.pat_name</NAME>
+--                <!-- 医師1 -->
+--                <DOCTOR_CD1>dataset:-436.staff_cd1</DOCTOR_CD1>
+--                <!-- 医師2 -->
+--                <DOCTOR_CD2>dataset:-436.staff_cd2</DOCTOR_CD2>
+--                <MST_PAT_GROUP>
+--                    <!-- 科コード -->
+--                    <IN_HOSPITAL_CD>dataset:-436.course_cd1</IN_HOSPITAL_CD>
+--                </MST_PAT_GROUP>
+--            </PAT_BASIC_INFO>
+--            <!-- 透析スケジュール -->
+--            <SCH_DIALYSIS_PLAN>
+--                <!-- ベッド番号 -->
+--                <BED_NO>dataset:-436.bed_cd1</BED_NO>
+--                <!-- クールコード -->
+--                <KUR_CD>dataset:-436.kur_cd1</KUR_CD>
+--                <!-- 透析日 -->
+--                <DIALYSIS_DATE>dataset:-436.treat_date</DIALYSIS_DATE>
+--                <!-- クールマスタ -->
+--                <MST_KUR>
+--                    <!-- クール内標準開始時間 -->
+--                    <STANDARD_START_TIME>dataset:-436.kur_standard_start_time</STANDARD_START_TIME>
+--                </MST_KUR>
+--                <!-- ベッドマスタ -->
+--                <MST_BED>
+--                    <!-- ベッド名 -->
+--                    <BED_NAME>dataset:-436.bed_name</BED_NAME>
+--                </MST_BED>
+--            </SCH_DIALYSIS_PLAN>
+--            <IND_DIALYSIS_COND DIALYSIS_ITEM_CD="dataset:-437.item_cd" NAME="dataset:-437.item_name" VALUE="dataset:-437.item_value" _sqlCode="-437">
+--            <!-- 条件指示 詳細：項目番号, 項目名, 設定値-->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-437.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値 -->
+--                <MST_STAFF STAFF_CD="dataset:-437.ind_user_id">
+--                    <!-- 職種コード -->
+--                    <JOB_CLASS_CD>job_cd:-437.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-437.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-437.up_date</UP_DATE>
+--                <!-- 装置:モード -->
+--                <MST_TREAT_ITEM DEVICE_MODE="dataset:-437.add_item"/>
+--            </IND_DIALYSIS_COND>
+--            <IND_DIALYSIS_PLAN CTL_NO="$COUNT" _sqlCode="-438">
+--            <!-- 予約指示 詳細:番号 -->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-438.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値-->
+--                <MST_STAFF STAFF_CD="dataset:-438.ind_user_id">
+--                    <!-- 職種コード-->
+--                    <JOB_CLASS_CD>job_cd:-438.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-438.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-438.up_date</UP_DATE>
+--            </IND_DIALYSIS_PLAN>
+--            <IND_DIALYSIS_MEDI CTL_NO="$COUNT" _sqlCode="-439">
+--            <!-- 投薬指示 詳細:番号 -->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-439.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値-->
+--                <MST_STAFF STAFF_CD="dataset:-439.ind_user_id">
+--                    <!-- 職種コード-->
+--                    <JOB_CLASS_CD>job_cd:-439.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-439.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-439.up_date</UP_DATE>
+--            </IND_DIALYSIS_MEDI>
+--            <IND_DIALYSIS_EQUIP CTL_NO="$COUNT" _sqlCode="-440">
+--            <!-- 材料指示 詳細:番号 -->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-440.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値-->
+--                <MST_STAFF STAFF_CD="dataset:-440.ind_user_id">
+--                    <!-- 職種コード-->
+--                    <JOB_CLASS_CD>job_cd:-440.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-440.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-440.up_date</UP_DATE>
+--            </IND_DIALYSIS_EQUIP>
+--            <IND_DIALYSIS_ADD CTL_NO="$COUNT" _sqlCode="-441">
+--            <!-- 指示簿指示 詳細:番号 -->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-441.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値-->
+--                <MST_STAFF STAFF_CD="dataset:-441.ind_user_id">
+--                    <!-- 職種コード-->
+--                    <JOB_CLASS_CD>job_cd:-441.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-441.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-441.up_date</UP_DATE>
+--            </IND_DIALYSIS_ADD>
+--            <SYS_COOP_EXEC_DATA>
+--                <A00001>
+--                    <SYS_STAFF_AUTH>
+--                        <ACL>1</ACL>
+--                    </SYS_STAFF_AUTH>
+--                </A00001>
+--                <A00002>
+--                    <MST_BED>
+--                        <BED_NO>1</BED_NO>
+--                    </MST_BED>
+--                </A00002>
+--                <A10001></A10001>
+--                <A10002>
+--                    <USER_TABLES>
+--                        <TABLE_NAME>COOP_LAYOUT</TABLE_NAME>
+--                    </USER_TABLES>
+--                </A10002>
+--            </SYS_COOP_EXEC_DATA>
+--        </rootNode>
+--    </dump>
+--</coop_info>', '{"dataset": [{"patId": "patId", "sqlCode": -200001}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -436}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -437}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -438}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -439}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -440}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -441}]}', '1', '0', -1, '2021-09-06 11:38:27', CURRENT_TIMESTAMP, '');
+--INSERT INTO "mst_coop_layout" ("ctl_no", "facility_cd", "coop_cd", "coop_cd_index", "direction", "coop_cd_sub", "coop_format", "coop_name", "coop_vender", "description", "is_editable", "coop_setting", "coop_ext_setting", "is_disp", "is_del", "user_id", "reg_date", "up_date", "coop_version") VALUES (-6020003, 'C_hosp', 'ind_dial', '', 'S', 'del', 'xml', 'CSI透析予約', 'MIRAIs', '透析予約', '1', '<coop_info>
+--    <!-- 電文種別 -->
+--    <facility_cd>$JOURNAL.facility_cd</facility_cd>
+--    <!-- 電文種別 -->
+--    <coop_cd>ind_dial</coop_cd>
+--    <!-- 作成更新区分 -->
+--    <crud>D</crud>
+--    <!-- 向き（送受信） -->
+--    <direction>S</direction>
+--    <!-- （連携先)オーダ番号 -->
+--    <coop_ord_no>$JOURNAL.coop_ord_no</coop_ord_no>
+--    <!-- 患者番号（連携用） -->
+--    <hosp_pat_id>dataset:-200001.hosp_pat_id</hosp_pat_id>
+--    <!-- 電文内容 -->
+--    <dump>
+--        <rootNode>
+--            <!-- 患者情報 -->
+--            <PAT_BASIC_INFO>
+--                <!-- 表示用患者ID -->
+--                <DISP_PATID>dataset:-200001.hosp_pat_id</DISP_PATID>
+--                <!-- 患者ID -->
+--                <PATID>$JOURNAL.pat_id</PATID>
+--                <!-- 患者名 -->
+--                <NAME>dataset:-200001.pat_name</NAME>
+--                <!-- 医師1 -->
+--                <DOCTOR_CD1>dataset:-436.staff_cd1</DOCTOR_CD1>
+--                <!-- 医師2 -->
+--                <DOCTOR_CD2>dataset:-436.staff_cd2</DOCTOR_CD2>
+--                <MST_PAT_GROUP>
+--                    <!-- 科コード -->
+--                    <IN_HOSPITAL_CD>dataset:-436.course_cd1</IN_HOSPITAL_CD>
+--                </MST_PAT_GROUP>
+--            </PAT_BASIC_INFO>
+--            <!-- 透析スケジュール -->
+--            <SCH_DIALYSIS_PLAN>
+--                <!-- ベッド番号 -->
+--                <BED_NO>dataset:-436.bed_cd1</BED_NO>
+--                <!-- クールコード -->
+--                <KUR_CD>dataset:-436.kur_cd1</KUR_CD>
+--                <!-- 透析日 -->
+--                <DIALYSIS_DATE>dataset:-436.treat_date</DIALYSIS_DATE>
+--                <!-- クールマスタ -->
+--                <MST_KUR>
+--                    <!-- クール内標準開始時間 -->
+--                    <STANDARD_START_TIME>dataset:-436.kur_standard_start_time</STANDARD_START_TIME>
+--                </MST_KUR>
+--                <!-- ベッドマスタ -->
+--                <MST_BED>
+--                    <!-- ベッド名 -->
+--                    <BED_NAME>dataset:-436.bed_name</BED_NAME>
+--                </MST_BED>
+--            </SCH_DIALYSIS_PLAN>
+--            <IND_DIALYSIS_COND DIALYSIS_ITEM_CD="dataset:-437.item_cd" NAME="dataset:-437.item_name" VALUE="dataset:-437.item_value" _sqlCode="-437">
+--            <!-- 条件指示 詳細：項目番号, 項目名, 設定値-->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-437.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値 -->
+--                <MST_STAFF STAFF_CD="dataset:-437.ind_user_id">
+--                    <!-- 職種コード -->
+--                    <JOB_CLASS_CD>job_cd:-437.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-437.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-437.up_date</UP_DATE>
+--                <!-- 装置:モード -->
+--                <MST_TREAT_ITEM DEVICE_MODE="dataset:-437.add_item"/>
+--            </IND_DIALYSIS_COND>
+--            <IND_DIALYSIS_PLAN CTL_NO="$COUNT" _sqlCode="-438">
+--            <!-- 予約指示 詳細:番号 -->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-438.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値-->
+--                <MST_STAFF STAFF_CD="dataset:-438.ind_user_id">
+--                    <!-- 職種コード-->
+--                    <JOB_CLASS_CD>job_cd:-438.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-438.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-438.up_date</UP_DATE>
+--            </IND_DIALYSIS_PLAN>
+--            <IND_DIALYSIS_MEDI CTL_NO="$COUNT" _sqlCode="-439">
+--            <!-- 投薬指示 詳細:番号 -->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-439.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値-->
+--                <MST_STAFF STAFF_CD="dataset:-439.ind_user_id">
+--                    <!-- 職種コード-->
+--                    <JOB_CLASS_CD>job_cd:-439.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-439.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-439.up_date</UP_DATE>
+--            </IND_DIALYSIS_MEDI>
+--            <IND_DIALYSIS_EQUIP CTL_NO="$COUNT" _sqlCode="-440">
+--            <!-- 材料指示 詳細:番号 -->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-440.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値-->
+--                <MST_STAFF STAFF_CD="dataset:-440.ind_user_id">
+--                    <!-- 職種コード-->
+--                    <JOB_CLASS_CD>job_cd:-440.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-440.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-440.up_date</UP_DATE>
+--            </IND_DIALYSIS_EQUIP>
+--            <IND_DIALYSIS_ADD CTL_NO="$COUNT" _sqlCode="-441">
+--            <!-- 指示簿指示 詳細:番号 -->
+--                <!-- 指示者 -->
+--                <INDICATOR_CD>dataset:-441.ind_user_id</INDICATOR_CD>
+--                <!-- スタッフマスタ：指示者の値-->
+--                <MST_STAFF STAFF_CD="dataset:-441.ind_user_id">
+--                    <!-- 職種コード-->
+--                    <JOB_CLASS_CD>job_cd:-441.ind_user_id</JOB_CLASS_CD>
+--                </MST_STAFF>
+--                <!-- 更新者 -->
+--                <UPDATE_STAFF_CD>dataset:-441.upd_user_id</UPDATE_STAFF_CD>
+--                <!-- 更新時間 -->
+--                <UP_DATE>dataset:-441.up_date</UP_DATE>
+--            </IND_DIALYSIS_ADD>
+--            <SYS_COOP_EXEC_DATA>
+--                <A00001>
+--                    <SYS_STAFF_AUTH>
+--                        <ACL>1</ACL>
+--                    </SYS_STAFF_AUTH>
+--                </A00001>
+--                <A00002>
+--                    <MST_BED>
+--                        <BED_NO>1</BED_NO>
+--                    </MST_BED>
+--                </A00002>
+--                <A10001></A10001>
+--                <A10002>
+--                    <USER_TABLES>
+--                        <TABLE_NAME>COOP_LAYOUT</TABLE_NAME>
+--                    </USER_TABLES>
+--                </A10002>
+--            </SYS_COOP_EXEC_DATA>
+--        </rootNode>
+--    </dump>
+--</coop_info>', '{"dataset": [{"patId": "patId", "sqlCode": -200001}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -436}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -437}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -438}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -439}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -440}, {"ordNo": "ordNo", "patId": "patId", "sqlCode": -441}]}', '1', '0', -1, '2021-09-06 11:38:27', CURRENT_TIMESTAMP, '');

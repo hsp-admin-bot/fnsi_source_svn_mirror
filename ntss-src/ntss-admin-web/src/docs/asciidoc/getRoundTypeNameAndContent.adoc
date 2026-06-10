@@ -1,0 +1,14 @@
+[[get-round-type-name-and-content]]
+=== 種別を取得
+
+==== Request
+include::{snippets}/round-type/name-and-content/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/round-type/name-and-content/get/ok/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/round-type/name-and-content/get/ok/path-parameters.adoc[]
+
+==== Response Fields
+include::{snippets}/round-type/name-and-content/get/ok/response-fields.adoc[]

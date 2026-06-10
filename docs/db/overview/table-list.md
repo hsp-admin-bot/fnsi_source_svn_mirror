@@ -1,0 +1,5 @@
+# テーブル一覧
+
+- Source workbook: `NTSSデータベース設計書_外部データ連携.xlsm`
+- Source sheet: `テーブル一覧`
+- Category: overview

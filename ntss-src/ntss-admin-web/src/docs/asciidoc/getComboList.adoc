@@ -1,0 +1,20 @@
+[[get-combo-list]]
+=== 参照型コンボの元データ取得
+
+==== Request
+include::{snippets}/combo/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/combo/ok/http-request.adoc[]
+
+==== Response(失敗:マスタ指定間違い)
+include::{snippets}/combo/invalid-master/http-response.adoc[]
+
+==== Response(失敗：カラム指定間違い)
+include::{snippets}/combo/invalid-column/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/combo/ok/path-parameters.adoc[]
+
+==== Response Fields
+include::{snippets}/combo/ok/response-fields.adoc[]

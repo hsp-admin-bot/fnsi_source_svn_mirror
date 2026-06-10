@@ -1,0 +1,141 @@
+.sub-modal-mask {
+  position: fixed;
+  z-index: 9998;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: table;
+  transition: opacity 0.3s ease;
+}
+
+.sub-modal-wrapper {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+.sub-modal-header h3 {
+  margin-top: 0;
+  color: #42b983;
+}
+.sub-modal-body {
+  margin: 0px 0;
+}
+
+.sub-modal-default-button {
+  float: right;
+}
+
+/*
+  * The following styles are auto-applied to elements with
+  * transition="modal" when their visibility is toggled
+  * by Vue.js.
+  *
+  * You can easily play with the modal transition by editing
+  * these styles.
+  */
+
+.sub-modal-enter {
+  opacity: 0;
+}
+
+.sub-modal-leave-active {
+  opacity: 0;
+}
+
+.sub-modal-container {
+  width: 82%;
+  height: 82%;
+  margin: auto;
+  -webkit-transform: scale(1);
+  transform: scale(1);
+  background-color: var(--ntss-base-background-color);
+  color: var(--ntss-list-body-color);
+  font-size: 1.5em;
+}
+
+.sub-modal-header,
+.sub-modal-footer {
+  position: absolute;
+  width: 100%;
+}
+.sub-modal-header {
+  height: 45px;
+}
+.sub-modal-footer .bottom-bar {
+  background-color: var(--ntss-base-background-color);
+}
+
+.toolbar__title span {
+  padding-left:0.5em;
+}
+
+.sub-modal-footer {
+  bottom: 0px;
+}
+
+.sub-modal-header ons-toolbar {
+  position: relative;
+  webkit-box-shadow: none;
+  box-shadow: none;
+  height: 44px;
+
+}
+
+.sub-modal-footer ons-bottom-toolbar {
+  position: relative;
+}
+
+.sub-modal-footer ons-bottom-toolbar {
+  height: 100%;
+}
+
+.sub-modal-search {
+  position: absolute;
+  top: 45px;
+  width: 100%;
+  height: 6.2em;
+  overflow-y: auto;
+}
+
+.sub-modal-body {
+  position: absolute;
+  top: 45px;
+  width: 100%;
+  height: calc(100% - 70px - 2em);
+  overflow-y: auto;
+}
+
+.sub-modal-body-no-footer {
+  position: absolute;
+  width: 100%;
+  top: 50px;
+  height: 91%;
+  overflow-y: auto;
+}
+
+.sub-modal-body-search {
+  position: absolute;
+  top: 10em;
+  width: 100%;
+  height: calc(100% - 15em);
+  overflow-y: auto;
+}
+
+@media screen and (max-width:480px) { 
+  .sub-modal-container {
+    width: 88%;
+    height: 88%;
+  }
+}
+
+@import "./print.scss";
+@media print {
+  .sub-modal-container {
+    font-size: inherit;
+  }
+  .sub-modal-search {
+    height: auto !important;
+  }
+}

@@ -1,0 +1,5 @@
+[app]
+54.64.6.178 ansible_connection=ssh ansible_user=esm ansible_ssh_private_key_file=~/esm.pem
+
+[staging:children]
+app

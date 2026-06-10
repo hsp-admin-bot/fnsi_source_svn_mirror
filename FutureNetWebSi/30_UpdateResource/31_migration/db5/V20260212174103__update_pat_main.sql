@@ -1,0 +1,1 @@
+UPDATE pat_main SET acceptance_status_info = '[]' WHERE acceptance_status_info IS NULL;

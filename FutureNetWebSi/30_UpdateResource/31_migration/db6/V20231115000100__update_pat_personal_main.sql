@@ -1,0 +1,1 @@
+UPDATE pat_personal_main SET dial_diff_com_info = regexp_replace(dial_diff_com_info::TEXT, '("reg_date":)([^"])(\d{14})(\d{6})([^"])', '\1\2"\3"\5', 'g')::JSONB WHERE dial_diff_com_info::TEXT ~ '\d{20}';

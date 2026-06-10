@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+    <soap:Body>
+        <RequestResponse
+            xmlns="http://medical.nec.co.jp/">
+            <RequestResult>
+                <Response>
+                    <Header>
+                        <Status>
+                            <StatusCode>0</StatusCode>
+                            <StatusMessage>OK</StatusMessage>
+                        </Status>
+                    </Header>
+                    <Result></Result>
+                </Response>
+            </RequestResult>
+        </RequestResponse>
+    </soap:Body>
+</soap:Envelope>

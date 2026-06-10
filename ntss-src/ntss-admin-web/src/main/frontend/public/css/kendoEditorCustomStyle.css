@@ -1,0 +1,65 @@
+/* Kendo editor のスタイル調整 */
+body {
+  height: 100%;
+  min-height: 100%;
+}
+p {
+  margin: 0;
+}
+
+/* 9504対応 フォントの設定を追加 START*/
+@font-face {
+  font-family: MSGothicAlias;
+  src: local("ＭＳ ゴシック"), local("MS Gothic");
+}
+
+@font-face {
+  font-family: MSPGothicAlias;
+  src: local("ＭＳ Ｐゴシック"), local("MS PGothic");
+}
+
+@font-face {
+  font-family: MSMinchoAlias;
+  src: local("ＭＳ 明朝"), local("MS Mincho");
+}
+
+@font-face {
+  font-family: MSPMinchoAlias;
+  src: local("ＭＳ Ｐ明朝"), local("MS PMincho");
+}
+
+@font-face {
+  font-family: MSUIGothicAlias;
+  src: local("MS UI Gothic"), local("MSUIGothic");
+}
+
+@font-face {
+  font-family: ArialAlias;
+  src: local("Arial");
+}
+
+@font-face {
+  font-family: OsakaAlias;
+  src: local("Osaka");
+}
+
+@font-face {
+  font-family: HelveticaNeueAlias;
+  src: local("Helvetica Neue"), local("HelveticaNeue");
+}
+
+@font-face {
+  font-family: HelveticaAlias;
+  src: local("Helvetica");
+}
+
+@font-face {
+  font-family: SansSerifAlias;
+  src: local("sans-serif");
+}
+
+@font-face {
+  font-family: TimesNewRomanAlias;
+  src: local("Times New Roman"), local("TimesNewRoman");
+}
+/* 9504対応 フォントの設定を追加 END*/

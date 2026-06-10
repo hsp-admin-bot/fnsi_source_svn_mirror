@@ -1,0 +1,263 @@
+※以下の見えない文字は16進数で設定します。
+  0x00～0x1F、0x7F
+----------------------------------------------------------------------------
+①ifedge_setting_Fujitsu.json：「socket_fujitsu.js」関連のjsonの説明。
+{
+    "response_telegram": {
+        "socket-type": "fujitsu",						←電子カルテの種類（例：富士通)
+        "type_name": "ResponseType",						←応答種別のJOSN設定名：header部分nameを設定した内容
+        "length_name": "TelegramLength",					←電文長のJOSN設定名：header部分nameを設定した内容
+        "type_name_success": "OK",						←正常応答電文の応答種別の値
+        "type_name_failure": "N2",						←異常応答電文の応答種別の値
+        "retry_value": "N1",							←再送要求の応答種別の値
+        "skip_value": "N2",							←スキップの応答種別の値
+        "abnormal_value": ["NG","N3","N4"],					←接続異常の応答種別の値
+        "header_length_included": false,					←受信電文の電文長にheader部分の長を含みますか（true：含める、false：含まない）
+        "response_success": {							←正常応答電文の定義
+            "header_length": 65,						←応答電文の長さ（★header_lengthは数値です）
+            "header": [								←応答電文項目
+                {
+                    "name": "TlegramType",					←応答電文.項目名
+                    "length": 2,						←応答電文.長さ（★length数値は数値です）
+                    "value": ""							←応答電文.値：空の文字列（受信電文の値)
+                },
+                {
+                    "name": "RecordContinuationInstructions",
+                    "length": 1,
+                    "value": ""
+                },
+                {
+                    "name": "DestinationSystemCode",
+                    "length": 2,
+                    "value": "XX"						←応答電文.値：固定値文字列（例：XX)
+                },
+                {
+                    "name": "SourceSystemCode",
+                    "length": 2,
+                    "value": "VN"
+                },
+                {
+                    "name": "DATE",
+                    "length": 8,
+                    "value": "$DATE",						←応答電文.値：日付（例：XX)
+                    "format": "YYYYMMDD"					←応答電文.書式（例：YYYYMMDD)
+                },
+                {
+                    "name": "TIME",
+                    "length": 6,
+                    "value": "$DATE",
+                    "format": "HH24MISS"
+                },
+                {
+                    "name": "TerminalName",
+                    "length": 8,
+                    "value": "VOSERVER"
+                },
+                {
+                    "name": "UserID",
+                    "length": 8,
+                    "value": "00000000"
+                },
+                {
+                    "name": "TreatmentDivision",
+                    "length": 2,
+                    "value": ""
+                },
+                {
+                    "name": "ResponseType",
+                    "length": 2,
+                    "value": "$TYPENAME"					←応答電文.値：応答種別の値($TYPENAME:type_name_successとtype_name_failureの値)
+                },
+                {
+                    "name": "TelegramLength",
+                    "length": 6,
+                    "value": "000065"
+                },
+                {
+                    "name": "ErrorCode",
+                    "length": 5,
+                    "value": ""
+                },
+                {
+                    "name": "Preliminary",
+                    "length": 12,
+                    "value": ""
+                },
+                {
+                    "name": "Terminal",
+                    "length": 1,
+                    "value": "\r"
+                }
+            ]
+        }
+    }
+}
+②ifedge_setting_nec.json：「socket_nec.js」関連のjsonの説明。
+{
+    "response_telegram": {
+        "socket-type": "nec",							←電子カルテの種類（例：NEC)
+        "type_name": "Result",
+        "type_name_success": "000000",
+        "type_name_failure": "999999",
+        "length_name": "DataLength",
+        "retry_value": "??????",
+        "abnormal_value": ["999999"],
+        "header_length_included": true,						←受信電文の電文長にheader部分の長を含みますか（true：含める、false：含まない）
+        "response_success": {
+            "header_length": 32,
+            "header": [
+                {
+                    "name": "DestinationID",
+                    "length": 6,
+                    "value": "      "
+                },
+                {
+                    "name": "SourceID",
+                    "length": 6,
+                    "value": "      "
+                },
+                {
+                    "name": "HandlingCommands",
+                    "length": 8,
+                    "value": "        "
+                },
+                {
+                    "name": "Result",
+                    "length": 6,
+                    "value": "$TYPENAME"
+                },
+                {
+                    "name": "DataLength",
+                    "length": 6,
+                    "value": "000000"
+                }
+            ]
+        }
+    }
+}
+③ifedge_setting_pana.json：「socket_pana.js」関連のjsonの説明。
+{
+    "response_telegram": {
+        "socket-type": "pana",							←電子カルテの種類（例：PANA)
+        "type_name": "ResponseCode",
+        "retry_value": "0x15",							←再送要求の応答種別の値(受信電文の値は16進数[0x15])
+        "abnormal_value": ["0x10"],						←接続異常の応答種別の値(受信電文の値は16進数[0x10])
+        "response_success": {
+            "header_length": 5,
+            "header": [
+                {
+                    "name": "ResponseCode",
+                    "length": 1,
+                    "value": "0x10"						←応答電文.値：16進数[0x10]
+                },
+                {
+                    "name": "Identifier",
+                    "length": 3,
+                    "value": "SDC"
+                },
+                {
+                    "name": "EOT",
+                    "length": 1,
+                    "value": "0x04"
+                }
+            ]
+        },
+        "response_failure": {
+            "header_length": 10,
+            "header": [
+                {
+                    "name": "ResponseCode",
+                    "length": 1,
+                    "value": "0x10"
+                },
+                {
+                    "name": "Identifier",
+                    "length": 3,
+                    "value": "SER"
+                },
+                {
+                    "name": "ErrorCode",
+                    "length": 5,
+                    "value": "99999"
+                },
+                {
+                    "name": "EOT",
+                    "length": 1,
+                    "value": "0x04"
+                }
+            ]
+        }
+    }
+}
+④ifedge_setting_facility_tshpuls.json：「socket_facility.jsとsocket_nec_tshpuls.js」関連のjsonの説明。
+{
+    "response_telegram": {
+        "socket-type": "facility-tshpuls",						←電子カルテの種類（例：facility、nec_tshpuls)
+        "response_success": {
+            "header_length": 6,
+            "header": [
+                {
+                    "name": "ResponseInfo",
+                    "length": 6,
+                    "value": "nullpo"
+                }
+            ]
+        }
+    }
+}
+
+⑤ifedge_setting_facility_csi.json：jsonの説明。
+{
+    "response_telegram": {
+        "socket-type": "facility-csi",						←電子カルテの種類（例：CSI)
+        "type_name": "ErrorCode",						←応答種別のJOSN設定名：header部分nameを設定した内容
+        "type_name_success": "OK",
+        "type_name_failure": "NG",
+        "length_name": "DataLength",						←電文長のJOSN設定名：header部分nameを設定した内容
+        "abnormal_value": ["NG"],						←接続異常の応答種別の値
+        "response_success": {
+            "header_length": 8,
+            "header": [
+                {
+                    "name": "DataLength",
+                    "length": 6,
+                    "value": "000000"
+                },
+                {
+                    "name": "ErrorCode",
+                    "length": 2,
+                    "value": "$TYPENAME"
+                }
+
+            ]
+        }
+    }
+}
+※※※電文設定のname辞書※※※
+電文種別：TlegramType
+レコード継続指示：RecordContinuationInstructions
+送信先システムコード：DestinationSystemCode
+発信元システムコード：SourceSystemCode
+処理年月日：DATE
+処理時刻：TIME
+端末名：TerminalName
+利用者番号：UserID
+処理区分：TreatmentDivision
+応答種別：ResponseType
+電文長：TelegramLength
+エラーコード：ErrorCode
+予備：Preliminary
+終端：Terminal
+
+送信先ID：DestinationID
+送信元ID：SourceID
+処理コマンド：HandlingCommands
+受信結果：Result
+データ長：DataLength
+
+応答コード：ResponseCode
+識別子：Identifier
+エラーコード：ErrorCode
+EOT：EOT
+
+応答内容：ResponseInfo

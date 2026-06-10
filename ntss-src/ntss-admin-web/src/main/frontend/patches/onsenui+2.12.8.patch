@@ -1,0 +1,21 @@
+diff --git a/node_modules/onsenui/esm/elements/ons-popover.js b/node_modules/onsenui/esm/elements/ons-popover.js
+index 9a927b1..4035622 100644
+--- a/node_modules/onsenui/esm/elements/ons-popover.js
++++ b/node_modules/onsenui/esm/elements/ons-popover.js
+@@ -285,8 +285,14 @@ export default class PopoverElement extends BaseDialogElement {
+       if (!target && this.target) {
+         target = document.getElementById(this.target);
+       }
+-      this._currentTarget = target;
+-      this._positionPopover(target);
++
++      if(!target){
++        this.style.display = 'none';
++        this._clearStyles();
++      }else{
++        this._currentTarget = target;
++        this._positionPopover(target);
++      }
+     } else {
+       this.style.display = 'none';
+       this._clearStyles();

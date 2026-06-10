@@ -1,0 +1,1 @@
+ALTER TABLE pat_event alter COLUMN report_url type varchar(200);

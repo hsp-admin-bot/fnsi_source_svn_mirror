@@ -1,0 +1,1 @@
+ALTER TABLE ntss.mst_coop_apilink ALTER COLUMN api_timing_io TYPE varchar(2);

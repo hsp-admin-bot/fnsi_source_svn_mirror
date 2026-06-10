@@ -1,0 +1,5 @@
+UPDATE MNT_MAINTE_MAIN
+    SET
+        MAINTE_ANS_1 = NULL
+    WHERE
+        MAINTE_ANS_1 NOT IN ('1', '2', '3');

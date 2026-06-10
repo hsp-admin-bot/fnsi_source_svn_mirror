@@ -1,0 +1,12 @@
+UPDATE ntss.sys_data_list_category
+	SET category_name='感染症有無'
+	WHERE category_cd=38;
+UPDATE ntss.sys_data_list_category
+	SET category_name='感染症(+)'
+	WHERE category_cd=40;
+UPDATE ntss.sys_data_list_category
+	SET category_name='感染症(-)'
+	WHERE category_cd=41;
+UPDATE ntss.sys_data_list_category
+	SET category_name='感染症（+-）'
+	WHERE category_cd=42;

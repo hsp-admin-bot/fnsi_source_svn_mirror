@@ -1,0 +1,1 @@
+UPDATE ntss.sys_data_list_detail SET data_list_detail_cd=1438 WHERE data_list_detail_cd=10295;

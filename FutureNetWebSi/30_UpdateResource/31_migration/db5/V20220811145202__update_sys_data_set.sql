@@ -1,0 +1,3 @@
+delete from ntss.sys_data_set where sql_cd = 1055;
+INSERT INTO "ntss"."sys_data_set"("sql_cd", "sql", "db_class", "detail", "can_repeat", "use_application", "report_class", "memo", "reg_date", "up_date", "pre_sql_info") VALUES (1055, 'SELECT CAST
+	( ( CASE @patMemoInfo.code WHEN '''' THEN ''0'' ELSE @patMemoInfo.code END ) AS INTEGER ) + 1 AS NO', 2, '[{}]', '0', '{"applications": [4]}', NULL, '(受信用)日機装)患者プロファイル(profile)(XML):患者メモ順位の取得', '2022-06-17 13:05:27.576', CURRENT_TIMESTAMP, NULL);

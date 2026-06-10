@@ -1,0 +1,5 @@
+--ALTER TABLE mst_treatment_status_layout ADD COLUMN fn_layout_no varchar DEFAULT NULL;
+--comment on column mst_treatment_status_layout.fn_layout_no is 'FNW+で管理する施設内の一意なコード';
+--
+--ALTER TABLE mst_trend_graph_template ADD COLUMN fn_template_cd varchar DEFAULT NULL;
+--comment on column mst_trend_graph_template.fn_template_cd is 'FNW+で管理する施設内の一意なコード';

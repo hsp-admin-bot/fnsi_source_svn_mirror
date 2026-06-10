@@ -1,0 +1,55 @@
+spring:
+  datasource:
+    certificate:
+      jdbc-url: jdbc:postgresql://localhost:5432/ntss_db7?currentSchema=ntss&stringtype=unspecified
+      driver-class-name: org.postgresql.Driver
+      username: nkk7
+      password: nkk7
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+  application:
+    name: ntss-certificate-download
+  jmx:
+    default-domain: ntss-certificate-download
+
+
+doma:
+  dialect: postgres
+
+logging:
+  file: /var/log/ntss-certificate-download/ntss-certificate-download.log
+  level:
+    org.springframework.transaction.interceptor: TRACE
+    org.mongodb.driver: ERROR
+
+server:
+  port: 8082
+  servlet:
+    contextPath: /ntss-certificate-download
+
+securityporicy:
+  accesskeycheck: true
+
+ntss:
+  logging:
+    appender:
+      file-name: /var/log/ntss-certificate-download/{0}.log
+    rolling:
+      file-name-pattern:  /var/log/ntss-certificate-download/{0}_%d'{'yyyyMMdd'}'.log
+      max-history: 180
+  cl-certificate:
+    # rootクライアント証明書のパス
+    certificate-path: "/nfs/certificate-path"
+    # 作成した.p12証明書のパス
+    p12-path: "/nfs/p12-path"
+    cl-facility:
+      password-min: 10
+      lock-count: 5
+    cl-user:
+      version: 1.0
+      password-min: 10
+      lock-count: 5
+  certificate:
+    sign-in:
+      restriction: false

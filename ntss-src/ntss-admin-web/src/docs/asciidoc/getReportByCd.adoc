@@ -1,0 +1,20 @@
+[[get-report-by-cd]]
+=== レポートコードを指定してレポートを出力
+
+==== Request
+include::{snippets}/report/creating-report/get-report-cd/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/report/creating-report/get-report-cd/ok/http-response.adoc[]
+
+==== Response(失敗:該当データなし)
+include::{snippets}/report/creating-report/get-report-cd/not-found/http-response.adoc[]
+
+==== Path Parameters
+include::{snippets}/report/creating-report/get-report-cd/ok/path-parameters.adoc[]
+
+==== Request Fields
+include::{snippets}/report/creating-report/get-report-cd/ok/request-fields.adoc[]
+
+==== Response Fields
+include::{snippets}/report/creating-report/get-report-cd/ok/response-fields.adoc[]

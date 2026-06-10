@@ -1,0 +1,11 @@
+[[get-notification-message-all]]
+=== 通知メッセージ取得(全件)
+
+==== Request
+include::{snippets}/notification_message/all/get/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/notification_message/all/get/ok/http-response.adoc[]
+
+==== Response Fields
+include::{snippets}/notification_message/all/get/ok/response-fields.adoc[]

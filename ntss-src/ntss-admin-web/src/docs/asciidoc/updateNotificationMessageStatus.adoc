@@ -1,0 +1,14 @@
+[[put-notification-message-status]]
+=== 既読フラグを更新
+
+==== Request
+include::{snippets}/notification-message/status/put/ok/http-request.adoc[]
+
+==== Response(成功)
+include::{snippets}/notification-message/status/put/ok/http-response.adoc[]
+
+==== Request Fields
+include::{snippets}/notification-message/status/put/ok/request-fields.adoc[]
+
+==== Response Fields
+include::{snippets}/notification-message/status/put/ok/response-fields.adoc[]

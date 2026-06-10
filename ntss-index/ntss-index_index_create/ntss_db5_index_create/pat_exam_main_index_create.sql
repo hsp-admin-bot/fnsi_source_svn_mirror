@@ -1,0 +1,16 @@
+﻿﻿DROP INDEX IF EXISTS idx_pat_exam_main_02;
+CREATE INDEX idx_pat_exam_main_02 ON pat_exam_main USING btree (facility_cd,is_del,reg_exam_date);
+DROP INDEX IF EXISTS idx_pat_exam_main_03;
+CREATE INDEX idx_pat_exam_main_03 ON pat_exam_main USING btree (facility_cd,reg_exam_date,is_del);
+DROP INDEX IF EXISTS idx_pat_exam_main_05;
+CREATE INDEX idx_pat_exam_main_05 ON pat_exam_main USING btree (facility_cd,pat_id,is_del,exam_week,reg_order_class,exam_from,exam_to);
+DROP INDEX IF EXISTS idx_pat_exam_main_04;
+CREATE INDEX idx_pat_exam_main_04 ON pat_exam_main USING btree (exam_status,pat_id);
+DROP INDEX IF EXISTS idx_pat_exam_main_06;
+CREATE INDEX idx_pat_exam_main_06 ON pat_exam_main USING btree (facility_cd,is_del,reg_exam_date);
+DROP INDEX IF EXISTS idx_pat_exam_main_07;
+CREATE INDEX idx_pat_exam_main_07 ON pat_exam_main USING btree (reg_order_class);
+DROP INDEX IF EXISTS idx_pat_exam_main_01;
+CREATE INDEX idx_pat_exam_main_01 ON pat_exam_main USING btree (pat_id,result_exam_date,reg_order_class,is_del);
+DROP INDEX IF EXISTS idx_pat_exam_main_exam_result_info_01;
+CREATE INDEX idx_pat_exam_main_exam_result_info_01 ON pat_exam_main USING GIN ((exam_result_info -> 'item_cd'), (exam_result_info -> 'result'), (exam_result_info -> 'unit'));

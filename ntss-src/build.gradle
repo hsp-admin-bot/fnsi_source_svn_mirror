@@ -1,0 +1,39 @@
+allprojects {
+  group = 'jp.co.nikkiso.ntss'
+  version = '0.0.1-SNAPSHOT'
+}
+
+subprojects {
+  apply plugin: 'java'
+  apply plugin: "jacoco"
+  sourceCompatibility=17
+  targetCompatibility=17
+  def defaultEncoding = "UTF-8"
+  tasks.withType(AbstractCompile).each {
+    it.options.encoding = defaultEncoding
+  }
+
+  plugins.withId('io.spring.dependency-management') {
+    dependencyManagement {
+      imports {
+        mavenBom "org.springframework.security:spring-security-bom:${spring_security_version}"
+      }
+      dependencies {
+        dependency "org.assertj:assertj-core:${assertj_version}"
+        dependency "org.yaml:snakeyaml:${snakeyaml_version}"
+        dependency "com.amazon.ion:ion-java:${ion_java_version}"
+        dependencySet(group: 'org.apache.tomcat.embed', version: tomcat_version) {
+          entry 'tomcat-embed-core'
+          entry 'tomcat-embed-el'
+          entry 'tomcat-embed-websocket'
+        }
+      }
+    }
+  }
+  
+  // ntss-coreへの依存関係
+  if (project.name in ['ntss-core']) return
+  dependencies {
+    implementation project(':ntss-core')
+  }
+}

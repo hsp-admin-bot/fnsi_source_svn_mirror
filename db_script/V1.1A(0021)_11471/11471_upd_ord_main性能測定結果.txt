@@ -1,0 +1,11 @@
+#11471:
+	測定条件：
+		１.UAT環境
+		２.ord_mainが15276件の状態
+	測定手順：
+		１.ord_mainのrst_device_modeをnullに設定する
+		２.設定は下記通り：rst_treatment_cd is not null and rst_dialysis_state > '0'
+	性能評価：
+		更新レコード総件数：15276
+		合計処理時間：5.784s
+		※処理上1000件単位でコミット

@@ -1,0 +1,1 @@
+ALTER TABLE client_cer_detail ADD COLUMN download_date timestamp without time zone  NULL;

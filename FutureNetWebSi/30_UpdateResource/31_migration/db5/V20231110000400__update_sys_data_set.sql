@@ -1,0 +1,3 @@
+DELETE FROM "ntss"."sys_data_set" WHERE sql_cd in (7114);
+INSERT INTO "ntss"."sys_data_set" ("sql_cd", "sql", "db_class", "detail", "can_repeat", "use_application", "report_class", "memo", "reg_date", "up_date", "pre_sql_info") VALUES (7114, 'SELECT ''"''||TO_CHAR(CURRENT_TIMESTAMP, ''YYYYMMDDHH24MISS'')||''"'' AS DATE;
+', 3, '[{}]', '0', '{"applications": [4]}', NULL, '(受信用)日機装の患者プロファイル(透析困難情報)の現在の日付取得', '2022-07-07 03:07:10.113', CURRENT_TIMESTAMP, NULL);

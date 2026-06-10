@@ -1,0 +1,5 @@
+rootProject.name = 'ntss'
+
+include 'ntss-core'
+include 'ntss-certificate-management'
+include 'ntss-certificate-download'
